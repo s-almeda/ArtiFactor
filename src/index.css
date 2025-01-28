@@ -1,0 +1,97 @@
+/* src/index.css */
+
+/* Tailwind's base styles */
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+@import "tailwindcss/base";
+
+@import "tailwindcss/components";
+
+@import "tailwindcss/utilities";
+
+/* Custom global styles */
+:root {
+  --font-primary: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --color-bg: #FCFAFA; /* Light background color */
+  --color-text: #333333; /* Text color */
+  --color-primary: #01b6ff; /* Title blue */
+  --color-secondary: #2563eb; /* Another shade of blue */
+  --color-accent: hsl(84, 100%, 75%); /* Accent color (green) */
+  --color-link: #3b82f6; /* Link color */
+  --color-button-bg: #2563eb; /* Button background */
+  --color-button-text: #ffffff; /* Button text */
+  --color-button-hover-bg: #1d4ed8; /* Button hover background */
+}
+
+/* Apply custom font family */
+html,
+body {
+  font-family: var(--font-primary);
+  scroll-behavior: smooth;
+  margin: 10px;
+  padding: 10px;
+  height: 100%; /* Ensure the body and html take full height */
+}
+
+/* Global background color */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Ensure #root takes full height */
+#root {
+  height: 100%;
+}
+
+/* Styling for headings */
+/* h1 {
+  
+  font-weight: 700;
+  color: var(--color-text);
+} */
+
+h1 {
+  font-family: var(--font-primary); /* Custom font */
+  color: var(--color-primary); /* Custom color */
+  text-align: center;
+}
+/* Links */
+a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Button Styles */
+button {
+  background-color: var(--color-button-bg);
+  color: var(--color-button-text);
+  border: none;
+  padding: 0.25rem 0.5rem; /* Reduced padding */
+  border-radius: 0.375rem; /* Tailwind's rounded-md */
+  font-size: 0.875rem; /* Smaller font size */
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--color-button-hover-bg);
+}
+
+
+/* Optional: Additional Customizations */
+.highlight-green {
+  background-color: var(--color-accent) !important;
+}
+.redrum{
+  color: red;
+  background-color: red;
+}
+/* Node transition class */
+.node-transition {
+  transition: transform 0.25s;
+}
