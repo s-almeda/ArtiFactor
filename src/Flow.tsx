@@ -17,6 +17,7 @@ import { AppNode } from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import { initialEdges, edgeTypes } from "./edges";
 import useClipboard from "./hooks/useClipboard";
+import { DnDProvider, useDnD } from './DnDContext';
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
@@ -30,7 +31,8 @@ const backend_url = "https://snailbunny.site"; // URL of the backend server host
 const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const { getIntersectingNodes, getNodesBounds } = useReactFlow();
+  const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
+  
 
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
 
@@ -135,6 +137,46 @@ const Flow = () => {
     [getIntersectingNodes, setNodes]
   );
 
+  /* -- when something else is dragged over the canvas -- */
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  
+ 
+  const onDrop = useCallback(
+    (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
+      event.preventDefault();
+      
+      console.log("dropped!");
+      // check if the dropped element is valid
+      // if (!type) {
+      //   return;
+      // }
+ 
+      // project was renamed to screenToFlowPosition
+      // and you don't need to subtract the reactFlowBounds.left/top anymore
+      // details: https://reactflow.dev/whats-new/2023-11-10
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const newNode: AppNode = {
+        id: `${nodes.length + 1}`,
+        type: "text",
+        position,
+        data: { content: `${event.content}` },
+      };
+
+      setNodes((prevNodes) => [...prevNodes, newNode]);
+ 
+      
+    },
+    [screenToFlowPosition],
+    
+  );
+
   const onNodeDragStop = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       //console.log("user stopped dragging a node ", draggedNode)
@@ -152,6 +194,8 @@ const Flow = () => {
   //   //returns true if the type of node is an "intersector"
   //   return nodeType === "intersection" || nodeType === "t2i-generator";
   // }
+
+   /*** ---- this is the code that makes stuff fly away lol --- */
 
   const calcPositionAfterDrag = (
     previousPosition: { x: number; y: number },
@@ -193,7 +237,7 @@ const Flow = () => {
         return node;
       })
     );
-  
+
     // Remove the transition class after the animation completes
     setTimeout(() => {
       setNodes((currentNodes) =>
@@ -210,7 +254,6 @@ const Flow = () => {
     }, 1000); // Match the duration of the CSS transition
   };
   
-
 
   const handleIntersections = (draggedNode: Node, intersections: string[]) => {
     setNodes((currentNodes) => {
@@ -439,6 +482,8 @@ const Flow = () => {
         onNodesChange={onNodesChange}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         edges={edges}
         edgeTypes={edgeTypes}
         onEdgesChange={onEdgesChange}
