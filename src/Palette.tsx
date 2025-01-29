@@ -1,8 +1,5 @@
 import React from 'react';
 
-import { TextNode } from "./nodes/TextNode";
-//import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 interface PaletteProps {
   onAddNode: () => void;
 }
@@ -18,7 +15,7 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
     <div className="bg-white p-4">
         <div className="space-y-3">
         {
-        testArray.map((item, i) => (
+        testArray.map((item) => (
           <div
           className="bg-white border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
           onDragStart={handleDragStart}
