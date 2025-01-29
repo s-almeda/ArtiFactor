@@ -16,6 +16,7 @@ export const initialNodes: AppNode[] = [
   // },
   {
     id: "c",
+    type: "text",
     position: { x: 100, y: 100 },
     data: { content: "bunny on the moon" },
   },
@@ -34,14 +35,14 @@ export const initialNodes: AppNode[] = [
         "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
     },
   },
-  {
-    id: "f",
-    type: "function",
-    position: { x: 400, y: 500 },
-    data: {
-      content: "",
-    },
-  },
+  // {
+  //   id: "f",
+  //   type: "function",
+  //   position: { x: 400, y: 500 },
+  //   data: {
+  //     content: "function type node",
+  //   },
+  // },
   {
     id: "t2i-generator-1",
     type: "t2i-generator",
@@ -61,6 +62,7 @@ export const initialNodes: AppNode[] = [
 
 export const nodeTypes: NodeTypes = {
   default: TextNode,
+  "text": TextNode,
   "position-logger": PositionLoggerNode,
   image: ImageNode,
   function: FunctionNode,

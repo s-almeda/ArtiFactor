@@ -4,6 +4,7 @@ import { useState } from "react";
 import Flow from "./Flow";
 import About from "./About";
 import Sidebar from "./Sidebar";
+import Palette from "./Palette";
 
 function AppContent() {
   //const location = useLocation();
@@ -45,11 +46,19 @@ function AppContent() {
           <Route
             path="/canvas"
             element={
-              <div
-                className="border border-gray-500"
-                style={{ height: "90vh", width: "70vw", margin:0, padding:0 }}
-              >
-                <Flow />
+              <div className="flex">
+          <div
+            className="border border-gray-500"
+            style={{ height: "90vh", width: "70vw", margin: 0, padding: 0 }}
+          >
+            <Flow />
+          </div>
+          <div
+            className="border border-gray-500"
+            style={{ height: "90vh", width: "30vw", margin: 0, padding: 0 }}
+          >
+            <Palette onAddNode={() => console.log("Adding node")} />
+          </div>
               </div>
             }
           />
