@@ -1,9 +1,5 @@
 
-import { useRef, useCallback } from 'react';
-import {
-  ReactFlowProvider,
-  useReactFlow
-} from '@xyflow/react';
+import { ReactFlowProvider } from '@xyflow/react';
 
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { useState } from "react";
@@ -11,11 +7,11 @@ import Flow from "./Flow";
 import About from "./About";
 import Sidebar from "./Sidebar";
 import Palette from "./Palette";
-import { DnDProvider, useDnD } from './DnDContext';
+import { DnDProvider } from './DnDContext';
 
 
 function AppContent() {
-  //const location = useLocation();
+
 
   /*--- SIDEBAR ----*/
   const [showSidebar, setShowSidebar] = useState(false);
@@ -24,43 +20,10 @@ function AppContent() {
     setShowSidebar((prev) => !prev);
   };
 
-   /*--- Drag and Drop Controller ----*/
-
-  const DnDFlow = () => {
-    const reactFlowWrapper = useRef(null);
-    const { screenToFlowPosition } = useReactFlow();
-    const [type] = useDnD();
-   
-    const onDragOver = useCallback((event: { preventDefault: () => void; dataTransfer: { dropEffect: string; }; }) => {
-      console.log("ragging ovr...")
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'move';
-    }, []);
-   
-    const onDrop = useCallback(
-      (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
-        event.preventDefault();
-        console.log("Dropped");
-        // check if the dropped element is valid
-        // if (!type) {
-        //   return;
-        // }
-        // const position = screenToFlowPosition({
-        //   x: event.clientX,
-        //   y: event.clientY,
-        // });
-        // const newNode = {
-        //   type,
-        //   position,
-        //   data: { label: `${type} node` },
-        // };
-
-      },
-      [screenToFlowPosition, type],
-    );
-  }
-
-  
+  const handleNewNode = (type: string, content: string) => {
+    console.log(`Adding new node with type: ${type} and content: ${content}`);
+    // Add new node to the Flow canvas
+  };
 
   return (
     <div className="relative h-screen w-screen">
@@ -96,21 +59,20 @@ function AppContent() {
             path="/canvas"
             element={
               <div className="flex">
-          <div
-            className="border border-gray-500"
-            style={{ height: "90vh", width: "70vw", margin: 0, padding: 0 }}
-          >
-            
-            <Flow />
-          </div>
-          <div
-            className="border border-gray-500"
-            style={{ height: "90vh", width: "30vw", margin: 0, padding: 0 }}
-          >
-            <Palette onAddNode={(type, content) => console.log(`${type}, ${content}`)} />
-          </div>
+              <div
+                className="border border-gray-500"
+                style={{ height: "90vh", width: "70vw", margin: 0, padding: 0 }}
+              >
+                <Flow />
               </div>
-            }
+              <div
+                className="border border-gray-500"
+                style={{ height: "90vh", width: "30vw", margin: 0, padding: 0 }}
+              >
+                <Palette onAddNode={(type, content) => handleNewNode(type, content)} />
+              </div>
+            </div>
+          }
           />
         </Routes>
        

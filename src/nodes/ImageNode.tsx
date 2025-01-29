@@ -4,8 +4,8 @@ import { type ImageNode } from "./types";
 
 export function ImageNode({ data }: NodeProps<ImageNode>) {
   const [imageUrl, setImageUrl] = useState("");
-  const [width, setWidth] = useState(150);
-  const [height, setHeight] = useState(150);
+  const [width, setWidth] = useState(70);
+  const [height, setHeight] = useState(70);
 
   useEffect(() => {
     if (data.content) {
@@ -20,6 +20,7 @@ export function ImageNode({ data }: NodeProps<ImageNode>) {
         width: `${width}px`,
         height: `${height}px`,
         position: "relative",
+        padding: "2px"
       }}
     >
       <NodeResizer

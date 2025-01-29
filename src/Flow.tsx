@@ -17,7 +17,7 @@ import { AppNode } from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import { initialEdges, edgeTypes } from "./edges";
 import useClipboard from "./hooks/useClipboard";
-import { DnDProvider, useDnD } from './DnDContext';
+import { useDnD } from './DnDContext';
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
@@ -32,7 +32,7 @@ const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
-  
+  const [draggableType,__, draggableContent,_ ] = useDnD();
 
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
 
@@ -138,7 +138,7 @@ const Flow = () => {
   );
 
   /* -- when something else is dragged over the canvas -- */
-  const onDragOver = useCallback((event) => {
+  const onDragOver = useCallback((event: { preventDefault: () => void; dataTransfer: { dropEffect: string; }; }) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
@@ -148,32 +148,34 @@ const Flow = () => {
   const onDrop = useCallback(
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
-      
-      console.log("dropped!");
+      console.log(`you dropped: ${draggableType} and ${draggableContent}`);
       // check if the dropped element is valid
-      // if (!type) {
-      //   return;
-      // }
+      if (!draggableType) {
+        return;
+      }
  
-      // project was renamed to screenToFlowPosition
-      // and you don't need to subtract the reactFlowBounds.left/top anymore
-      // details: https://reactflow.dev/whats-new/2023-11-10
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
-      const newNode: AppNode = {
-        id: `${nodes.length + 1}`,
-        type: "text",
-        position,
-        data: { content: `${event.content}` },
-      };
 
-      setNodes((prevNodes) => [...prevNodes, newNode]);
- 
+      switch (draggableType) {
+        case "image":
+          addImageNode(draggableContent as unknown as string, position);
+          break;
+        case "t2i-generator":
+          addT2IGenerator(position);
+          break;
+        default:
+          addTextNode(draggableContent as unknown as string, position);
+          break;
+          //console.warn(`Unknown draggable type: ${draggableType}`);
+      }
+
+
       
     },
-    [screenToFlowPosition],
+    [draggableType, draggableContent,screenToFlowPosition],
     
   );
 
@@ -324,29 +326,29 @@ const Flow = () => {
 
   
 
-  const addTextNode = () => {
+  const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
     const newTextNode: AppNode = {
-      id: `${nodes.length + 1}`,
+      id: `text-${nodes.length + 1}`,
       type: "default",
-      position: {
+      position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
         x: Math.random() * 250,
         y: Math.random() * 250,
       },
       data: {
         label: `Text Node ${nodes.length + 1}`,
-        content: "your text here",
+        content: content,
       },
     };
 
     setNodes((prevNodes) => [...prevNodes, newTextNode]);
   };
 
-  const addImageNode = (content?: string) => {
+  const addImageNode = (content?: string, position?: { x: number; y: number }) => {
     console.log(content);
     const newNode: AppNode = {
       id: `image-${nodes.length + 1}`,
       type: "image",
-      position: {
+      position: position?? { 
         x: Math.random() * 250,
         y: Math.random() * 250,
       },
@@ -360,11 +362,11 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
 
-  const addT2IGenerator = () => {
+  const addT2IGenerator = (position ?:{ x:number, y:number}) => {
     const newT2IGeneratorNode: AppNode = {
       id: `t2i-generator-${nodes.length + 1}`,
       type: "t2i-generator",
-      position: {
+      position: position ?? {
       x: Math.random() * 250,
       y: Math.random() * 250,
       },
@@ -374,7 +376,7 @@ const Flow = () => {
       yOffset: 0,
       xOffset: 0,
       updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
-        console.log(`new node with content: ${content} and mode: ${mode}`);
+        console.log(`new node passed with content: ${content} and mode: ${mode}`);
         return true;
       }
       },
@@ -461,7 +463,7 @@ const Flow = () => {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-        <button onClick={addTextNode}> Text </button>
+        <button onClick={() => addTextNode}> Text </button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addT2IGenerator()}>New Text to Image Generator</button>
       </div>
