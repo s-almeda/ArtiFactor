@@ -6,14 +6,13 @@ import {
   Controls,
   //MiniMap,
   addEdge,
-  Node,
   useNodesState,
   useEdgesState,
-  type OnConnect,
   useReactFlow,
 } from "@xyflow/react";
+import type { Node, OnConnect } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AppNode } from "./nodes/types";
+import type { AppNode } from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import { initialEdges, edgeTypes } from "./edges";
 import useClipboard from "./hooks/useClipboard";

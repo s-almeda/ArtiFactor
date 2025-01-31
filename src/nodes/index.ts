@@ -34,6 +34,7 @@ export const initialNodes: AppNode[] = [
       content:
         "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
     },
+    selected: false,
   },
   // {
   //   id: "f",

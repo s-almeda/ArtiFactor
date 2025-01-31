@@ -39,6 +39,7 @@ function AppContent() {
 
       {/* Sidebar Toggle Button */}
       <button
+        type="button"
         onClick={toggleSidebar}
         className="absolute top-4 left-64 z-50 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-r focus:outline-none transition-all duration-300"
         style={{

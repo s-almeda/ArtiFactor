@@ -1,8 +1,9 @@
-import { Handle, Position, type NodeProps, NodeResizer } from "@xyflow/react";
+import { Handle, Position, NodeResizer, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
-import { type ImageNode } from "./types";
+import type { NodeProps } from "@xyflow/react";
+import type { ImageNode } from "./types";
 
-export function ImageNode({ data }: NodeProps<ImageNode>) {
+export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
   const [imageUrl, setImageUrl] = useState("");
   const [width, setWidth] = useState(70);
   const [height, setHeight] = useState(70);
@@ -20,7 +21,7 @@ export function ImageNode({ data }: NodeProps<ImageNode>) {
         width: `${width}px`,
         height: `${height}px`,
         position: "relative",
-        padding: "2px"
+        padding: "2px",
       }}
     >
       <NodeResizer
@@ -36,9 +37,27 @@ export function ImageNode({ data }: NodeProps<ImageNode>) {
         }}
         isVisible={true}
       />
+      {/* React Flow's built-in NodeToolbar */}
+      <NodeToolbar isVisible={selected} position={Position.Top}>
+        <button
+          type="button"
+          onClick={() => alert("Action 1")}
+          aria-label="Action 1"
+        >
+          🔍
+        </button>
+        <button
+          type="button"
+          onClick={() => alert("Action 2")}
+          aria-label="Action 2"
+        >
+          🖼️
+        </button>
+      </NodeToolbar>
+
       <img
         src={imageUrl}
-        alt="Node Image"
+        alt="Generated Output"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
       <Handle type="source" position={Position.Bottom} />
