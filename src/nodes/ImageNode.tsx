@@ -57,7 +57,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
 
       <img
         src={imageUrl}
-        alt="Generated Output"
+        alt="Generated Outpu"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
       <Handle type="source" position={Position.Bottom} />
