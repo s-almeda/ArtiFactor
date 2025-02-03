@@ -18,7 +18,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.0.2",
-    "react-scripts": "^5.0.1",
+    "react-scripts": "^3.0.1",
     "reactflow": "^11.11.4",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
@@ -38,6 +38,6 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
-    "vite": "^5.0.12"
+    "vite": "^5.4.14"
   }
 }
