@@ -27,6 +27,10 @@ export const NodeProvider: React.FC<{ children: ReactNode }> = ({
   const [nodes, setNodes] = useState<NodeData[]>([]);
 
   const addGeneratedImage = (imageUrl: string) => {
+    // if the image is already in the list, don't add it again
+    if (generatedImages.includes(imageUrl)) {
+      return;
+    }
     setGeneratedImages((prevImages) => [...prevImages, imageUrl]);
   };
 
