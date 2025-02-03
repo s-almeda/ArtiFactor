@@ -12,7 +12,7 @@ interface NodeData {
 // Define the context type
 interface NodeContextType {
   nodes: NodeData[];
-  onAddNode: (type: "image" | "text", content: string) => void;
+  addGeneratedImage: (content: string) => void;
   generatedImages?: string[];
 }
 
@@ -23,21 +23,26 @@ const NodeContext = createContext<NodeContextType | undefined>(undefined);
 export const NodeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [nodes, setNodes] = useState<NodeData[]>([]);
 
-  // Function to add a new node
-  const onAddNode = (type: "image" | "text", content: string) => {
-    const newNode: NodeData = {
-      id: `node-${nodes.length + 1}`,
-      type,
-      content,
-    };
-    setNodes([...nodes, newNode]);
-    console.log
+  const addGeneratedImage = (imageUrl: string) => {
+    setGeneratedImages((prevImages) => [...prevImages, imageUrl]);
   };
 
+  //   // Function to add a new node
+  //   const onAddNode = (type: "image" | "text", content: string) => {
+  //     const newNode: NodeData = {
+  //       id: `node-${nodes.length + 1}`,
+  //       type,
+  //       content,
+  //     };
+  //     setNodes([...nodes, newNode]);
+  //     console.log;
+  //   };
+
   return (
-    <NodeContext.Provider value={{ nodes, onAddNode }}>
+    <NodeContext.Provider value={{ nodes, generatedImages, addGeneratedImage }}>
       {children}
     </NodeContext.Provider>
   );

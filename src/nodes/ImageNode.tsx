@@ -5,7 +5,7 @@ import type { ImageNode } from "./types";
 import { useNodeContext } from "../NodeContext";
 
 export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
-  const { onAddNode } = useNodeContext();
+  const { addGeneratedImage } = useNodeContext();
   const [imageUrl, setImageUrl] = useState("");
   const [width, setWidth] = useState(70);
   const [height, setHeight] = useState(70);
@@ -50,7 +50,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
         </button>
         <button
           type="button"
-          onClick={() => onAddNode("image", imageUrl)} // Add to Palette
+          onClick={() => addGeneratedImage(imageUrl)} // Add to Palette
           aria-label="Save to Palette"
         >
           🖼️

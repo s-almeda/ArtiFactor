@@ -70,7 +70,7 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
 
 const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
-  const { generatedImages = [] } = useNodeContext(); // Ensure it's always an array
+  const { generatedImages = [], addGeneratedImage } = useNodeContext();
 
   // Example data for text & images
   const textPrompts = [
@@ -87,6 +87,7 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
     "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
     ...generatedImages, // Replace with actual image URLs
   ];
+  console.log(savedImages);
 
   return (
     <div className="bg-white p-4 w-[23vw]">
