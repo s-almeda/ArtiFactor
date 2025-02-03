@@ -1,7 +1,7 @@
 import type { NodeTypes } from "@xyflow/react";
 import { PositionLoggerNode } from "./PositionLoggerNode";
 import { TextNode } from "./TextNode";
-import { AppNode } from "./types";
+import type { AppNode } from "./types";
 import { ImageNode } from "./ImageNode";
 import FunctionNode from "./FunctionNode";
 //import IntersectionNode from "./IntersectionNode";
@@ -33,8 +33,11 @@ export const initialNodes: AppNode[] = [
     data: {
       content:
         "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
+      onAddNode: (content: string) => {
+        console.log(`Add to Palette: ${content}`);
+      }
     },
-    selected: false,
+    selected: false
   },
   // {
   //   id: "f",

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useDnD } from "./DnDContext";
+import { useNodeContext } from "./NodeContext";
 
 const charLimit = 25;
 
@@ -69,6 +70,7 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
 
 const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
+  const { generatedImages = [] } = useNodeContext(); // Ensure it's always an array
 
   // Example data for text & images
   const textPrompts = [
@@ -82,8 +84,8 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   ];
 
   const savedImages = [
-    "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg", // Replace with actual image URLs
-
+    "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
+    ...generatedImages, // Replace with actual image URLs
   ];
 
   return (

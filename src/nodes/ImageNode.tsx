@@ -2,8 +2,10 @@ import { Handle, Position, NodeResizer, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
+import { useNodeContext } from "../NodeContext";
 
 export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
+  const { onAddNode } = useNodeContext();
   const [imageUrl, setImageUrl] = useState("");
   const [width, setWidth] = useState(70);
   const [height, setHeight] = useState(70);
@@ -48,8 +50,8 @@ export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
         </button>
         <button
           type="button"
-          onClick={() => alert("Action 2")}
-          aria-label="Action 2"
+          onClick={() => onAddNode("image", imageUrl)} // Add to Palette
+          aria-label="Save to Palette"
         >
           🖼️
         </button>
