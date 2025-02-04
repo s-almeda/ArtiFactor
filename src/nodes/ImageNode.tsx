@@ -2,6 +2,7 @@ import {Position, NodeResizer, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
+import { useNodeContext } from "../NodeContext";
 
 
 interface ImageNodeProps extends NodeProps<ImageNode> {
@@ -10,6 +11,7 @@ interface ImageNodeProps extends NodeProps<ImageNode> {
 
 
 export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
+  const { addGeneratedImage } = useNodeContext();
   const [imageUrl, setImageUrl] = useState("");
   const [width, setWidth] = useState(200);
   const [height, setHeight] = useState(200);
@@ -54,8 +56,8 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
         </button>
         <button
           type="button"
-          onClick={() => alert("Action 2")}
-          aria-label="Action 2"
+          onClick={() => addGeneratedImage(imageUrl)} // Add to Palette
+          aria-label="Save to Palette"
         >
           🖼️
         </button>

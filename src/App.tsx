@@ -1,5 +1,4 @@
-
-import { ReactFlowProvider } from '@xyflow/react';
+import { ReactFlowProvider } from "@xyflow/react";
 
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { useState } from "react";
@@ -7,13 +6,12 @@ import Flow from "./Flow";
 import About from "./About";
 import Sidebar from "./Sidebar";
 import Palette from "./Palette";
-//import Lookup from "./Lookup";
-import { DnDProvider } from './DnDContext';
+
+import { DnDProvider } from "./DnDContext";
+import { NodeProvider } from "./NodeContext";
 
 
 function AppContent() {
-
-
   /*--- SIDEBAR ----*/
   const [showSidebar, setShowSidebar] = useState(false);
   const toggleSidebar = () => {
@@ -86,31 +84,48 @@ function AppContent() {
       
 
       {/* Main Content */}
+      
       <ReactFlowProvider>
-        <DnDProvider>
-          <Routes>
-        <Route path="/" element={<About />} />
-        <Route
-          path="/canvas"
-          element={
-            <div className="flex">
-          <div
-            className="border border-gray-500"
-            style={{ height: "90vh", width: "70vw", margin: 0, padding: 0 }}
-          >
-            <Flow />
-          </div>
-          <div
-            className="border border-gray-500"
-            style={{ height: "90vh", width: "30vw", margin: 0, padding: 0 }}
-          >
-            <Palette onAddNode={(type, content) => handleNewNode(type, content)} />
-          </div>
-            </div>
-          }
-        />
-          </Routes>
-        </DnDProvider>
+        <NodeProvider>
+          <DnDProvider>
+            <Routes>
+              <Route path="/" element={<About />} />
+              <Route
+                path="/canvas"
+                element={
+                  <div className="flex">
+                    <div
+                      className="border border-gray-500"
+                      style={{
+                        height: "90vh",
+                        width: "70vw",
+                        margin: 0,
+                        padding: 0,
+                      }}
+                    >
+                      <Flow />
+                    </div>
+                    <div
+                      className="border border-gray-500"
+                      style={{
+                        height: "90vh",
+                        width: "30vw",
+                        margin: 0,
+                        padding: 0,
+                      }}
+                    >
+                      <Palette
+                        onAddNode={(type, content) =>
+                          handleNewNode(type, content)
+                        }
+                      />
+                    </div>
+                  </div>
+                }
+              />
+            </Routes>
+          </DnDProvider>
+        </NodeProvider>
       </ReactFlowProvider>
         </div>
       );

@@ -1,7 +1,7 @@
 import type { NodeTypes } from "@xyflow/react";
 import { PositionLoggerNode } from "./PositionLoggerNode";
 import { TextNode } from "./TextNode";
-import { AppNode } from "./types";
+import type { AppNode } from "./types";
 import { ImageNode } from "./ImageNode";
 import FunctionNode from "./FunctionNode";
 import T2IGeneratorNode from "./T2IGeneratorNode";
@@ -27,6 +27,7 @@ export const initialNodes: AppNode[] = [
   //   position: { x: 0, y: 200 },
   //   data: { label: "with React Flow" },
   // },
+
   // {
   //   id: "e",
   //   type: "image",
