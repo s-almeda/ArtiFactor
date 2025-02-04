@@ -1,8 +1,19 @@
-import {Position, NodeResizer, NodeToolbar } from "@xyflow/react";
+import {Position, NodeResizeControl, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
-import { useNodeContext } from "../NodeContext";
+
+
+const controlStyle: React.CSSProperties = {
+  background: 'white',
+  //border: '1px solid grey',
+  width: '8px',
+  height: '8px',
+  position: 'absolute', 
+  bottom: 0, 
+  right: 0
+  
+};
 
 
 interface ImageNodeProps extends NodeProps<ImageNode> {
@@ -11,10 +22,9 @@ interface ImageNodeProps extends NodeProps<ImageNode> {
 
 
 export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
-  const { addGeneratedImage } = useNodeContext();
   const [imageUrl, setImageUrl] = useState("");
-  const [width, setWidth] = useState(200);
-  const [height, setHeight] = useState(200);
+  const [width, setWidth] = useState(80);
+  const [height, setHeight] = useState(80);
 
   useEffect(() => {
     if (data.content) {
@@ -32,7 +42,9 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
         padding: "2px",
       }}
     >
-      <NodeResizer
+      <NodeResizeControl
+        className="controlStyle"
+        style={controlStyle}
         minWidth={50}
         minHeight={50}
         keepAspectRatio={true}
@@ -43,21 +55,25 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
           setWidth(params.width);
           setHeight(newHeight);
         }}
-        isVisible={true}
+        //isVisible={true}
       />
       {/* React Flow's built-in NodeToolbar */}
       <NodeToolbar isVisible={selected} position={Position.Top}>
         <button
           type="button"
+          className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
           onClick={() => data.lookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl)} // calls the function passed to it in the data prop
           aria-label="Action 1"
+          style={{ marginRight: '8px' }}
         >
           🔍
         </button>
+          
         <button
+          className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
           type="button"
-          onClick={() => addGeneratedImage(imageUrl)} // Add to Palette
-          aria-label="Save to Palette"
+          onClick={() => alert("Action 2")}
+          aria-label="Action 2"
         >
           🖼️
         </button>

@@ -30,7 +30,7 @@ const T2IGeneratorNode = ({ data }: T2IGeneratorNodeProps) => {
             setContent("drop to generate...");
         } else {
             setMode("ready");
-            setContent("ready to generate! \n(drag and drop here)");
+            setContent("ready to generate!");
         }
 
         return mode === "ready" || mode === "dragging"; // Return whether the node is ready

@@ -76,6 +76,18 @@
   color: #2e004b; /* Darkened purple */
   line-height: 50px;
 }
+.controlStyle {
+  background: 'white';
+  border: '1px solid grey';
+  width: '10px';
+  height: '10px';
+  position: 'absolute';
+  bottom: 0;
+  right: 0;
+  
+}
+
+
 
 
 /* Apply custom font family */

@@ -393,33 +393,18 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newT2IGeneratorNode]);
   };
 
-  // const addLookupNode = (position: {x: number; y: number} = { x: 250, y: 250 }, artworks: Artwork[]) => {
-  //   const newPosition = { ...position, x: position.x - 100 };
-  //   console.log("adding lookup node at position: ", newPosition);
-  //   const newLookupNode: AppNode = {
-  //     id: `lookup-${Date.now()}`,
-  //     type: "lookup",
-  //     position: newPosition,
-  //     data: {
-  //       content: "Similar Images",
-  //       artworks,
-  //     },
-  //   };
-
-  //   setNodes((prevNodes) => [...prevNodes, newLookupNode]);
-  // }
-
   /*-- adds a lookup window ---*/
   const handleImageLookUp = useCallback(async (position: {x: number; y: number;}, imageUrl: string) => {
     //takes an image and its position as input, looks up the image in the backend, adds the results as a LookupNode to the canvas
     console.log(`Looking up image with url: ${imageUrl}`);
+    console.log(`!!!received position: ${position}`);
     
     // Add a blank text node to indicate loading
     const loadingNodeId = `loading-${Date.now()}`;
     const loadingNode: AppNode = {
       id: loadingNodeId,
       type: "text",
-      position: { x: position.x - 300, y: position.y - 200 },
+      position: { x: position.x - 20, y: position.y - 20 },
       data: { content: "...that reminds me of something...", loading: true },
     };
     setNodes((nodes) => [...nodes, loadingNode]);
@@ -574,6 +559,7 @@ const Flow = () => {
         onConnect={onConnect}
         zoomOnDoubleClick={false}
         fitView
+//        fitViewOptions={{minZoom: 0.001}}
         selectionOnDrag
       >
         <Background />
