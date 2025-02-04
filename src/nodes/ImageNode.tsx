@@ -1,4 +1,4 @@
-import { Handle, Position, NodeResizer, NodeToolbar } from "@xyflow/react";
+import {Position, NodeResizer, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";

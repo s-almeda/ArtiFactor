@@ -1,4 +1,4 @@
-import type { PaletteNode as PaletteNodeType } from "./types";
+//import type { PaletteNode as PaletteNodeType } from "./types";
 
 interface PaletteNodeProps {
   content: string;

@@ -1,11 +1,9 @@
-import { Handle, Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
+import { Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
 import { ChevronLeft, ChevronRight} from 'lucide-react';
 import { useState, useEffect, memo } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { LookupNode, Artwork } from "./types";
 
-
-const onConnect = (params: any) => console.log('handle onConnect', params);
 
 const controlStyle: React.CSSProperties = {
   background: 'transparent',
@@ -29,7 +27,7 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
     const [width, setWidth] = useState(100);
     const [height, setHeight] = useState(100);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [isFocused, setIsFocused] = useState(true);
+    //const [isFocused, setIsFocused] = useState(true);
     const [artworks, setArtworks] = useState( // Default artworks
     [
         {
