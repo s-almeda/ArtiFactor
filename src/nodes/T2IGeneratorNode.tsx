@@ -60,8 +60,8 @@ const T2IGeneratorNode = ({ data }: T2IGeneratorNodeProps) => {
             <div style={{ fontSize: "smaller", color: "#555" }}>{content}</div>
            {/*<div>Current Mode: {mode}</div>*/}
 
-            <Handle type="target" position={Position.Top} />
-            <Handle type="source" position={Position.Bottom} />
+            {/* <Handle type="target" position={Position.Top} />
+            <Handle type="source" position={Position.Bottom} /> */}
         </div>
     );
 };

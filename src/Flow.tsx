@@ -12,19 +12,21 @@ import {
 } from "@xyflow/react";
 import type { Node, OnConnect } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { AppNode } from "./nodes/types";
+import type { AppNode, Artwork } from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import { initialEdges, edgeTypes } from "./edges";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './DnDContext';
 
+// import { ImageNode } from "./nodes/ImageNode";
+
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
-//const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
+const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
 //const backend_url = "http://104.200.25.53/"; //IP address of backend server hosted online, probably don't use this one.
 
 // TURN THIS ONLINE ONE back on before you run "npm build" and deploy to Vercel!
-const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
+//const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
 
 
 const Flow = () => {
@@ -34,6 +36,9 @@ const Flow = () => {
   const [draggableType,__, draggableContent,_ ] = useDnD();
 
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
+
+  
+
 
 
   
@@ -320,8 +325,11 @@ const Flow = () => {
       return updatedNodes;
     });
   };
+
+
+
   
-  //*** -- Node Adders -- ***/
+  //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
   
 
@@ -344,17 +352,18 @@ const Flow = () => {
 
   const addImageNode = (content?: string, position?: { x: number; y: number }) => {
     console.log(content);
+    position = position ?? { 
+      x: Math.random() * 250,
+      y: Math.random() * 250,
+    };
+    content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
     const newNode: AppNode = {
       id: `image-${nodes.length + 1}`,
       type: "image",
-      position: position?? { 
-        x: Math.random() * 250,
-        y: Math.random() * 250,
-      },
+      position: position,
       data: {
-        content:
-          content ??
-          "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp",
+        content: content,
+        lookUp: () => handleImageLookUp(position, content),
       },
     };
 
@@ -384,16 +393,94 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newT2IGeneratorNode]);
   };
 
+  // const addLookupNode = (position: {x: number; y: number} = { x: 250, y: 250 }, artworks: Artwork[]) => {
+  //   const newPosition = { ...position, x: position.x - 100 };
+  //   console.log("adding lookup node at position: ", newPosition);
+  //   const newLookupNode: AppNode = {
+  //     id: `lookup-${Date.now()}`,
+  //     type: "lookup",
+  //     position: newPosition,
+  //     data: {
+  //       content: "Similar Images",
+  //       artworks,
+  //     },
+  //   };
+
+  //   setNodes((prevNodes) => [...prevNodes, newLookupNode]);
+  // }
+
+  /*-- adds a lookup window ---*/
+  const handleImageLookUp = useCallback(async (position: {x: number; y: number;}, imageUrl: string) => {
+    //takes an image and its position as input, looks up the image in the backend, adds the results as a LookupNode to the canvas
+    console.log(`Looking up image with url: ${imageUrl}`);
+    
+    // Add a blank text node to indicate loading
+    const loadingNodeId = `loading-${Date.now()}`;
+    const loadingNode: AppNode = {
+      id: loadingNodeId,
+      type: "text",
+      position: { x: position.x - 300, y: position.y - 200 },
+      data: { content: "that reminds me of something...", loading: true },
+    };
+    setNodes((nodes) => [...nodes, loadingNode]);
+
+    try {
+      const response = await axios.post(`${backend_url}/api/get-similar-images`, {
+        image: imageUrl
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log(`Image lookup response: ${response.data}`);
+      if (response.status === 200) {
+        const responseData = JSON.parse(response.data);
+        const artworks: Artwork[] = responseData.map((item: any) => ({
+          title: item.title || "Unknown",
+          date: item.date || "Unknown",
+          artist: item.artist || "Unknown",
+          genre: item.genre || "Unknown",
+          style: item.style || "Unknown",
+          description: item.description || "Unknown",
+          image: item.image || "Unknown",
+        }));
+        
+        // Replace the loading node with the new lookup node
+        const newLookupNode: AppNode = {
+          id: `lookup-${Date.now()}`,
+          type: "lookup",
+          position,
+          data: {
+            content: "Similar Images",
+            artworks,
+          },
+          dragHandle: '.drag-handle__custom',
+        };
+
+        setNodes((nodes) =>
+          nodes.map((node) =>
+            node.id === loadingNodeId ? newLookupNode : node
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to lookup image:", error);
+    }
+  }, [setNodes]);
+
+
+
+
   const generateImageNode = useCallback(
-    // Generates an image node with a prompt and optional position
+    // Requests through reagent, generates an image node with a prompt and optional position
     async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }, testing: boolean = false) => {
       console.log(`Generating image with prompt: ${prompt}`);
       const loadingNodeId = `loading-${Date.now()}`;
       const loadingNode: AppNode = {
         id: loadingNodeId,
-        type: "default",
+        type: "text",
         position,
-        data: { label: "", content: "Loading..." },
+        data: { content: "Loading...", loading: true },
       };
       setNodes((nodes) => [...nodes, loadingNode]);
 
@@ -404,7 +491,10 @@ const Flow = () => {
           id: `image-${Date.now()}`,
           type: "image",
           position,
-          data: { content: "https://collectionapi.metmuseum.org/api/collection/v1/iiif/459123/913555/main-image" },
+          data: { 
+            content: "https://collectionapi.metmuseum.org/api/collection/v1/iiif/459123/913555/main-image", 
+            lookUp: () => handleImageLookUp(position, "https://collectionapi.metmuseum.org/api/collection/v1/iiif/459123/913555/main-image"),
+            },
         };
 
         setNodes((nodes) =>
@@ -433,7 +523,10 @@ const Flow = () => {
               id: `image-${Date.now()}`,
               type: "image",
               position,
-              data: { content: response.data.imageUrl },
+              data: { 
+                content: response.data.imageUrl,
+                lookUp: () => handleImageLookUp(position, response.data.imageUrl),
+              },
             };
 
             setNodes((nodes) =>
@@ -489,7 +582,9 @@ const Flow = () => {
         edgeTypes={edgeTypes}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        zoomOnDoubleClick={false}
         fitView
+        selectionOnDrag
       >
         <Background />
         {/*<MiniMap />*/}
