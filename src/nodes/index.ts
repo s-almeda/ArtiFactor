@@ -4,8 +4,9 @@ import { TextNode } from "./TextNode";
 import type { AppNode } from "./types";
 import { ImageNode } from "./ImageNode";
 import FunctionNode from "./FunctionNode";
-//import IntersectionNode from "./IntersectionNode";
 import T2IGeneratorNode from "./T2IGeneratorNode";
+import LookupNode from "./LookupNode";
+
 
 export const initialNodes: AppNode[] = [
   // {
@@ -18,7 +19,7 @@ export const initialNodes: AppNode[] = [
     id: "c",
     type: "text",
     position: { x: 100, y: 100 },
-    data: { content: "bunny on the moon" },
+    data: { content: "bunny on the moon", loading: false },
   },
   // {
   //   id: "d",
@@ -26,19 +27,18 @@ export const initialNodes: AppNode[] = [
   //   position: { x: 0, y: 200 },
   //   data: { label: "with React Flow" },
   // },
-  {
-    id: "e",
-    type: "image",
-    position: { x: -150, y: 150 },
-    data: {
-      content:
-        "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
-      onAddNode: (content: string) => {
-        console.log(`Add to Palette: ${content}`);
-      }
-    },
-    selected: false
-  },
+
+  // {
+  //   id: "e",
+  //   type: "image",
+  //   position: { x: -150, y: 150 },
+  //   data: {
+  //     content:
+  //       "https://upload.wikimedia.org/wikipedia/commons/8/87/Vincent_van_Gogh_-_Head_of_a_skeleton_with_a_burning_cigarette_-_Google_Art_Project.jpg",
+  //     lookUp: handleImageLookUp,
+  //   },
+  //   selected: false,
+  // },
   // {
   //   id: "f",
   //   type: "function",
@@ -70,6 +70,7 @@ export const nodeTypes: NodeTypes = {
   "position-logger": PositionLoggerNode,
   image: ImageNode,
   function: FunctionNode,
+  "lookup": LookupNode,
   //intersection: IntersectionNode,
   "t2i-generator": T2IGeneratorNode,
 };

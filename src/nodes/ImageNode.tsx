@@ -1,14 +1,20 @@
-import { Handle, Position, NodeResizer, NodeToolbar } from "@xyflow/react";
+import {Position, NodeResizer, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
 import { useNodeContext } from "../NodeContext";
 
-export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
+
+interface ImageNodeProps extends NodeProps<ImageNode> {
+  //ons: (imageUrl: string) => void;
+}
+
+
+export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
   const { addGeneratedImage } = useNodeContext();
   const [imageUrl, setImageUrl] = useState("");
-  const [width, setWidth] = useState(70);
-  const [height, setHeight] = useState(70);
+  const [width, setWidth] = useState(200);
+  const [height, setHeight] = useState(200);
 
   useEffect(() => {
     if (data.content) {
@@ -43,7 +49,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
       <NodeToolbar isVisible={selected} position={Position.Top}>
         <button
           type="button"
-          onClick={() => alert("Action 1")}
+          onClick={() => data.lookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl)} // calls the function passed to it in the data prop
           aria-label="Action 1"
         >
           🔍
@@ -59,13 +65,13 @@ export function ImageNode({ data, selected }: NodeProps<ImageNode>) {
 
       <img
         src={imageUrl}
-        alt="Generated Outpu"
+        alt="Generated Output"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
-      <Handle type="source" position={Position.Bottom} />
+      {/* <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Right} />
       <Handle type="target" position={Position.Left} />
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Top} /> */}
     </div>
   );
 }
