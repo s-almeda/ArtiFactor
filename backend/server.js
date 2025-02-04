@@ -3,6 +3,7 @@ import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
+import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
 dotenv.config();
 
@@ -20,6 +21,46 @@ app.get("/", (req, res) => {
 app.get("/overview", (req, res) => {
   res.end('if you can see this, that means the backend server is working!');
 });
+
+// new /api/get-similar-images route takes an image: base64string or image: imageURL within a .json file and returns a list of similar images as urls or as base64
+app.post("/api/get-similar-images", async (req, res) => {
+  const { image } = req.body;
+  console.log("received a get-similar-images request:", req.body);
+
+  if (!image) {
+    return res.status(400).json({ error: "Missing 'image' in request body" });
+  }
+
+  let imageData = image;
+
+  // Check if the image is a URL
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    try {
+      const response = await fetch(image);
+      const buffer = await response.buffer();
+      imageData = buffer.toString('base64');
+    } catch (error) {
+      console.error("Error converting image URL to base64:", error);
+      return res.status(500).json({ error: "Error processing image URL" });
+    }
+  }
+
+  try {
+    console.log("Sending image to data.SnailBunny...");
+    const response = await axios.post(
+      "https://data.snailbunny.site/image",
+      {
+        image: imageData,
+      }
+    );
+    console.log("Got response from data.SnailBunny:", response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error getting similar images:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 app.post("/api/generate-image", async (req, res) => {
   const { prompt = "lizard on saturn" } = req.body; //default prompt with no form data

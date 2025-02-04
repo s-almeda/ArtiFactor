@@ -1,3 +1,4 @@
+// this, and the database it creates, doesn't do anything useful yet...just a placeholder for now
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 

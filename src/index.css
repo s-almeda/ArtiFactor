@@ -24,6 +24,60 @@
   --color-button-hover-bg: #1d4ed8; /* Button hover background */
 }
 
+/* .loading {
+  font-weight: bold;
+  display: inline-block;
+  font-family: monospace;
+  font-size: 30px;
+  clip-path: inset(0 3ch 0 0);
+  animation: l 1s steps(4, jump-none) infinite;
+}
+
+@keyframes l {
+  to {
+    clip-path: inset(0)
+  }
+} */
+/* HTML: <div class="loader"></div> */
+.loader {
+  width: 1.5em;
+  aspect-ratio: 4;
+  background: radial-gradient(circle closest-side,#000 90%,#0000) 0/calc(100%/3) 100% space;
+  clip-path: inset(0 100% 0 0);
+  animation: l1 1s steps(4) infinite;
+}
+@keyframes l1 {to{clip-path: inset(0 -34% 0 0)}}
+
+.drag-handle__custom {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  /*background-color: #000;*/
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  cursor: -webkit-move; /* Webkit move cursor */
+  top: 0;
+  left: 0;
+  padding: 5px;
+}
+.drag-handle__custom::before {
+  content: '.';
+  position: absolute;
+  left: 5px;
+  font-size: 20px;
+  line-height: 0px;
+  color: #333333; /* Dark grey */
+  text-shadow: 0 5px #555555, 0 10px #555555, 5px 0 #555555, 5px 5px #555555, 5px 10px #555555, 10px 0 #555555, 10px 5px #333333, 10px 10px #333333;
+}
+
+.drag-handle__custom span {
+  color: #2e004b; /* Darkened purple */
+  line-height: 50px;
+}
+
+
 /* Apply custom font family */
 html,
 body {
