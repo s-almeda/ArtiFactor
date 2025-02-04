@@ -70,7 +70,7 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
 
 const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
-  const { generatedImages = [], addGeneratedImage } = useNodeContext();
+  const { generatedImages = [] } = useNodeContext();
 
   // Example data for text & images
   const textPrompts = [

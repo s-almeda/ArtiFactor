@@ -38,7 +38,7 @@ export function TextNode({ data }: NodeProps<TextNode>) {
           overflow: "y-scroll",
           color: "inherit",
           fontFamily: "inherit",
-          fontSize: "inherit",
+          fontSize: "12px",
         }}
       />
       {data.loading && <div className="loader"></div>}

@@ -25,8 +25,8 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
 
 const LookupNode = ({ data, selected }: LookupNodeProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [width, setWidth] = useState(300);
-    const [height, setHeight] = useState(500);
+    const [width, setWidth] = useState(150);
+    const [height, setHeight] = useState(250);
     const [currentIndex, setCurrentIndex] = useState(0);
     //const [isFocused, setIsFocused] = useState(true);
     const [artworks, setArtworks] = useState( // Default artworks
@@ -138,7 +138,7 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
 
         <div className="relative flex flex-col h-full overflow-scroll">             
               
-                <div className="relative flex items-center justify-center mb-2 mx-auto" style={{ width: `${height * 0.6}px`, height: `${height * 0.5}px` }}>
+                <div className="relative flex items-center justify-center mb-2 mx-auto" style={{ width: `${height * 0.45}px`, height: `${height * 0.4}px` }}>
                 <img
                   src={currentArtwork.image}
                   alt={currentArtwork.title}
@@ -147,17 +147,17 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
                 </div>
 
               <div className="text-left mb-2">
-                <h2 className="text-md font-bold text-gray-800">
+                <h2 className="text-sm/5 font-bold text-gray-800">
                   {currentArtwork.title} ({currentArtwork.date})
                 </h2>
-                <p className="text-sm text-gray-600">{currentArtwork.artist}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600">{currentArtwork.artist}</p>
+                <p className="text-[10px] text-gray-500">
                   {currentArtwork.genre} • {currentArtwork.style}
                 </p>
               </div>
 
               <div className="bg-gray-50 p-2 rounded-lg max-h-24 overflow-y-auto">
-                <p className="text-gray-700 leading-relaxed text-xs">
+                <p className="text-gray-700 leading-relaxed text-[10px]">
                   {currentArtwork.description}
                 </p>
               </div>
