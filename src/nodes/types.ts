@@ -19,7 +19,7 @@ export type PositionLoggerNode = Node<{ content: string }, "position-logger">;
 export type TextNode = Node<{ content: string; loading: boolean }, "text">;
 export type ImageNode = Node<{ 
   content: string 
-  lookUp: (imageUrl: string) => void;
+  lookUp: (position: {x: number; y:number}, imageUrl: string) => void;
 }, "image">;
 export type FunctionNode = Node<{ content: string }, "function">;
 export type PaletteNode = Node< {content: string }, "palette">;

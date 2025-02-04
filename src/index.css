@@ -50,18 +50,22 @@
 
 .drag-handle__custom {
   display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  /*background-color: #000;*/
   border-radius: 50%;
-  position: relative;
+  position: absolute;
   top: 50%;
   cursor: -webkit-move; /* Webkit move cursor */
+  top: 0;
+  left: 0;
+  padding: 5px;
 }
 .drag-handle__custom::before {
   content: '.';
   position: absolute;
-  left: 0px;
+  left: 5px;
   font-size: 20px;
   line-height: 0px;
   color: #333333; /* Dark grey */
@@ -70,7 +74,7 @@
 
 .drag-handle__custom span {
   color: #2e004b; /* Darkened purple */
-  line-height: 42px;
+  line-height: 50px;
 }
 
 

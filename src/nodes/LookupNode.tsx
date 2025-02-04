@@ -1,19 +1,19 @@
 import { Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
 import { ChevronLeft, ChevronRight} from 'lucide-react';
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { LookupNode, Artwork } from "./types";
 
-
 const controlStyle: React.CSSProperties = {
-  background: 'transparent',
+  background: 'white',
   border: '1px solid grey',
-  borderRadius: '4px',
+  borderRadius: '0px',
   width: '10px',
   height: '10px',
   position: 'absolute', 
   bottom: 0, 
   right: 0
+  
 };
 
 interface LookupNodeProps extends NodeProps<LookupNode> {
@@ -24,8 +24,9 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
 }
 
 const LookupNode = ({ data, selected }: LookupNodeProps) => {
-    const [width, setWidth] = useState(100);
-    const [height, setHeight] = useState(100);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [width, setWidth] = useState(300);
+    const [height, setHeight] = useState(500);
     const [currentIndex, setCurrentIndex] = useState(0);
     //const [isFocused, setIsFocused] = useState(true);
     const [artworks, setArtworks] = useState( // Default artworks
@@ -70,44 +71,30 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
       setCurrentIndex((prev) => (prev === data.artworks.length - 1 ? 0 : prev + 1));
     };
 
+    useEffect(() => {
+      if (data.artworks) {
+        setArtworks(data.artworks);
+  
+        }
+    }, [data.artworks]);
+
+    useEffect(() => {
+      if (containerRef.current) {
+        const {offsetWidth, offsetHeight} = containerRef.current;
+        setWidth(offsetWidth);
+        setHeight(offsetHeight);  
+      }
+    }, []);
 
     const currentArtwork = artworks[currentIndex];
 
-    useEffect(() => {
-      if (data.artworks) {
-      setArtworks(data.artworks);
-
-      }
-    }, [data.artworks]);
-
     return (
-      <div className={`max-w-sm p-4 bg-white rounded-lg shadow-lg`}>
-      <NodeResizeControl
-        style={controlStyle}
-        position = {Position.Bottom}
-        minWidth={100}
-        minHeight={100}
-        maxHeight={450}
-        maxWidth={300}
-        keepAspectRatio={true}
-        color="black"
-        onResize={(_, params) => {
-          console.log(width, height);
-          const aspectRatio = width / height;
-          const newHeight = Math.floor(params.width / aspectRatio);
-          setWidth(params.width);
-          setHeight(newHeight);
-        } }
-        />
+      <>
+      <span className="drag-handle__custom" />
 
-        <span className="drag-handle__custom" />
 
-        {/* Main Content of the lookup component */}
-
-          <div className="relative flex items-center justify-between mb-2">
+          <NodeToolbar isVisible={selected} position={Position.Top}>
             
-            
-            <NodeToolbar isVisible={selected} position={Position.Top}>
               <button
                 onClick={handlePrevious}
                 className="p-1 text-white-600 hover:text-white-900"
@@ -126,9 +113,32 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
                 <ChevronRight size={20} />
               </button>
             </NodeToolbar>
+
+
+            <NodeResizeControl
+              style={controlStyle}
+              minWidth={150}
+              maxWidth={350}
+              keepAspectRatio={true}
+              color="black"
+              onResize={(_, params) => {
+                if (containerRef.current) {
+                  containerRef.current.style.width = `${params.width}px`;
+                  containerRef.current.style.height = `${params.height}px`;
+                  setWidth(params.width);
+                  setHeight(params.height);
+                }
+              }}
+            />
+          <div ref={containerRef} className={`max-w-sm p-4 bg-white pt-10 rounded-lg shadow-lg overflow-scroll`} style={{width, height}}>
+
+        
+
+        {/* Main Content of the lookup component */}
+
+        <div className="relative flex flex-col h-full overflow-scroll">             
               
-              </div>
-                <div className="relative flex items-center justify-center mb-2 mx-auto" style={{ width: `${width*0.8}px`, height: `${height*0.8}px` }}>
+                <div className="relative flex items-center justify-center mb-2 mx-auto" style={{ width: `${height * 0.6}px`, height: `${height * 0.5}px` }}>
                 <img
                   src={currentArtwork.image}
                   alt={currentArtwork.title}
@@ -151,8 +161,11 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
                   {currentArtwork.description}
                 </p>
               </div>
-        </div>
-    );
+         </div>
+       </div>
+       </>
+      );
   };
+  
   export default memo(LookupNode);
 

@@ -9,7 +9,7 @@ interface ImageNodeProps extends NodeProps<ImageNode> {
 }
 
 
-export function ImageNode({ data, selected }: ImageNodeProps) {
+export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
   const [imageUrl, setImageUrl] = useState("");
   const [width, setWidth] = useState(200);
   const [height, setHeight] = useState(200);
@@ -47,7 +47,7 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
       <NodeToolbar isVisible={selected} position={Position.Top}>
         <button
           type="button"
-          onClick={() => data.lookUp(imageUrl)} // calls the function passed to it in the data prop
+          onClick={() => data.lookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl)} // calls the function passed to it in the data prop
           aria-label="Action 1"
         >
           🔍

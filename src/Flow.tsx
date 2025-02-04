@@ -420,7 +420,7 @@ const Flow = () => {
       id: loadingNodeId,
       type: "text",
       position: { x: position.x - 300, y: position.y - 200 },
-      data: { content: "that reminds me of something...", loading: true },
+      data: { content: "...that reminds me of something...", loading: true },
     };
     setNodes((nodes) => [...nodes, loadingNode]);
 
@@ -554,21 +554,11 @@ const Flow = () => {
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-        <button onClick={() => addTextNode}> Text </button>
+      <div style={{ position: 'absolute', top: '10px', left: '25%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
+        <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addT2IGenerator()}>New Text to Image Generator</button>
       </div>
-      {/* image generation button */
-      /*
-      <button
-        onClick={() => generateImageNode("kawaii bunny with a witch hat")}
-      >
-        {" "}
-        Generate an Image
-      </button> */
-      }
-
 
       <ReactFlow
         nodes={nodes}
