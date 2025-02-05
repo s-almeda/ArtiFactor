@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type MouseEvent } from "react";
+import {useCallback, useEffect, type MouseEvent } from "react";
 import axios from "axios";
 import {
   ReactFlow,
@@ -22,7 +22,7 @@ import { useDnD } from './DnDContext';
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
-//const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
+// const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
 //const backend_url = "http://104.200.25.53/"; //IP address of backend server hosted online, probably don't use this one.
 
 // TURN THIS ONLINE ONE back on before you run "npm build" and deploy to Vercel!
@@ -34,7 +34,6 @@ const Flow = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
   const [draggableType,__, draggableContent,_ ] = useDnD();
-
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
 
   
@@ -536,14 +535,75 @@ const Flow = () => {
     [setNodes]
   );
 
+  /*-- SAVING AND LOADING SESSIONS ---*/
+
+  // save the current canvas state as a JSON file
+  const saveCanvas = () => {
+    // Convert nodes and edges to JSON string and put in blob
+    const jsonData = JSON.stringify({ nodes, edges }, null, 2);
+    const blob = new Blob([jsonData], { type: "application/json" });
+    
+    // temp URL
+    const url = URL.createObjectURL(blob);
+    
+    // trigger a download
+    const a = document.createElement("a");
+    a.href = url; // set URL as Blob URL
+    a.download = "ArtiFactorCanvas.json"; // filename
+    
+    // Append the anchor element to the document
+    document.body.appendChild(a);
+    
+    // start the file download and stops the anchor element after the download starts
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // load a previous canvas using a JSON file
+  const loadSession = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // get selected file
+    const file = event.target.files?.[0];
+
+    //return if no file selected
+    if (!file) {
+      return;
+    }
+      
+    // read contents of file
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      if (!e.target?.result) {
+        return;
+      }
+
+      // JSON data --> JavaScript objects
+      const data = JSON.parse(e.target.result as string);
+      
+      // update node and edges state
+      setNodes(data.nodes || []);
+      setEdges(data.edges || []);
+    };
+    
+    // read and trigger onload
+    reader.readAsText(file);
+  };
+
+
+  
+
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '10px', left: '25%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: '10px', left: '40%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addT2IGenerator()}>New Text to Image Generator</button>
+        <button onClick={saveCanvas}>Save Canvas</button>
+        <input type="file" onChange={loadSession}/>
       </div>
+
+
 
       <ReactFlow
         nodes={nodes}
