@@ -19,7 +19,7 @@ export const initialNodes: AppNode[] = [
     id: "c",
     type: "text",
     position: { x: 100, y: 100 },
-    data: { content: "bunny on the moon", loading: false },
+    data: { content: "bunny on the moon", loading: false, combinable: false },
   },
   // {
   //   id: "d",

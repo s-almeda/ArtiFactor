@@ -39,7 +39,9 @@ const Flow = () => {
 
   
 
-
+  const deleteNodeById = (id: string) => {
+    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== id))
+  }
 
   
   // Keyboard Event Listener for Copy, Cut, Paste
@@ -118,27 +120,9 @@ const Flow = () => {
       );
   
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      setNodes((currentNodes) =>
-        currentNodes.map((node) => {
-          if ((node.type === "t2i-generator") && intersections.includes(node.id)) {
-            node.data.updateNode?.("", "dragging"); // Trigger dragging mode
-            //console.log(node.data)
-            return {
-              ...node,
-              className: "highlight-green",
-            };
-          }
-          else if (node.type === "t2i-generator") {
-            node.data.updateNode?.("", "ready");
-          }
-          return {
-            ...node,
-            className: "",
-          };
-        })
-      );
+      handleIntersectionsOnDrag(draggedNode, intersections);
     },
-    [getIntersectingNodes, setNodes]
+    [setNodes, getIntersectingNodes]
   );
 
   /* -- when something else is dragged over the canvas -- */
@@ -187,7 +171,7 @@ const Flow = () => {
     (_: MouseEvent, draggedNode: Node) => {
       //console.log("user stopped dragging a node ", draggedNode)
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      handleIntersections(draggedNode, intersections);
+      handleIntersectionsOnDrop(draggedNode, intersections);
     },
     [getIntersectingNodes, setNodes]
   );
@@ -259,12 +243,56 @@ const Flow = () => {
       );
     }, 1000); // Match the duration of the CSS transition
   };
+
+const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) => {
+  setNodes((currentNodes) => {
+    const updatedNodes = currentNodes.map((node) => {
+      /*--- If the draggedNode and the node it overlaps with are BOTH text nodes ---*/
+      if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
+        draggedNode.data.combinable = true;
+        node.data.combinable = true;
+      } 
+      else if (node.type === "text") {
+        node.data.combinable = false;
+      }
+      /*this node is a generator node and something is hovering over it */
+      else if ((node.type === "t2i-generator") && intersections.includes(node.id)) {
+        node.data.updateNode?.("", "dragging"); // Trigger dragging mode
+        return {
+          ...node,
+          className: "highlight-green",
+        };
+      } else if (node.type === "t2i-generator") {
+        node.data.updateNode?.("", "ready");
+      }
+
+      return {
+        ...node,
+        className: "",
+      };
+    });
+    return updatedNodes;
+  });
+};
   
 
-  const handleIntersections = (draggedNode: Node, intersections: string[]) => {
+  const handleIntersectionsOnDrop = (draggedNode: Node, intersections: string[]) => {
     setNodes((currentNodes) => {
       const updatedNodes = currentNodes.map((node) => {
-        if (node.type === "t2i-generator" && intersections.includes(node.id)) {
+        if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
+          draggedNode.data.combinable = true;
+          node.data.combinable = true;
+          addTextNode(node.data.content + ", " + draggedNode.data.content, { x: node.position.x + 20, y: node.position.y + 20 });
+          console.log(draggedNode.data.content + " " + node.data.content);
+
+          deleteNodeById(draggedNode.id);
+          deleteNodeById(node.id);
+        } 
+        else if (node.type === "text") {
+          node.data.combinable = false;
+        }
+        /*--- If a node has been dragged on top of a t2i generator ---*/
+        else if (node.type === "t2i-generator" && intersections.includes(node.id)) {
           const overlappingNode = currentNodes.find((n) => n.id === draggedNode.id);
           const inputNodeContent = 
           //grab the content of the node that was dragged on top, and use it as input for our generator
@@ -315,7 +343,6 @@ const Flow = () => {
         else if (node.type === "t2i-generator") { // the node is a generator, but nothing is intersecting with it
           node.data.updateNode?.("", "ready"); 
         }
-
         return {
           ...node,
           className: "",
@@ -335,15 +362,17 @@ const Flow = () => {
 
   const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
     const newTextNode: AppNode = {
-      id: `text-${nodes.length + 1}`,
-      type: "default",
+      id: `text-${Date.now()}`,
+      type: "text",
       position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
-        x: Math.random() * 250,
-        y: Math.random() * 250,
+      x: Math.random() * 250,
+      y: Math.random() * 250,
       },
       data: {
-        label: `Text Node ${nodes.length + 1}`,
-        content: content,
+      //label: `Text Node ${nodes.length + 1}`,
+      content: content,
+      loading: false,
+      combinable: false
       },
     };
 
@@ -405,7 +434,7 @@ const Flow = () => {
       id: loadingNodeId,
       type: "text",
       position: { x: position.x - 20, y: position.y - 20 },
-      data: { content: "...that reminds me of something...", loading: true },
+      data: { content: "...that reminds me of something...", loading: true, combinable: false },
     };
     setNodes((nodes) => [...nodes, loadingNode]);
 
@@ -465,7 +494,7 @@ const Flow = () => {
         id: loadingNodeId,
         type: "text",
         position,
-        data: { content: "Loading...", loading: true },
+        data: { content: "loading ", loading: true, combinable: false },
       };
       setNodes((nodes) => [...nodes, loadingNode]);
 

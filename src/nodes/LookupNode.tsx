@@ -164,7 +164,7 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
       <>
       <span className="drag-handle__custom" />
 
-
+      
           <NodeToolbar isVisible={selected} position={Position.Top}>
             
               <button
@@ -208,14 +208,13 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
 
         {/* Main Content of the lookup component */}
 
-        <div className="relative flex flex-col h-full overflow-scroll">             
+        <div className="relative flex flex-col h-full overflow-scroll cursor-default">             
               
-                <DraggableImage src={currentArtwork.image} alt={currentArtwork.title} height={height} />
-
-                < DraggableText styling="title" content={currentArtwork.title + "(" + currentArtwork.date + ")"} />
-                < DraggableText styling="artist" content={currentArtwork.artist} />
-                < DraggableText styling="default" content={currentArtwork.genre + " • " + currentArtwork.style} />
-                < DraggableText styling="description" content={currentArtwork.description} />
+          < DraggableImage src={currentArtwork.image} alt={currentArtwork.title} height={height} />
+          < DraggableText styling="title" content={currentArtwork.title + "(" + currentArtwork.date + ")"} />
+          < DraggableText styling="artist" content={currentArtwork.artist} />
+          < DraggableText styling="default" content={currentArtwork.genre + " • " + currentArtwork.style} />
+          < DraggableText styling="description" content={currentArtwork.description} />
               
               </div>
 

@@ -16,7 +16,7 @@ export type DefaultNode = Node<{ label: string; content: string }, "default">;
 
 // all our types of nodes...
 export type PositionLoggerNode = Node<{ content: string }, "position-logger">;
-export type TextNode = Node<{ content: string; loading: boolean }, "text">;
+export type TextNode = Node<{ content: string; loading: boolean, combinable:boolean}, "text">; //if loading is true, its a loading message!
 export type ImageNode = Node<{ 
   content: string 
   lookUp: (position: {x: number; y:number}, imageUrl: string) => void;
