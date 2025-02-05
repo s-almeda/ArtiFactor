@@ -83,9 +83,11 @@ app.post("/api/generate-text", async (req, res) => {
     console.log("Output from replicate API:", output);
     //todo, let the user choose how truncated the output should be? 
     const truncatedOutput = output.split(',').slice(0, 5).join(', ');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ text: truncatedOutput });
   } catch (error) {
     console.error("Error in generate-text:", error);
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(500).json({ error: "Internal server error" });
   }
 });
