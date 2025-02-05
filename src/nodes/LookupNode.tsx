@@ -4,6 +4,8 @@ import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { LookupNode, Artwork } from "./types";
 
+import { useDnD } from "../DnDContext";
+
 const controlStyle: React.CSSProperties = {
   background: 'white',
   border: '1px solid grey',
@@ -22,6 +24,76 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
     artworks: Artwork[];
     };
 }
+
+
+  const DraggableText = ({ content, styling }: { content: string, styling?: string }) => {
+    const [_, setDraggableType, __, setDraggableContent] = useDnD();
+
+    const onDragStart = (
+      event: React.DragEvent<HTMLDivElement>,
+      type: string,
+      content: string
+    ) => {
+      event.dataTransfer.effectAllowed = "move";
+      setDraggableType(type);
+      setDraggableContent(content);
+    };
+
+    const getStyledContent = () => {
+      switch (styling) {
+        case "title":
+          return <h2 className="text-sm/5 font-bold text-gray-800">{content}</h2>;
+        case "artist":
+          return <p className="text-xs text-gray-600">{content}</p>;
+        case "description":
+          return (
+            <div className="bg-gray-50 p-2 rounded-lg max-h-24 overflow-y-auto">
+              <p className="text-gray-700 leading-relaxed text-[10px]">{content}</p>
+            </div>
+          );
+        default:
+          return <p className="text-[10px] text-gray-500">{content}</p>;
+      }
+    };
+
+    return (
+      <div
+        draggable
+        onDragStart={(event) => onDragStart(event, "lookupText", content)}
+        className="text-left mb-2"
+      >
+        {getStyledContent()}
+      </div>
+    );
+  };
+  const DraggableImage = ({ src, alt, height }: { src: string, alt: string, height: number }) => {
+    const [_, setDraggableType, __, setDraggableContent] = useDnD();
+
+    const onDragStart = (
+      event: React.DragEvent<HTMLDivElement>,
+      content: string
+    ) => {
+      event.dataTransfer.effectAllowed = "move";
+      setDraggableType("image");
+      setDraggableContent(content);
+    };
+
+    return (
+      <div
+        draggable
+        onDragStart={(event) => onDragStart(event, src)}
+        className="relative flex items-center justify-center mb-2 mx-auto"
+        style={{ width: `${height * 0.45}px`, height: `${height * 0.4}px` }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          className="object-cover rounded-md w-full h-full"
+          key={src}
+        />
+      </div>
+    );
+  };
 
 const LookupNode = ({ data, selected }: LookupNodeProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -138,34 +210,22 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
 
         <div className="relative flex flex-col h-full overflow-scroll">             
               
-                <div className="relative flex items-center justify-center mb-2 mx-auto" style={{ width: `${height * 0.45}px`, height: `${height * 0.4}px` }}>
-                <img
-                  src={currentArtwork.image}
-                  alt={currentArtwork.title}
-                  className="object-cover rounded-md w-full h-full"
-                  key={currentArtwork.image} />
-                </div>
+                <DraggableImage src={currentArtwork.image} alt={currentArtwork.title} height={height} />
 
-              <div className="text-left mb-2">
-                <h2 className="text-sm/5 font-bold text-gray-800">
-                  {currentArtwork.title} ({currentArtwork.date})
-                </h2>
-                <p className="text-xs text-gray-600">{currentArtwork.artist}</p>
-                <p className="text-[10px] text-gray-500">
-                  {currentArtwork.genre} • {currentArtwork.style}
-                </p>
+                < DraggableText styling="title" content={currentArtwork.title + "(" + currentArtwork.date + ")"} />
+                < DraggableText styling="artist" content={currentArtwork.artist} />
+                < DraggableText styling="default" content={currentArtwork.genre + " • " + currentArtwork.style} />
+                < DraggableText styling="description" content={currentArtwork.description} />
+              
               </div>
 
-              <div className="bg-gray-50 p-2 rounded-lg max-h-24 overflow-y-auto">
-                <p className="text-gray-700 leading-relaxed text-[10px]">
-                  {currentArtwork.description}
-                </p>
-              </div>
+
          </div>
-       </div>
        </>
       );
   };
+
+
   
   export default memo(LookupNode);
 

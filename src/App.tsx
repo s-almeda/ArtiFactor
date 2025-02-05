@@ -8,7 +8,7 @@ import Sidebar from "./Sidebar";
 import Palette from "./Palette";
 
 import { DnDProvider } from "./DnDContext";
-import { NodeProvider } from "./NodeContext";
+import { NodeProvider } from "./PaletteContext";
 
 
 function AppContent() {

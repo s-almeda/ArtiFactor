@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDnD } from "./DnDContext";
-import { useNodeContext } from "./NodeContext";
+import { usePaletteContext } from "./PaletteContext";
 
 const charLimit = 25;
 
@@ -70,7 +70,7 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
 
 const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
-  const { generatedImages = [] } = useNodeContext();
+  const { clippedImages = [] } = usePaletteContext();
 
   // Example data for text & images
   const textPrompts = [
@@ -84,7 +84,7 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
   ];
 
   const savedImages = [
-    ...generatedImages, // Replace with actual image URLs
+    ...clippedImages, // Replace with actual image URLs
   ];
   console.log(savedImages);
 

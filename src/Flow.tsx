@@ -397,7 +397,7 @@ const Flow = () => {
   const handleImageLookUp = useCallback(async (position: {x: number; y: number;}, imageUrl: string) => {
     //takes an image and its position as input, looks up the image in the backend, adds the results as a LookupNode to the canvas
     console.log(`Looking up image with url: ${imageUrl}`);
-    console.log(`!!!received position: ${position}`);
+    console.log(`!!!received position: ${position.x, position.y}`);
     
     // Add a blank text node to indicate loading
     const loadingNodeId = `loading-${Date.now()}`;
