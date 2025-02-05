@@ -27,16 +27,15 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
 
 
   const DraggableText = ({ content, styling }: { content: string, styling?: string }) => {
-    const [_, setDraggableType, __, setDraggableContent] = useDnD();
+    const [_, setDraggableType, __, setDraggableData] = useDnD();
 
     const onDragStart = (
       event: React.DragEvent<HTMLDivElement>,
-      type: string,
       content: string
     ) => {
       event.dataTransfer.effectAllowed = "move";
-      setDraggableType(type);
-      setDraggableContent(content);
+      setDraggableType("text");
+      setDraggableData({content: content});
     };
 
     const getStyledContent = () => {
@@ -48,26 +47,26 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
         case "description":
           return (
             <div className="bg-gray-50 p-2 rounded-lg max-h-24 overflow-y-auto">
-              <p className="text-gray-700 leading-relaxed text-[10px]">{content}</p>
+              <p className="text-gray-700 leading-relaxed text-[12px]">{content}</p>
             </div>
           );
         default:
-          return <p className="text-[10px] text-gray-500">{content}</p>;
+          return <p className="text-[12px] text-gray-500">{content}</p>;
       }
     };
 
     return (
       <div
         draggable
-        onDragStart={(event) => onDragStart(event, "lookupText", content)}
-        className="text-left mb-2"
+        onDragStart={(event) => onDragStart(event, content)}
+        className="text-left mb-0 mt-0"
       >
         {getStyledContent()}
       </div>
     );
   };
   const DraggableImage = ({ src, alt, height }: { src: string, alt: string, height: number }) => {
-    const [_, setDraggableType, __, setDraggableContent] = useDnD();
+    const [_, setDraggableType, __, setDraggableData] = useDnD();
 
     const onDragStart = (
       event: React.DragEvent<HTMLDivElement>,
@@ -75,7 +74,7 @@ interface LookupNodeProps extends NodeProps<LookupNode> {
     ) => {
       event.dataTransfer.effectAllowed = "move";
       setDraggableType("image");
-      setDraggableContent(content);
+      setDraggableData({content: content, prompt: alt});
     };
 
     return (
@@ -160,6 +159,7 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
 
     const currentArtwork = artworks[currentIndex];
 
+
     return (
       <>
       <span className="drag-handle__custom" />
@@ -207,16 +207,15 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
         
 
         {/* Main Content of the lookup component */}
-
         <div className="relative flex flex-col h-full overflow-scroll cursor-default">             
               
-          < DraggableImage src={currentArtwork.image} alt={currentArtwork.title} height={height} />
-          < DraggableText styling="title" content={currentArtwork.title + "(" + currentArtwork.date + ")"} />
-          < DraggableText styling="artist" content={currentArtwork.artist} />
-          < DraggableText styling="default" content={currentArtwork.genre + " • " + currentArtwork.style} />
-          < DraggableText styling="description" content={currentArtwork.description} />
+          <DraggableImage src={currentArtwork.image} alt={`${currentArtwork.title}${currentArtwork.date.toString() !== "None" ? ` (${currentArtwork.date})` : ''} by ${currentArtwork.artist}`} height={height} />
+          <DraggableText styling="title" content={currentArtwork.date.toString() !== "None" ? `${currentArtwork.title} (${currentArtwork.date})` : currentArtwork.title} />
+          <DraggableText styling="artist" content={currentArtwork.artist} />
+          <DraggableText styling="default" content={`${currentArtwork.genre} • ${currentArtwork.style}`} />
+          <DraggableText styling="description" content={currentArtwork.description} />
               
-              </div>
+        </div>
 
 
          </div>

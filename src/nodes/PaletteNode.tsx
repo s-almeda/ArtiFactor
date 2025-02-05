@@ -1,4 +1,4 @@
-//import type { PaletteNode as PaletteNodeType } from "./types";
+// NOTE--- THIS DOESN'T ACTUALLY SEEM TO BE USED...
 
 interface PaletteNodeProps {
   content: string;
@@ -28,7 +28,7 @@ export function PaletteNode({ type, content, onAddNode }: PaletteNodeProps) {
           src={content}
           alt="Saved Image"
           className="w-full h-auto rounded-md"
-          style={{ maxWidth: "100px", maxHeight: "100px", objectFit: "cover" }}
+          style={{ maxWidth: "100px", maxHeight: "50px", objectFit: "cover" }}
         />
       ) : (
         ""

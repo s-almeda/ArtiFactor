@@ -33,7 +33,7 @@ const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
-  const [draggableType,__, draggableContent,_ ] = useDnD();
+  const [draggableType,__, draggableData,_ ] = useDnD();
 
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
 
@@ -95,8 +95,8 @@ const Flow = () => {
             "content" in sourceNode.data
               ? sourceNode.data.content
               : sourceNode.data.label;
-          console.log(`Generating image with prompt: ${prompt}`);
-          // await generateImageNode(prompt);
+          console.log(`Generating with prompt: ${prompt}`);
+          // await generateNode(prompt);
         }
       } else {
         setEdges((edges) => addEdge(connection, edges));
@@ -136,7 +136,7 @@ const Flow = () => {
   const onDrop = useCallback(
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
-      console.log(`you dropped: ${draggableType} and ${draggableContent}`);
+      console.log(`you just dropped: ${draggableType} and ${draggableData}`);
       // check if the dropped element is valid
       if (!draggableType) {
         return;
@@ -149,13 +149,17 @@ const Flow = () => {
 
       switch (draggableType) {
         case "image":
-          addImageNode(draggableContent as unknown as string, position);
+            if ("content" in draggableData && "prompt" in draggableData) {
+              addImageNode(draggableData["content"] as string, position, draggableData["prompt"] as string);
+            }
           break;
         case "t2i-generator":
           addT2IGenerator(position);
           break;
         default:
-          addTextNode(draggableContent as unknown as string, position);
+          if ("content" in draggableData){
+            addTextNode(draggableData["content"] as unknown as string, position);
+          }
           break;
           //console.warn(`Unknown draggable type: ${draggableType}`);
       }
@@ -163,7 +167,7 @@ const Flow = () => {
 
       
     },
-    [draggableType, draggableContent,screenToFlowPosition],
+    [draggableType, draggableData,screenToFlowPosition],
     
   );
 
@@ -316,9 +320,9 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
             node.data.updateNode?.(inputNodeContent, "generating");
   
             // Generate a new image node, use helper function to decide where it should appear
-            generateImageNode(inputNodeContent, calcPositionAfterDrag(node.position, node, "below"))
+            generateNode(inputNodeContent, calcPositionAfterDrag(node.position, node, "below"))
               .then(() => {
-                console.log("Image generation complete!");
+                console.log("Generation complete!");
                 
                 node.data.updateNode?.("", "ready");  
               })
@@ -379,21 +383,24 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     setNodes((prevNodes) => [...prevNodes, newTextNode]);
   };
 
-  const addImageNode = (content?: string, position?: { x: number; y: number }) => {
+  const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
     console.log(content);
     position = position ?? { 
       x: Math.random() * 250,
       y: Math.random() * 250,
     };
     content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
+    prompt = prompt ?? "None";
     const newNode: AppNode = {
       id: `image-${nodes.length + 1}`,
       type: "image",
       position: position,
       data: {
         content: content,
+        prompt: prompt,
         lookUp: () => handleImageLookUp(position, content),
       },
+      dragHandle: '.drag-handle__invisible',
     };
 
     setNodes((prevNodes) => [...prevNodes, newNode]);
@@ -485,10 +492,14 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
 
 
 
-  const generateImageNode = useCallback(
+  const generateNode = useCallback(
     // Requests through reagent, generates an image node with a prompt and optional position
-    async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }, testing: boolean = false) => {
-      console.log(`Generating image with prompt: ${prompt}`);
+    async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
+      
+
+      // True if the "prompt" is actually an image
+      const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(prompt);
+
       const loadingNodeId = `loading-${Date.now()}`;
       const loadingNode: AppNode = {
         id: loadingNodeId,
@@ -498,59 +509,69 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       };
       setNodes((nodes) => [...nodes, loadingNode]);
 
-      // if the testing paramter is true, let's just use a default image to avoid generation costs
-      if (testing) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const newImageNode: AppNode = {
-          id: `image-${Date.now()}`,
-          type: "image",
-          position,
-          data: { 
-            content: "https://collectionapi.metmuseum.org/api/collection/v1/iiif/459123/913555/main-image", 
-            lookUp: () => handleImageLookUp(position, "https://collectionapi.metmuseum.org/api/collection/v1/iiif/459123/913555/main-image"),
-            },
-        };
-
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === loadingNodeId ? newImageNode : node
-          )
-        );
-        return;
-      }
-
-      // let's generate the image for real for real
+      // let's generate a node... 
 
       try {
-        const formData = new FormData();
-        formData.append("prompt", prompt); // make the prompt into form data
-
-        // Make a POST request to the backend server 
-        const response = await axios.post(`${backend_url}/api/generate-image`, {
-            prompt, // Send the prompt as part of the request body
+        if (isValidImage){// the user has sent an image for text generation
+          console.log(`Describing this image: ${prompt}`);
+          const response = await axios.post(`${backend_url}/api/generate-text`, {
+            imageUrl: prompt, // Send the imageUrl as part of the request body
           });
-      
-          if (response.status === 200) {
-            console.log(`Image url ${response.data.imageUrl} received from backend!`);
 
-            const newImageNode: AppNode = {
-              id: `image-${Date.now()}`,
-              type: "image",
+          if (response.status === 200) {
+            const newTextNode: AppNode = {
+              id: `text-${Date.now()}`,
+              type: "text",
               position,
               data: { 
-                content: response.data.imageUrl,
-                lookUp: () => handleImageLookUp(position, response.data.imageUrl),
+                content: response.data.text,
+                loading: false,
+                combinable: false,
               },
             };
-
             setNodes((nodes) =>
               nodes.map((node) =>
-                node.id === loadingNodeId ? newImageNode : node
+                node.id === loadingNodeId ? newTextNode : node
               )
             );
+          } // response error
+          else {
+            console.error(`Text generation Error: ${response.status}`);
+          }
+        }
+        else{ // the user has sent a text prompt for generation
+          console.log(`Generating with prompt: ${prompt}`);
+          const formData = new FormData();
+          formData.append("prompt", prompt); // make the prompt into form data
 
-          } else {
-            console.error(`Generation Error: ${response.status}`);
+          // Make a POST request to the backend server 
+          const response = await axios.post(`${backend_url}/api/generate-image`, {
+              prompt, // Send the prompt as part of the request body
+            });
+        
+            if (response.status === 200) {
+              //console.log(`Image url ${response.data.imageUrl} received from backend!`);
+              const newImageNode: AppNode = {
+                id: `image-${Date.now()}`,
+                type: "image",
+                position,
+                data: { 
+                  content: response.data.imageUrl,
+                  prompt: prompt,
+                  lookUp: () => handleImageLookUp(position, response.data.imageUrl),
+                },
+                dragHandle: '.drag-handle__invisible',
+              };
+
+              setNodes((nodes) =>
+                nodes.map((node) =>
+                  node.id === loadingNodeId ? newImageNode : node
+                )
+              );
+            } // response error
+            else {
+              console.error(`Image generation Error: ${response.status}`);
+            }
           }
         } 
         catch (error) {

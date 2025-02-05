@@ -1,66 +1,65 @@
-import React, { useState } from "react";
+import React from "react"; // {useState}
 import { useDnD } from "./DnDContext";
-import { usePaletteContext } from "./PaletteContext";
+import { usePaletteContext, NodeData } from "./PaletteContext";
 
 const charLimit = 25;
+
 
 interface PaletteProps {
   onAddNode: (type: string, content: string) => void;
 }
 
 interface PaletteNodeProps {
-  content: string;
+  data: NodeData;
   charLimit: number;
   type: string;
-  onAddNode: (type: string, content: string) => void;
+  //onAddNode: (type: string, content: string) => void;
 }
 
+
 const PaletteNode: React.FC<PaletteNodeProps> = ({
-  type = "text",
-  content,
+  data,
   charLimit,
-  onAddNode,
+  type,
 }) => {
-  const [_, setDraggableType, __, setDraggableContent] = useDnD();
+  const [_, setDraggableType, __, setDraggableData] = useDnD();
 
   const onDragStart = (
     event: { dataTransfer: { effectAllowed: string } },
-    type: string,
-    content: string
   ) => {
     event.dataTransfer.effectAllowed = "move";
     setDraggableType(type);
-    setDraggableContent(content);
-  };
-
-  const handleNodeClick = (content: string) => {
-    onAddNode(type, content);
+    setDraggableData(data);
   };
 
   return (
     <div
       className="bg-white border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
       draggable
-      onDragStart={(event) => onDragStart(event, type, content)}
-      onClick={() => handleNodeClick(content)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") handleNodeClick(content);
-      }}
+      onDragStart={(event) => onDragStart(event)}
       tabIndex={0}
       style={{ width: "21vw" }}
     >
       {type === "text" ? (
-        content.length > charLimit ? (
-          `${content.substring(0, charLimit)}...`
+        data.content.length > charLimit ? (
+          `${data.content.substring(0, charLimit)}...`
         ) : (
-          content
+          data.content
         )
       ) : type === "image" ? (
-        <img
-          src={content}
-          alt="Saved Image"
-          className="w-full h-auto rounded-md"
-        />
+        <div style={{ position: "relative", maxHeight: "60px", overflow: "hidden" }}>
+          <img
+            src={data.content}
+            alt={data.prompt}
+            className="rounded-md object-cover"
+            style={{ width: "auto", height: "100%", transform: "translateY(-30%)", position: "relative" }}
+          />
+            <div
+              className="absolute bottom-0 left-0 w-full h-full bg-white bg-opacity-50 text-gray-800 text-md uppercase text-center p-1 opacity-0 transition-opacity duration-300 hover:opacity-100 font-bold italic leading-tight"
+            >
+            {data.prompt.length > 60 ? `${data.prompt.substring(0, 60)}...` : data.prompt}
+          </div>
+        </div>
       ) : (
         ""
       )}
@@ -68,25 +67,14 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
   );
 };
 
-const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
-  const [activeTab, setActiveTab] = useState<"text" | "image">("text");
-  const { clippedImages = [] } = usePaletteContext();
+const Palette: React.FC<PaletteProps> = ({  }) => {//onAddNode
+  const { activeTab, setActiveTab } = usePaletteContext();
+  const { clippedNodes = [] } = usePaletteContext();
 
-  // Example data for text & images
-  const textPrompts = [
-    "claude monet was an amazing guy and he was soooo cool",
-    "van gogh",
-    "picasso",
-    "dali",
-    "michelangelo",
-    "raphael",
-    "leonardo",
-  ];
+  const clippedTextNodes = clippedNodes.filter(node => node.type === "text");
 
-  const savedImages = [
-    ...clippedImages, // Replace with actual image URLs
-  ];
-  console.log(savedImages);
+  const clippedImageNodes = clippedNodes.filter(node => node.type === "image");
+
 
   return (
     <div className="bg-white p-4 w-[23vw]">
@@ -106,11 +94,11 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
         <button
           type="button"
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            activeTab === "image"
+            activeTab === "images"
               ? "bg-gray-800 text-white"
               : "bg-gray-200 text-gray-600"
           }`}
-          onClick={() => setActiveTab("image")}
+          onClick={() => setActiveTab("images")}
         >
           Images
         </button>
@@ -119,22 +107,20 @@ const Palette: React.FC<PaletteProps> = ({ onAddNode }) => {
       {/* Tab Content */}
       <div className="space-y-3">
         {activeTab === "text"
-          ? textPrompts.map((item, i) => (
+          ? clippedTextNodes.map((data, index) => (
               <PaletteNode
-                key={`text_${i}`}
-                type="text"
-                content={item}
-                charLimit={charLimit}
-                onAddNode={onAddNode}
+          key={index}
+          data={data}
+          charLimit={charLimit}
+          type="text"
               />
             ))
-          : savedImages.map((image, i) => (
+          : clippedImageNodes.map((data, index) => (
               <PaletteNode
-                key={`image_${i}`}
-                type="image"
-                content={image}
-                charLimit={charLimit}
-                onAddNode={onAddNode}
+          key={index}
+          data={data}
+          charLimit={charLimit}
+          type="image"
               />
             ))}
       </div>

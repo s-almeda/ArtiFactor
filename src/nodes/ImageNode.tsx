@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
 import { usePaletteContext } from "../PaletteContext";
+import { useDnD } from "../DnDContext";
 
 
 const controlStyle: React.CSSProperties = {
@@ -16,6 +17,29 @@ const controlStyle: React.CSSProperties = {
   
 };
 
+  const DraggableText = ({ content }: { content: string }) => {
+    const [_, setDraggableType, __, setDraggableData] = useDnD();
+
+    const onDragStart = (
+      event: React.DragEvent<HTMLDivElement>,
+      content: string
+    ) => {
+      event.dataTransfer.effectAllowed = "move";
+      setDraggableType("text");
+      setDraggableData({content: content});
+    };
+
+    return (
+      <div
+        draggable
+        onDragStart={(event) => onDragStart(event, content)}
+        className="text-left mb-2"
+      >
+        <h3 className="mt-2 text-xs/3 italic text-gray-800">"{content}"</h3>
+      </div>
+    );
+  };
+
 
 interface ImageNodeProps extends NodeProps<ImageNode> {
   //ons: (imageUrl: string) => void;
@@ -23,8 +47,9 @@ interface ImageNodeProps extends NodeProps<ImageNode> {
 
 
 export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
-  const { addClippedImage } = usePaletteContext(); 
+  const { addClippedNode } = usePaletteContext(); 
   const [imageUrl, setImageUrl] = useState("");
+  const [showPrompt, setShowPrompt] = useState(false);
   const [width, setWidth] = useState(80);
   const [height, setHeight] = useState(80);
 
@@ -66,30 +91,55 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
           className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
           onClick={() => data.lookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl)} // calls the function passed to it in the data prop
           aria-label="Action 1"
-          style={{ marginRight: '8px' }}
+          style={{ marginRight: '4px' }}
         >
           🔍
         </button>
+
           
         <button
           className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
           type="button"
-          onClick={() => addClippedImage(imageUrl)} // Add to Palette
+          onClick={() => addClippedNode(
+            {
+              type: 'image',
+              content: imageUrl,
+              prompt: data.prompt
+            }
+          )} // Add to Palette
+
           aria-label="Save to Palette"
+          style={{ marginRight: '4px' }}
         >
           🖼️
         </button>
-      </NodeToolbar>
 
-      <img
+        {data.prompt !== "None" && (
+          <button
+            type="button"
+            className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+            onClick={() => setShowPrompt(!showPrompt)}
+            aria-label="View Prompt"
+            style={{ marginRight: '0px' }}
+          >
+            📝
+          </button>
+        )}
+            </NodeToolbar>
+
+            <img className="drag-handle__invisible"
         src={imageUrl}
         alt="Generated Output"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-      {/* <Handle type="source" position={Position.Bottom} />
-      <Handle type="source" position={Position.Right} />
-      <Handle type="target" position={Position.Left} />
-      <Handle type="target" position={Position.Top} /> */}
-    </div>
-  );
-}
+            />
+            {/*show the prompt if it exists and the button has been pressed! */}
+            {showPrompt && data.prompt !== "None" && (
+            <DraggableText content={data.prompt} />
+            )}
+            {/* <Handle type="source" position={Position.Bottom} />
+            <Handle type="source" position={Position.Right} />
+            <Handle type="target" position={Position.Left} />
+            <Handle type="target" position={Position.Top} /> */}
+          </div>
+        );
+      }

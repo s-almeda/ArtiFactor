@@ -1,27 +1,27 @@
 import { createContext, useContext, useState, useEffect } from 'react';
- 
+
 // A Drag and Drop context keeps track of the type of node and content of node currently being dragged around the app! 
 // it needs to be separate so people can drag between different components (the palette and the Flow canvas)
-const DnDContext = createContext<[string, React.Dispatch<React.SetStateAction<string>>, string, React.Dispatch<React.SetStateAction<string>>]>(["default", () => {}, "null", () => {}]);
- 
+const DnDContext = createContext<[string, React.Dispatch<React.SetStateAction<string>>, object, React.Dispatch<React.SetStateAction<object>>]>(["default", () => {}, {}, () => {}]);
+
 export const DnDProvider = ({ children }: { children: any }) => {
   const [draggableType, setDraggableType] = useState("default");
-  const [draggableContent, setDraggableContent] = useState("null");
- 
+  const [draggableData, setDraggableData] = useState({});
+
   useEffect(() => {
-    console.log(`DnDProvider receiving: ${draggableType} and ${draggableContent}`);
-  }, [draggableType, draggableContent]);
+    console.log(`DnDProvider receiving: ${draggableType} and ${JSON.stringify(draggableData)}`);
+  }, [draggableType, draggableData]);
   
   return (
-    <DnDContext.Provider value={[draggableType, setDraggableType, draggableContent, setDraggableContent]}>
+    <DnDContext.Provider value={[draggableType, setDraggableType, draggableData, setDraggableData]}>
       {children}
-      {console.log(`${draggableType} and ${draggableContent}`)}
+      {console.log(`${draggableType} and ${JSON.stringify(draggableData)}`)}
     </DnDContext.Provider>
   );
 }
- 
+
 export default DnDContext;
- 
+
 export const useDnD = () => {
   return useContext(DnDContext);
 }

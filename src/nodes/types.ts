@@ -19,7 +19,9 @@ export type PositionLoggerNode = Node<{ content: string }, "position-logger">;
 export type TextNode = Node<{ content: string; loading: boolean, combinable:boolean}, "text">; //if loading is true, its a loading message!
 export type ImageNode = Node<{ 
   content: string 
-  lookUp: (position: {x: number; y:number}, imageUrl: string) => void;
+  prompt: string;
+  lookUp: (position: {x: number; y:number}, 
+    imageUrl: string) => void;
 }, "image">;
 export type FunctionNode = Node<{ content: string }, "function">;
 export type PaletteNode = Node< {content: string }, "palette">;

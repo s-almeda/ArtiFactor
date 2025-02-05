@@ -3,17 +3,18 @@ import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 // Define the type of a node
-interface NodeData {
-  id: string;
-  type: "image" | "text";
-  content: string;
+export interface NodeData {
+  type: "image" | "text"; 
+  content: string; // is either text, or an imageUrl
+  prompt: string; // for storing the prompt, or the title/artist alt text for the artwork
 }
 
 // Define the context type
 interface PaletteContextType {
-  nodes: NodeData[];
-  addClippedImage: (content: string) => void;
-  clippedImages?: string[];
+  clippedNodes: NodeData[];
+  addClippedNode: (node: NodeData) => void;
+  activeTab: "images" | "text";
+  setActiveTab: (tab: "images" | "text") => void;
 }
 
 // Create the context with a default value
@@ -23,19 +24,24 @@ const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 export const NodeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [clippedImages, setClippedImages] = useState<string[]>([]);
-  const [nodes, _] = useState<NodeData[]>([]);
+  const [clippedNodes, setClippedNodes] = useState<NodeData[]>([]);
+  const [activeTab, setActiveTab] = useState<"images" | "text">("images");
 
-  const addClippedImage = (imageUrl: string) => {
-    // if the image is already in the list, don't add it again
-    if (clippedImages.includes(imageUrl)) {
+  const addClippedNode = (node: NodeData) => {
+    if (node.type === "image") {
+      setActiveTab("images");
+    } else {
+      setActiveTab("text");
+    }
+    // if the node with the same content is already in the list, don't add it again
+    if (clippedNodes.some((n) => n.content === node.content)) {
       return;
     }
-    setClippedImages((prevImages) => [...prevImages, imageUrl]);
+    setClippedNodes((prevNodes) => [...prevNodes, node]);
   };
 
   return (
-    <PaletteContext.Provider value={{ nodes, clippedImages, addClippedImage }}>
+    <PaletteContext.Provider value={{ clippedNodes, addClippedNode, activeTab, setActiveTab }}>
       {children}
     </PaletteContext.Provider>
   );
