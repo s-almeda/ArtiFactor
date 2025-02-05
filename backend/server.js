@@ -5,6 +5,10 @@ import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
+import Replicate from "replicate";
+const replicate = new Replicate();
+
+
 dotenv.config();
 
 const app = express();
@@ -57,6 +61,31 @@ app.post("/api/get-similar-images", async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error("Error getting similar images:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/generate-text", async (req, res) => {
+  const { imageUrl = "https://uploads3.wikiart.org/images/pierre-tal-coat/en-grimpant-1962.jpg" } = req.body;
+  console.log("received a generate-text request:", req.body);
+
+  const input = {
+    mode: "fast",
+    image: imageUrl,
+    clip_model_name: "ViT-H-14/laion2b_s32b_b79k"
+  };
+
+  try {
+    const output = await replicate.run(
+      "pharmapsychotic/clip-interrogator:8151e1c9f47e696fa316146a2e35812ccf79cfc9eba05b11c7f450155102af70",
+      { input }
+    );
+    console.log("Output from replicate API:", output);
+    //todo, let the user choose how truncated the output should be? 
+    const truncatedOutput = output.split(',').slice(0, 5).join(', ');
+    res.json({ text: truncatedOutput });
+  } catch (error) {
+    console.error("Error in generate-text:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
