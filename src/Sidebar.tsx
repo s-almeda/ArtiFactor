@@ -10,10 +10,10 @@ const Sidebar = ({ onClose }: { onClose: () => void }) => {
         Close
       </button>
 
-      <Link to="/">
+      <Link to="/about">
         <p>Home</p>
       </Link>
-      <Link to="/canvas">
+      <Link to="/">
         <p>Canvas</p>
       </Link>
     </div>

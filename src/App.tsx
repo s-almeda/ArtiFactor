@@ -11,6 +11,7 @@ import { DnDProvider } from "./DnDContext";
 import { NodeProvider } from "./PaletteContext";
 
 
+
 function AppContent() {
   /*--- SIDEBAR ----*/
   const [showSidebar, setShowSidebar] = useState(false);
@@ -89,9 +90,9 @@ function AppContent() {
         <NodeProvider>
           <DnDProvider>
             <Routes>
-              <Route path="/" element={<About />} />
+              <Route path="/about" element={<About />} />
               <Route
-                path="/canvas"
+                path="/"
                 element={
                   <div className="flex">
                     <div

@@ -111,7 +111,7 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
           aria-label="Save to Palette"
           style={{ marginRight: '4px' }}
         >
-          🖼️
+          📎
         </button>
 
         {data.prompt !== "None" && (
