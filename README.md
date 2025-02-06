@@ -1,3 +1,5 @@
+FYI: don't pull request this branch! I'm making it just to have a version of the app as demoed on February 5th available in vercel lol
+
 # ArtiFactor! 
 (name is tentative lol)
 
