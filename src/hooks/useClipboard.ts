@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AppNode } from "../types"; // adjust the import as needed
+import { AppNode } from "../nodes/types"; // adjust the import as needed
 
 const useClipboard = (
   nodes: AppNode[],

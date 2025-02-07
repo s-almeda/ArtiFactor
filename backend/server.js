@@ -129,6 +129,271 @@ app.post("/api/generate-image", async (req, res) => {
   }
 });
 
+
+
+// --------- USER DATA -- Adding and authenticating users! -------------- //
+
+app.post("/api/add-user", async (req, res) => {
+  const { userID, password = "" } = req.body;
+
+  if (!userID) {
+    return res.status(400).json({ error: "Missing required field: userID" });
+  }
+
+  try {
+    const db = await dbPromise;
+
+    // Check if user already exists
+    const existingUser = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
+    if (existingUser) {
+      return res.json({ success: true, message: "User already exists", userID });
+    }
+
+    // Insert new user with a blank password by default
+    await db.run(`INSERT INTO users (id, password) VALUES (?, ?)`, [userID, password]);
+
+    res.json({ success: true, userID, message: "User added successfully!" });
+  } catch (error) {
+    console.error("Error adding user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+//check a user's password -- no encryption for now lol, super simple. 
+app.post("/api/authenticate-user", async (req, res) => {
+  const { userID, password } = req.body;
+
+  if (!userID) {
+    return res.status(400).json({ error: "Missing required field: userID" });
+  }
+
+  try {
+    const db = await dbPromise;
+
+    // Fetch the user
+    const user = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check password (blank is allowed)
+    if (user.password !== password) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    res.json({ success: true, userID, message: "User authenticated!" });
+  } catch (error) {
+    console.error("Error authenticating user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+// --------- USER DATA -- Saving and loading the canvas! -------------- //
+
+app.post("/api/save-canvas", async (req, res) => {
+  const { userID, name, nodes } = req.body;
+
+  if (!userID || !name || !Array.isArray(nodes)) {
+    return res.status(400).json({ error: "Missing or invalid fields: userID, name, nodes" });
+  }
+
+  try {
+    const db = await dbPromise;
+
+    // Check if user exists
+    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if the canvas already exists
+    const existingCanvas = await db.get(
+      `SELECT id FROM canvases WHERE user_id = ? AND name = ?`,
+      [userID, name]
+    );
+
+    const nodesJSON = JSON.stringify(nodes); // Convert nodes to JSON
+
+    let canvasId;
+    if (existingCanvas) {
+      // ✅ Overwrite existing canvas
+      canvasId = existingCanvas.id;
+      await db.run(`UPDATE canvases SET nodes = ? WHERE id = ?`, [nodesJSON, canvasId]);
+      console.log(`Overwriting existing canvas: ${canvasId}`);
+    } else {
+      // ✅ Generate `{userID}-{canvasNumber}` format
+      const lastCanvas = await db.get(
+        `SELECT id FROM canvases WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+        [userID]
+      );
+      const nextCanvasNumber = lastCanvas ? parseInt(lastCanvas.id.split("-")[1]) + 1 : 1;
+      canvasId = `${userID}-${nextCanvasNumber}`;
+
+      await db.run(
+        `INSERT INTO canvases (id, user_id, name, nodes) VALUES (?, ?, ?, ?)`,
+        [canvasId, userID, name, nodesJSON]
+      );
+    }
+
+    console.log(`Canvas ${canvasId} saved with ${nodes.length} nodes`);
+    res.json({ success: true, message: existingCanvas ? "Canvas updated!" : "Canvas saved successfully!", canvasId });
+  } catch (error) {
+    console.error("Error saving canvas:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+// list users and their canvases
+app.get("/api/list-users", async (req, res) => {
+  try {
+    const db = await dbPromise;
+
+    // Get all users
+    const users = await db.all(`SELECT id FROM users`);
+
+    // Get each user's canvases asynchronously
+    const usersWithCanvases = await Promise.all(
+      users.map(async (user) => {
+        const canvases = await db.all(`SELECT * FROM canvases WHERE user_id = ?`, [user.id]);
+        return {
+          id: user.id,
+          canvases: canvases.map((canvas) => ({
+            id: canvas.id,
+            name: canvas.name,
+            created_at: canvas.created_at,
+          })),
+        };
+      })
+    );
+
+    console.log(`Listed ${usersWithCanvases.length} users`);
+    res.json({ success: true, users: usersWithCanvases });
+  } catch (error) {
+    console.error("Error listing users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+
+
+  app.get("/api/load-canvas/:canvasID", async (req, res) => {
+    const { canvasID } = req.params;
+  
+    try {
+      const db = await dbPromise;
+  
+      // Fetch the canvas
+      const canvas = await db.get(`SELECT * FROM canvases WHERE id = ?`, [canvasID]);
+      if (!canvas) {
+        return res.status(404).json({ error: "Canvas not found" });
+      }
+  
+      // Parse nodes from JSON
+      canvas.nodes = JSON.parse(canvas.nodes);
+      
+      console.log(`Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes`);
+      res.json({ success: true, canvas });
+
+    } catch (error) {
+      console.error("Error loading canvas:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+
+  //------------- CLIPPINGS (for saving and loading a user's Palette) ---------//
+  app.get("/api/get-clippings/:userID", async (req, res) => {
+    const { userID } = req.params;
+  
+    try {
+      const db = await dbPromise;
+      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+  
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      res.json({ success: true, clippings: JSON.parse(user.clippings) });
+    } catch (error) {
+      console.error("Error loading clippings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/add-clipping", async (req, res) => {
+    const { userID, clipping } = req.body;
+  
+    if (!userID || !clipping || typeof clipping !== "object") {
+      return res.status(400).json({ error: "Invalid userID or clipping format" });
+    }
+  
+    try {
+      const db = await dbPromise;
+  
+      // Fetch current clippings
+      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      let clippings = JSON.parse(user.clippings);
+  
+      // Prevent duplicate clippings
+      if (!clippings.some((c) => JSON.stringify(c) === JSON.stringify(clipping))) {
+        clippings.push(clipping);
+      }
+  
+      // Update user's clippings
+      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
+  
+      res.json({ success: true, message: "Clipping added!", clippings });
+    } catch (error) {
+      console.error("Error adding clipping:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/remove-clipping", async (req, res) => {
+    const { userID, clipping } = req.body;
+  
+    if (!userID || !clipping || typeof clipping !== "object") {
+      return res.status(400).json({ error: "Invalid userID or clipping format" });
+    }
+  
+    try {
+      const db = await dbPromise;
+  
+      // Fetch current clippings
+      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      let clippings = JSON.parse(user.clippings);
+  
+      // Remove clipping by filtering it out
+      clippings = clippings.filter((c) => JSON.stringify(c) !== JSON.stringify(clipping));
+  
+      // Update user's clippings
+      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
+  
+      res.json({ success: true, message: "Clipping removed!", clippings });
+    } catch (error) {
+      console.error("Error removing clipping:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
+  
+  
+  
+
+
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });

@@ -1,8 +1,8 @@
 /* an editable text node*/
 import { type NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { useState, useRef, useEffect } from "react";
-import { type TextNode } from "../types";
-import { usePaletteContext } from "../PaletteContext";
+import { type TextNode } from "./types";
+import { usePaletteContext } from "../contexts/PaletteContext";
 
 export function TextNode({ data, selected }: NodeProps<TextNode>) {
   const [content, setContent] = useState(data.content || "");
@@ -45,10 +45,9 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
   }, [content, data]);
 
   return (
-
     
     <div className={`react-flow__node-default ${data.combinable ? 'bg-yellow-100' : ''}`} style={{ width: "fit-content" }}>
-      
+
       {data.loading ? (
         <div className={`${data.combinable ? 'bg-yellow-50' : ''}`} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
           {content.split('\n').map((line, index) => (

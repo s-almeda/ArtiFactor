@@ -1,9 +1,9 @@
 import {Position, NodeResizeControl, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
-import type { ImageNode } from "../types";
-import { usePaletteContext } from "../PaletteContext";
-import { useDnD } from "../DnDContext";
+import type { ImageNode } from "./types";
+import { usePaletteContext } from "../contexts/PaletteContext";
+import { useDnD } from "../contexts/DnDContext";
 
 
 const controlStyle: React.CSSProperties = {
@@ -89,7 +89,9 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
         <button
           type="button"
           className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
-          onClick={() => data.lookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl)} // calls the function passed to it in the data prop
+          onClick={() => {
+            data.activateLookUp && data.activateLookUp({x: positionAbsoluteX, y: positionAbsoluteY}, imageUrl);
+          }} // calls the function passed to it in the data prop
           aria-label="Action 1"
           style={{ marginRight: '4px' }}
         >
@@ -104,7 +106,7 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
             {
               type: 'image',
               content: imageUrl,
-              prompt: data.prompt
+              prompt: data.prompt || ""
             }
           )} // Add to Palette
 
@@ -134,7 +136,7 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
             />
             {/*show the prompt if it exists and the button has been pressed! */}
             {showPrompt && data.prompt !== "None" && (
-            <DraggableText content={data.prompt} />
+            <DraggableText content={data.prompt || ""} />
             )}
             {/* <Handle type="source" position={Position.Bottom} />
             <Handle type="source" position={Position.Right} />

@@ -21,7 +21,7 @@ interface PaletteContextType {
 const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 
 // Create a provider component
-export const NodeProvider: React.FC<{ children: ReactNode }> = ({
+export const PaletteProvider: React.FC<{ children: ReactNode; userID: string } > = ({
   children,
 }) => {
   const [clippedNodes, setClippedNodes] = useState<NodeData[]>([]);
@@ -51,7 +51,7 @@ export const NodeProvider: React.FC<{ children: ReactNode }> = ({
 export const usePaletteContext = () => {
   const context = useContext(PaletteContext);
   if (!context) {
-    throw new Error("usePaletteContext must be used within a NodeProvider");
+    throw new Error("usePaletteContext must be used within a PaletteProvider");
   }
   return context;
 };

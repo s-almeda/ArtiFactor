@@ -1,22 +1,36 @@
-// this, and the database it creates, doesn't do anything useful yet...just a placeholder for now
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 
 const dbPromise = open({
-  filename: './database.db',
-  driver: sqlite3.Database
+  filename: "./database.db",
+  driver: sqlite3.Database,
 });
 
 (async () => {
   const db = await dbPromise;
+
+  // ✅ Users table (now with a palette of clippings)
   await db.exec(`
-    CREATE TABLE IF NOT EXISTS artists (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      first_name TEXT,
-      last_name TEXT
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY, -- Example values: "admin", "P1", "P2"
+      password TEXT DEFAULT '', -- Blank password by default
+      clippings TEXT NOT NULL DEFAULT '[]' -- JSON-encoded list of saved clippings (favorite nodes)
     )
   `);
-  console.log("Database initialized with artists table");
+
+  // ✅ Canvases table (storing nodes as JSON)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS canvases (
+      id TEXT PRIMARY KEY, -- Example: "shm-1", "admin-2"
+      user_id TEXT NOT NULL, -- Foreign key to users
+      name TEXT NOT NULL, -- Name of the canvas
+      nodes TEXT NOT NULL DEFAULT '[]', -- JSON-encoded list of nodes
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  console.log("Database initialized with users, canvases, and palettes");
 })();
 
 export default dbPromise;

@@ -1,6 +1,6 @@
 import React from "react"; // {useState}
-import { useDnD } from "./DnDContext";
-import { usePaletteContext, NodeData } from "./PaletteContext";
+import { useDnD } from "./contexts/DnDContext";
+import { usePaletteContext, NodeData } from "./contexts/PaletteContext";
 
 const charLimit = 25;
 
