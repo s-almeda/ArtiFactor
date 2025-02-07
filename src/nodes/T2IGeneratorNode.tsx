@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { type NodeProps } from "@xyflow/react";
-import { type T2IGeneratorNode } from "./types";
+import { type T2IGeneratorNode } from "../types";
 
 interface T2IGeneratorNodeProps extends NodeProps<T2IGeneratorNode> {}
 

@@ -5,16 +5,13 @@ import {
   Background,
   Controls,
   //MiniMap,
-  addEdge,
   useNodesState,
-  useEdgesState,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node, OnConnect } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { AppNode, Artwork } from "./nodes/types";
+import type { AppNode, Artwork } from "./types";
 import { initialNodes, nodeTypes } from "./nodes";
-import { initialEdges, edgeTypes } from "./edges";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './DnDContext';
 
@@ -31,7 +28,6 @@ const backend_url = "https://snailbunny.site"; // URL of the backend server host
 
 const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
   const [draggableType,__, draggableData,_ ] = useDnD();
 
@@ -57,53 +53,6 @@ const Flow = () => {
     return () => document.removeEventListener("keydown", handleKeydown);
   }, [handleCopy, handleCut, handlePaste]);
   
-   // --- FUNCTIONS TRIGGERED BY CANVAS INTERACTIONS --- //
-  const onConnect: OnConnect = useCallback(
-    async (connection) => {
-      const sourceNode = nodes.find((node) => node.id === connection.source);
-      const targetNode = nodes.find((node) => node.id === connection.target);
-
-      if (targetNode && targetNode.type === "function") {
-        const animatedConnection = { ...connection, type: "wire" };
-        setEdges((edges) => addEdge(animatedConnection, edges));
-
-        if (sourceNode && targetNode) {
-          const content =
-            "content" in sourceNode.data
-              ? sourceNode.data.content
-              : sourceNode.data.label;
-
-          console.log(`functionNode content is currently: ${content}`);
-
-          // Update the target node's content after the source node content is ready
-          setNodes(
-            (nodes) =>
-              nodes.map((node) =>
-                node.id === targetNode.id
-                  ? {
-                      ...node,
-                      data: {
-                        ...node.data,
-                        content: content,
-                      },
-                    }
-                  : node
-              ) as AppNode[]
-          );
-
-          const prompt =
-            "content" in sourceNode.data
-              ? sourceNode.data.content
-              : sourceNode.data.label;
-          console.log(`Generating with prompt: ${prompt}`);
-          // await generateNode(prompt);
-        }
-      } else {
-        setEdges((edges) => addEdge(connection, edges));
-      }
-    },
-    [nodes, setEdges, setNodes]
-  );
 
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
@@ -460,8 +409,18 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
           title: item.title || "Unknown",
           date: item.date || "Unknown",
           artist: item.artist || "Unknown",
-          genre: item.genre || "Unknown",
-          style: item.style || "Unknown",
+          keywords: [
+        {
+          id: `genre-${Date.now()}`, // todo, this should be replaced with the actual gene ids from Artsy!
+          type: "genre",
+          value: item.genre || "Unknown",
+        },
+        {
+          id: `style-${Date.now()}`,
+          type: "style",
+          value: item.style || "Unknown",
+        },
+          ],
           description: item.description || "Unknown",
           image: item.image || "Unknown",
         }));
@@ -603,10 +562,6 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
         onNodeDragStop={onNodeDragStop}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        edges={edges}
-        edgeTypes={edgeTypes}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
         zoomOnDoubleClick={false}
         fitView
 //        fitViewOptions={{minZoom: 0.001}}

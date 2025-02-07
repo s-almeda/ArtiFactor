@@ -1,7 +1,7 @@
 /* an editable text node*/
 import { type NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { useState, useRef, useEffect } from "react";
-import { type TextNode } from "./types";
+import { type TextNode } from "../types";
 import { usePaletteContext } from "../PaletteContext";
 
 export function TextNode({ data, selected }: NodeProps<TextNode>) {

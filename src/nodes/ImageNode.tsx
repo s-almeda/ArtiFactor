@@ -1,7 +1,7 @@
 import {Position, NodeResizeControl, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
-import type { ImageNode } from "./types";
+import type { ImageNode } from "../types";
 import { usePaletteContext } from "../PaletteContext";
 import { useDnD } from "../DnDContext";
 

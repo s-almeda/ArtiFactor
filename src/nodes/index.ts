@@ -1,7 +1,6 @@
 import type { NodeTypes } from "@xyflow/react";
-import { PositionLoggerNode } from "./PositionLoggerNode";
 import { TextNode } from "./TextNode";
-import type { AppNode } from "./types";
+import type { AppNode } from "../types";
 import { ImageNode } from "./ImageNode";
 import FunctionNode from "./FunctionNode";
 import T2IGeneratorNode from "./T2IGeneratorNode";
@@ -67,10 +66,8 @@ export const initialNodes: AppNode[] = [
 export const nodeTypes: NodeTypes = {
   default: TextNode,
   "text": TextNode,
-  "position-logger": PositionLoggerNode,
   image: ImageNode,
   function: FunctionNode,
   "lookup": LookupNode,
-  //intersection: IntersectionNode,
   "t2i-generator": T2IGeneratorNode,
 };
