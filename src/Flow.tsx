@@ -8,9 +8,10 @@ import {
   Controls,
   //MiniMap,
   Node,
-  applyNodeChanges,
   useNodesState,
   useReactFlow,
+  
+
 } from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
@@ -18,71 +19,47 @@ import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, T2IGene
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
-import { useCanvasContext } from './context/CanvasContext';
 import { calcPositionAfterDrag } from './utils/calcPositionAfterDrag';
 //import { addTextNode, addImageNode, addT2IGenerator } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
+import { useCanvasContext } from './context/CanvasContext';
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
-  const { userID, backend, loadCanvasRequest, setLoadCanvasRequest} = useAppContext();
-  const { canvasName, canvasId, savedNodes, saveNodes, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext();  //the nodes as saved to the context and database
-  const [flowNodes, setFlowNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { getIntersectingNodes, screenToFlowPosition } = useReactFlow();
+  const { userID, backend } = useAppContext();
+  const { canvasName, canvasId, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext();  //the nodes as saved to the context and database
+  const [ nodes, setNodes, onNodesChange] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
   const [draggableType, __, draggableData, _] = useDnD();
-  const [saveCanvasRequest, setSaveCanvasRequest] = useState(false);
-
-  // sync and reload the flow canvas when "Load" is triggered
-  useEffect(() => {
-
-    if (loadCanvasRequest) { //the App has requested the Flow to reload entirely- the context should already hold the new set of nodes
-      setFlowNodes(savedNodes); //overwrite the Flow Canvas to match what's in the context
-      setLoadCanvasRequest(false); //turn the App flag off!
-    }
-    else if(saveCanvasRequest){
-      saveNodes(flowNodes); //save the current state of the Flow canvas to the context
-    }
-  }, [loadCanvasRequest, savedNodes]);
+  
 
     /* 
     ================================================== 
     ||            Saving and Loading...             || 
     =======================================-========== 
      */
-  // manually trigger the load and save functions
-  const handleLoadCanvas = async () => {
-    const canvasID = prompt("Enter the Canvas ID to load:");
-    if (canvasID) {
-      await loadCanvas(canvasID);
-      setLoadCanvasRequest(true); 
-    }
-  };
+    const handleLoadCanvas = useCallback(async () => {
+      console.log("loading canvas data for: ", canvasId);
+      const canvasData = await loadCanvas(canvasId);
+      console.log("Loaded Canvas Data:", canvasData); // Print to console for debugging
+
+      if (canvasData !== undefined) {
+        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = canvasData;
+        setNodes(nodes);
+        setViewport(viewport);
+      }
+    }, [canvasId, loadCanvas, setNodes, setViewport]);
 
   const handleSaveCanvas = async () => {
-    const newCanvasName = prompt("Enter the Canvas Name to save as:", canvasName);
-    if (newCanvasName) {
-      await saveNodes(flowNodes); // Update the context with the current flow nodes
-      saveCanvas(newCanvasName); // Trigger the database save with the new canvas name
-    }
-    else{
-      saveCanvas(canvasName);
-    }
+    const canvasData = toObject();
+    saveCanvas(canvasData);
+    //todo
   };
 
-  const onNodesChange = useCallback(
-    (changes: any) => {
-      setFlowNodes((prevNodes) => {
-        const updatedNodes = applyNodeChanges(changes, prevNodes);
-        setSaveCanvasRequest(true); // Trigger the save request
-        return updatedNodes;
-      });
-
-    },[]
-  );
 
   /* ---------------------------------------------------- */
   // TODO - move this to a KeyboardShortcut Provider Context situation so we cna also track Undos/Redos
-  const { handleCopy, handleCut, handlePaste } = useClipboard(flowNodes, setFlowNodes); // Use the custom hook
+  const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
 
   // Keyboard Event Listener for Copy, Cut, Paste
   useEffect(() => {
@@ -102,7 +79,7 @@ const Flow = () => {
 
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
-      setFlowNodes((currentNodes: AppNode[]) =>
+      setNodes((currentNodes: AppNode[]) =>
         currentNodes.map((node: AppNode) => {
           if (node.id === draggedNode.id) {
             return {
@@ -116,7 +93,7 @@ const Flow = () => {
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
       handleIntersectionsOnDrag(draggedNode, intersections);
     },
-    [setFlowNodes, getIntersectingNodes]
+    [setNodes, getIntersectingNodes]
   );
 
   /* -- when something else is dragged over the canvas -- */
@@ -158,7 +135,7 @@ const Flow = () => {
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
       handleIntersectionsOnDrop(draggedNode, intersections);
     },
-    [getIntersectingNodes, setFlowNodes]
+    [getIntersectingNodes, setNodes]
   );
 
 
@@ -169,7 +146,7 @@ const Flow = () => {
 
   const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
     /* takes a node and a new position as input, moves the node there */
-    setFlowNodes((currentNodes) =>
+    setNodes((currentNodes) =>
       currentNodes.map((node) => {
         if (node.id === nodeId) {
           if (node.position.x !== newPosition.x || node.position.y !== newPosition.y) {
@@ -185,7 +162,7 @@ const Flow = () => {
     );
     // Remove the transition class after the animation completes
     setTimeout(() => {
-      setFlowNodes((currentNodes) =>
+      setNodes((currentNodes) =>
         currentNodes.map((node) => {
           if (node.id === nodeId) {
             return {
@@ -201,7 +178,7 @@ const Flow = () => {
 
   
 const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) => {
-  setFlowNodes((currentNodes) => {
+  setNodes((currentNodes) => {
     const updatedNodes = currentNodes.map((node) => {
       /*--- If the draggedNode and the node it overlaps with are BOTH text nodes ---*/
       if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
@@ -237,7 +214,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
 };
 
   const handleIntersectionsOnDrop = (draggedNode: Node, intersections: string[]) => {
-    setFlowNodes((currentNodes) => {
+    setNodes((currentNodes) => {
       const updatedNodes = currentNodes.map((node) => {
         if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
           const draggedTextNode = draggedNode as Node<TextNodeData>;
@@ -338,7 +315,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       } as TextNodeData,
     };
 
-    setFlowNodes((prevNodes) => [...prevNodes, newTextNode]);
+    setNodes((prevNodes) => [...prevNodes, newTextNode]);
   };
 
   const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
@@ -350,7 +327,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
     prompt = prompt ?? "None";
     const newNode: AppNode = {
-      id: `image-${flowNodes.length + 1}`,
+      id: `image-${nodes.length + 1}`,
       type: "image",
       position: position,
       data: {
@@ -361,12 +338,12 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       dragHandle: '.drag-handle__invisible',
     };
 
-    setFlowNodes((prevNodes) => [...prevNodes, newNode]);
+    setNodes((prevNodes) => [...prevNodes, newNode]);
   };
 
   const addT2IGenerator = (position ?:{ x:number, y:number}) => {
     const newT2IGeneratorNode: AppNode = {
-      id: `t2i-generator-${flowNodes.length + 1}`,
+      id: `t2i-generator-${nodes.length + 1}`,
       type: "t2i-generator",
       position: position ?? {
       x: Math.random() * 250,
@@ -384,7 +361,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       } as T2IGeneratorNodeData,
     };
 
-    setFlowNodes((prevNodes) => [...prevNodes, newT2IGeneratorNode]);
+    setNodes((prevNodes) => [...prevNodes, newT2IGeneratorNode]);
   };
 
   /*-- adds a lookup window ---*/
@@ -401,7 +378,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       position: { x: position.x - 20, y: position.y - 20 },
       data: { content: "...that reminds me of something...", loading: true, combinable: false } as TextNodeData,
     };
-    setFlowNodes((nodes) => [...nodes, loadingNode]);
+    setNodes((nodes) => [...nodes, loadingNode]);
 
     try {
       const response = await axios.post(`${backend}/api/get-similar-images`, {
@@ -445,7 +422,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
           dragHandle: '.drag-handle__custom',
         };
 
-        setFlowNodes((nodes) =>
+        setNodes((nodes) =>
           nodes.map((node) =>
             node.id === loadingNodeId ? newLookupNode : node
           )
@@ -454,7 +431,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     } catch (error) {
       console.error("Failed to lookup image:", error);
     }
-  }, [setFlowNodes]);
+  }, [setNodes]);
 
 
 
@@ -474,7 +451,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
         position,
         data: { content: "loading ", loading: true, combinable: false } as TextNodeData,
       };
-      setFlowNodes((nodes) => [...nodes, loadingNode]);
+      setNodes((nodes) => [...nodes, loadingNode]);
 
       // let's generate a node... 
 
@@ -496,7 +473,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
                 combinable: false,
               } as TextNodeData,
             };
-            setFlowNodes((nodes) =>
+            setNodes((nodes) =>
               nodes.map((node) =>
                 node.id === loadingNodeId ? newTextNode : node
               )
@@ -530,7 +507,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
                 dragHandle: '.drag-handle__invisible',
               };
 
-              setFlowNodes((nodes) =>
+              setNodes((nodes) =>
                 nodes.map((node) =>
                   node.id === loadingNodeId ? newImageNode : node
                 )
@@ -550,7 +527,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
         }
       
     },
-    [setFlowNodes]
+    [setNodes]
   );
 
   const [showDebugInfo, setShowDebugInfo] = useState(false);
@@ -576,7 +553,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
             
       <div style={{ width: '100%', height: '100vh' }}>
         <ReactFlow
-          nodes={flowNodes}
+          nodes={nodes}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onNodeDrag={onNodeDrag}
@@ -609,8 +586,8 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
           <p><strong>User ID:</strong> {userID}</p>
           <p><strong>Canvas Name:</strong> {canvasName}</p>
           <p><strong>Canvas ID:</strong> {canvasId}</p>
-          <p><strong>Flow Nodes:</strong> {JSON.stringify(flowNodes, null, 2)}</p>
-          <p><strong>Saved Nodes:</strong> {JSON.stringify(savedNodes, null, 2)}</p>
+          <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
+          <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
             </div>
           )
           }

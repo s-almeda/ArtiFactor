@@ -1,92 +1,75 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
-import type { ReactNode } from "react";
-import type { AppNode } from "../nodes/types";
 import { useAppContext } from "./AppContext";
+import { useReactFlow, type ReactFlowJsonObject } from "@xyflow/react";
 
 interface CanvasContextType {
-    savedNodes: AppNode[]; //nodes that have been saved to the context, that this context will then also upload to the database
-    saveNodes: (nodes: AppNode[]) => void;
-
-    canvasId: string; // unique id for this canvas. will take the form <userID>-<canvas number>, eg shm-1
-    setCanvasId: (canvasId: string) => void;
-    canvasName: string; // cute user name for the canvas. eg "My Cool Canvas"
-    setCanvasName: (canvasId: string) => void; 
-
-    saveCanvas: (newCanvasName?: string) => void;
-    loadCanvas: (canvasID: string) => void; //takes a set of nodes from the database and loads them into the React Flow canvas
+  canvasId: string;
+  setCanvasId: (canvasId: string) => void;
+  canvasName: string;
+  setCanvasName: (canvasName: string) => void;
+  saveCanvas: (canvasData: ReactFlowJsonObject) => void;
+  loadCanvas: (canvasID: string) => void;
 }
 
-// This context is used to save and load lists of nodes! so users can save and reload canvases! 
-// Create Context
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
 
-// Provider Component
-// the backend and the userID are set at the App level (in the App.tsx file!) and passed here!
-export const CanvasProvider: React.FC<{ children: ReactNode;}> = ({ children }) => {
-    const { userID, backend } = useAppContext();
-    const [savedNodes, setNodes] = useState<AppNode[]>([]);
-    const [canvasId, setCanvasId] = useState<string>("none"); //none by default - will get assigned one when a canvas is loaded in or saved for the first time.
-    const [canvasName, setCanvasName] = useState<string>("Untitled Canvas");
+export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
+  const { userID, backend } = useAppContext();
 
-    const saveNodes = useCallback((nodes: AppNode[]) => { // this function is called every frame by Flow to update the context, so it knows the current state of nodes in the Flow canvas
-        const nodesAreDifferent = JSON.stringify(nodes) !== JSON.stringify(savedNodes);
-        if (nodesAreDifferent) {
-            const diffNodes = nodes.filter((node, index) => JSON.stringify(node) !== JSON.stringify(savedNodes[index]));
-            console.log(`Saving ${nodes.length} nodes to context. Different nodes:`, diffNodes);
-        }
-        setNodes(nodes); //set the nodes in the context to match the nodes just passed to the function
-    }, [savedNodes]);
+  // Canvas ID in the format <userID>-<canvas number>, e.g., "shm-1"
+  const [canvasId, setCanvasId] = useState<string>(`new-canvas`);//special new-canvas is the default user starter canvas
+  const [canvasName, setCanvasName] = useState<string>("Untitled Canvas");
 
-  // Load a canvas by ID
-  const loadCanvas = useCallback(async (canvasId: string) => {
+  //  Save Canvas
+  const saveCanvas = useCallback(
+    async (canvasData: ReactFlowJsonObject) => {
+      if (!userID) {
+        console.error("No user ID found. Cannot save.");
+        return;
+      }
+
+      try {
+        const { nodes, viewport } = canvasData; // Extract nodes, edges, and viewport data from canvasData
+        await axios.post(`${backend}/api/save-canvas`, {
+          userID,
+          canvasId,
+          canvasName,
+          nodes, //leave out the edges
+          viewport, // Include the viewport data
+        });
+        console.log("Canvas saved successfully!");
+      } catch (error) {
+        console.error("Error saving canvas:", error);
+      }
+    },
+    [userID, backend, canvasId, canvasName]
+  );
+
+  //load Canvas
+
+  const loadCanvas = useCallback(async (canvasID: string) => {
     try {
-      const response = await axios.get(`${backend}/api/load-canvas/${canvasId}`);
-      if (response.data.success) {
-        setNodes(response.data.canvas.nodes);
-        setCanvasId(canvasId); //set the canvas ID to the one just loaded
-        console.log(`Loaded ${savedNodes.length} nodes from canvas: ${canvasId}`);
-        setCanvasName(response.data.canvas.name || "Untitled Canvas"); //  Set name if exists, otherwise use default name
-      } else {
-        console.error("Failed to load canvas:", response.data.error);
+      const response = await axios.get(`${backend}/api/get-canvas/${canvasID}`);
+      if (response.status === 200 && response.data.success) {
+        return response.data.canvas;
       }
     } catch (error) {
       console.error("Error loading canvas:", error);
     }
+    return null;
   }, [backend]);
 
-// Save the current canvas state
-const saveCanvas = useCallback(async (newCanvasName?: string) => {
-    const { userID } = useAppContext();
-    try {
-        const finalCanvasName = newCanvasName?.trim() === "" ? "Untitled Canvas" : (newCanvasName || canvasName).replace(/[^a-zA-Z0-9 _-]/g, ""); // Ensure the name is SQL safe
-        const canvasData = {
-            userID,
-            canvasId,
-            canvasName: finalCanvasName,
-            nodes: [...savedNodes], // Ensure it's explicitly an array
-        };
 
-        console.log("Attempting to save canvas:", canvasData);
-
-        const response = await axios.post(`${backend}/api/save-canvas`, canvasData, {
-            headers: { "Content-Type": "application/json" },
-        });
-
-        console.log("Canvas saved successfully!", response.data);
-    } catch (error) {
-        console.error("Error saving canvas:", error);
-    }
-}, [userID, canvasId, canvasName, savedNodes, backend]);
 
   return (
-    <CanvasContext.Provider value={{ savedNodes, saveNodes, saveCanvas, loadCanvas, canvasId, setCanvasId, canvasName, setCanvasName }}>
+    <CanvasContext.Provider value={{ canvasId, setCanvasId, canvasName, setCanvasName, saveCanvas, loadCanvas }}>
       {children}
     </CanvasContext.Provider>
   );
 };
 
-// Custom Hook to use the context
+
 export const useCanvasContext = () => {
   const context = useContext(CanvasContext);
   if (!context) {

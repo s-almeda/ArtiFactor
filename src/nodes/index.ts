@@ -7,12 +7,12 @@ import LookupNode from "./LookupNode";
 import { AppNode, TextNodeData, T2IGeneratorNodeData } from "./types";
 
 export const initialNodes: AppNode[] = [
-  {
-    id: "example",
-    type: "text",
-    position: { x: 100, y: 100 },
-    data: { content: "bunny on the moon", loading: false, combinable: false } as TextNodeData,
-  },
+  // {
+  //   id: "example",
+  //   type: "text",
+  //   position: { x: 100, y: 100 },
+  //   data: { content: "bunny on the moon", loading: false, combinable: false } as TextNodeData,
+  // },
   // {
   //   id: "t2i-generator-1",
   //   type: "t2i-generator",
