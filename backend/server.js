@@ -195,7 +195,36 @@ app.post("/api/authenticate-user", async (req, res) => {
 
 
 
+
+
 // --------- USER DATA -- Saving and loading the canvas! -------------- //
+
+app.get("/api/get-canvases/:userID", async (req, res) => {
+  const { userID } = req.params;
+
+  try {
+    const db = await dbPromise;
+
+    // Check if user exists
+    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // Get all canvases for the user
+    const canvases = await db.all(`SELECT id, name FROM canvases WHERE user_id = ?`, [userID]);
+
+    // Format the canvases
+    const formattedCanvases = canvases.map(canvas => ({
+      id: canvas.id,
+      name: canvas.name
+    }));
+
+    res.json({ success: true, canvases: formattedCanvases });
+  } catch (error) {
+    console.error("Error getting canvases:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
 app.post("/api/save-canvas", async (req, res) => {
@@ -295,6 +324,7 @@ app.get("/api/list-users", async (req, res) => {
 
 
   app.get("/api/load-canvas/:canvasID", async (req, res) => {
+    console.log("Attempting to load canvas:", req.params);
     const { canvasID } = req.params;
   
     try {

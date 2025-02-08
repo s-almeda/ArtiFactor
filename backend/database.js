@@ -6,6 +6,16 @@ const dbPromise = open({
   driver: sqlite3.Database,
 });
 
+// ✅ Define initial nodes (matches /nodes/index.ts)
+const initialNodes = JSON.stringify([
+  {
+    id: "example",
+    type: "text",
+    position: { x: 100, y: 100 },
+    data: { content: "bunny on the moon", loading: false, combinable: false },
+  }
+]);
+
 (async () => {
   const db = await dbPromise;
 
@@ -30,7 +40,39 @@ const dbPromise = open({
     )
   `);
 
+  // ✅ Ensure a default user exists
+  const existingUser = await db.get(`SELECT id FROM users LIMIT 1`);
+  if (!existingUser) {
+    await db.run(`
+      INSERT INTO users (id, password, clippings)
+      VALUES ('default-user', '', '[]')
+    `);
+    console.log("✅ Default user 'default-user' created.");
+  }
+
+  // ✅ Ensure the `new-canvas` exists for the default user
+  const existingCanvas = await db.get(`SELECT id FROM canvases WHERE id = 'new-canvas'`);
+  if (!existingCanvas) {
+    await db.run(`
+      INSERT INTO canvases (id, user_id, name, nodes)
+      VALUES ('new-canvas', 'default-user', 'Untitled Canvas', ?)
+    `, [initialNodes]);
+    console.log("✅ Default 'new-canvas' created with initial nodes.");
+  }
+
   console.log("Database initialized with Users and Canvases!");
+  const users = await db.all(`
+    SELECT u.id, COUNT(c.id) as canvas_count, GROUP_CONCAT(c.id || ': ' || c.name, ', ') as canvas_details
+    FROM users u
+    LEFT JOIN canvases c ON u.id = c.user_id
+    GROUP BY u.id
+    LIMIT 5
+  `);
+
+  users.forEach(user => {
+    const canvasDetails = user.canvas_details ? user.canvas_details.split(', ').slice(0, 2).join(', ') : 'No canvases';
+    console.log(`User: ${user.id}, Canvases: ${user.canvas_count}, Canvas Details: [${canvasDetails}]`);
+  });
 })();
 
 export default dbPromise;
