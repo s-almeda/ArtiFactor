@@ -2,8 +2,8 @@ import {Position, NodeResizeControl, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageNode } from "./types";
-import { usePaletteContext } from "../contexts/PaletteContext";
-import { useDnD } from "../contexts/DnDContext";
+import { usePaletteContext } from "../context/PaletteContext";
+import { useDnD } from "../context/DnDContext";
 
 
 const controlStyle: React.CSSProperties = {

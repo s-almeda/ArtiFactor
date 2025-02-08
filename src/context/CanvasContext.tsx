@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 import type { ReactNode } from "react";
 import type { AppNode } from "../nodes/types";
+import { useAppContext } from "./AppContext";
 
 interface CanvasContextType {
     savedNodes: AppNode[]; //nodes that have been saved to the context, that this context will then also upload to the database
@@ -22,7 +23,8 @@ const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
 
 // Provider Component
 // the backend and the userID are set at the App level (in the App.tsx file!) and passed here!
-export const CanvasProvider: React.FC<{ children: ReactNode; userID: string; backend: string }> = ({ children, userID, backend }) => {
+export const CanvasProvider: React.FC<{ children: ReactNode;}> = ({ children }) => {
+    const { userID, backend } = useAppContext();
     const [savedNodes, setNodes] = useState<AppNode[]>([]);
     const [canvasId, setCanvasId] = useState<string>("none"); //none by default - will get assigned one when a canvas is loaded in or saved for the first time.
     const [canvasName, setCanvasName] = useState<string>("Untitled Canvas");
@@ -55,10 +57,8 @@ export const CanvasProvider: React.FC<{ children: ReactNode; userID: string; bac
 
 // Save the current canvas state
 const saveCanvas = useCallback(async (newCanvasName?: string) => {
+    const { userID } = useAppContext();
     try {
-        if (userID === "") {
-            userID = "default";
-        }
         const finalCanvasName = newCanvasName?.trim() === "" ? "Untitled Canvas" : (newCanvasName || canvasName).replace(/[^a-zA-Z0-9 _-]/g, ""); // Ensure the name is SQL safe
         const canvasData = {
             userID,

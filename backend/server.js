@@ -5,11 +5,18 @@ import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
+
+// ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
-const replicate = new Replicate();
-
-
 dotenv.config();
+if (!process.env.REPLICATE_API_TOKEN) { //this will fail if you don't have my replicate api key in your .env file! (like, saved to your terminal)
+  console.error("REPLICATE_API_TOKEN is not set in the environment");
+}
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
+
+// ------------------------------------------------ //
 
 const app = express();
 const port = 3000;
@@ -81,7 +88,6 @@ app.post("/api/generate-text", async (req, res) => {
       { input }
     );
     console.log("Output from replicate API:", output);
-    //todo, let the user choose how truncated the output should be? 
     const truncatedOutput = output.split(',').slice(0, 5).join(', ');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ text: truncatedOutput });

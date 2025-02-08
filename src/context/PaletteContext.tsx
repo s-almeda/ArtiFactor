@@ -1,6 +1,7 @@
 import type React from "react";
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
+//import { useAppContext } from "./AppContext"; //add this back when we start saving palette data to the database
 
 // Define the type of a node
 export interface NodeData {
@@ -21,9 +22,8 @@ interface PaletteContextType {
 const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 
 // Create a provider component
-export const PaletteProvider: React.FC<{ children: ReactNode; userID: string } > = ({
-  children,
-}) => {
+export const PaletteProvider: React.FC<{ children: ReactNode; } > = ({children}) => {
+  // const { userID, backend } = useAppContext(); //add this back when we start saving palette data to the database
   const [clippedNodes, setClippedNodes] = useState<NodeData[]>([]);
   const [activeTab, setActiveTab] = useState<"images" | "text">("images");
 

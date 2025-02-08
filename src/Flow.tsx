@@ -17,23 +17,21 @@ import "@xyflow/react/dist/style.css";
 import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, T2IGeneratorNodeData} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
-import { useDnD } from './contexts/DnDContext';
-import { useCanvasContext } from './contexts/CanvasContext';
-
+import { useDnD } from './context/DnDContext';
+import { useCanvasContext } from './context/CanvasContext';
+import { calcPositionAfterDrag } from './utils/calcPositionAfterDrag';
+//import { addTextNode, addImageNode, addT2IGenerator } from './utils/nodeAdders';
+import { useAppContext } from './context/AppContext';
 
 //we now set the backend in App.tsx and grab it here!
-const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { backend: string; userID:string; loadCanvasRequest: boolean; setLoadCanvasRequest: React.Dispatch<React.SetStateAction<boolean>> }) => {
-  //the nodes as saved to the context and database
-  const { canvasName, canvasId, savedNodes, saveNodes, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext(); // We only need to update context
-  //saveCanvas uploads the current Canvas to the database. loadCanvas replaces the current canvas with the one from the database.
-  //savedNodes and saveNodes syncs the data in the Flow component with the data in the CanvasContext!
+const Flow = () => {
+  const { userID, backend, loadCanvasRequest, setLoadCanvasRequest} = useAppContext();
+  const { canvasName, canvasId, savedNodes, saveNodes, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext();  //the nodes as saved to the context and database
+  const [flowNodes, setFlowNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { getIntersectingNodes, screenToFlowPosition } = useReactFlow();
+  const [draggableType, __, draggableData, _] = useDnD();
+  const [saveCanvasRequest, setSaveCanvasRequest] = useState(false);
 
-  //the nodes as being rendered in the Flow Canvas
-  const [flowNodes, setFlowNodes] = useNodesState(initialNodes);
-
-  // const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
-  const [draggableType,__, draggableData,_ ] = useDnD();
   // sync and reload the flow canvas when "Load" is triggered
   useEffect(() => {
 
@@ -41,7 +39,7 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
       setFlowNodes(savedNodes); //overwrite the Flow Canvas to match what's in the context
       setLoadCanvasRequest(false); //turn the App flag off!
     }
-    else{
+    else if(saveCanvasRequest){
       saveNodes(flowNodes); //save the current state of the Flow canvas to the context
     }
   }, [loadCanvasRequest, savedNodes]);
@@ -70,26 +68,22 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
       saveCanvas(canvasName);
     }
   };
+
   const onNodesChange = useCallback(
     (changes: any) => {
       setFlowNodes((prevNodes) => {
         const updatedNodes = applyNodeChanges(changes, prevNodes);
-        saveNodes(flowNodes);
+        setSaveCanvasRequest(true); // Trigger the save request
         return updatedNodes;
       });
 
-    },
-    [saveNodes]
+    },[]
   );
+
   /* ---------------------------------------------------- */
-
-      // Update CanvasContext when nodes change
-
-
+  // TODO - move this to a KeyboardShortcut Provider Context situation so we cna also track Undos/Redos
   const { handleCopy, handleCut, handlePaste } = useClipboard(flowNodes, setFlowNodes); // Use the custom hook
 
-
-  
   // Keyboard Event Listener for Copy, Cut, Paste
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
@@ -103,6 +97,7 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
     return () => document.removeEventListener("keydown", handleKeydown);
   }, [handleCopy, handleCut, handlePaste]);
 
+  /* ----------------------------------------------------*/
 
 
   const onNodeDrag = useCallback(
@@ -118,7 +113,6 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
           return node;
         })
       );
-  
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
       handleIntersectionsOnDrag(draggedNode, intersections);
     },
@@ -172,30 +166,7 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
 
    /*** ---- this is the code that makes stuff fly away lol --- */
 
-  const calcPositionAfterDrag = (
-    previousPosition: { x: number; y: number },
-    intersectionNode: Node,
-    direction: "above" | "below" = "below"
-  ) => {
-    const bounds = getNodesBounds([intersectionNode]);
-    let newPosition = { ...previousPosition };
-  
-    const xOffset = typeof intersectionNode.data.xOffset === 'number' ? intersectionNode.data.xOffset : 10;
-    const yOffset = typeof intersectionNode.data.yOffset === 'number' ? intersectionNode.data.yOffset : 10;
-  
-    newPosition.x = bounds.x + xOffset; // place to the right
-    newPosition.y = bounds.y + bounds.height + yOffset; // place below
 
-    if (direction === "below") {
-      newPosition.x = bounds.x + xOffset; // place to the right
-      newPosition.y = bounds.y + bounds.height + yOffset; // place below
-    } else if (direction === "above") {
-      newPosition.x = bounds.x - bounds.width/2 - xOffset; // place to the left
-      newPosition.y = bounds.y - bounds.height - yOffset; // place above
-    }
-    return newPosition;
-  };
-  
   const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
     /* takes a node and a new position as input, moves the node there */
     setFlowNodes((currentNodes) =>
@@ -212,7 +183,6 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
         return node;
       })
     );
-
     // Remove the transition class after the animation completes
     setTimeout(() => {
       setFlowNodes((currentNodes) =>
@@ -229,6 +199,7 @@ const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { ba
     }, 1000); // Match the duration of the CSS transition
   };
 
+  
 const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) => {
   setFlowNodes((currentNodes) => {
     const updatedNodes = currentNodes.map((node) => {
@@ -581,9 +552,8 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     },
     [setFlowNodes]
   );
+
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-
-
 
   return (
     <>

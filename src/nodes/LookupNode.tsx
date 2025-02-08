@@ -4,7 +4,7 @@ import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { LookupNode, Artwork } from "./types";
 
-import { useDnD } from "../contexts/DnDContext";
+import { useDnD } from "../context/DnDContext";
 
 const controlStyle: React.CSSProperties = {
   background: 'white',

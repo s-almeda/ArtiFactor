@@ -2,7 +2,7 @@
 import { type NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { useState, useRef, useEffect } from "react";
 import { type TextNode } from "./types";
-import { usePaletteContext } from "../contexts/PaletteContext";
+import { usePaletteContext } from "../context/PaletteContext";
 
 export function TextNode({ data, selected }: NodeProps<TextNode>) {
   const [content, setContent] = useState(data.content || "");

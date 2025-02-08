@@ -1,12 +1,12 @@
 import React from "react"; // {useState}
-import { useDnD } from "./contexts/DnDContext";
-import { usePaletteContext, NodeData } from "./contexts/PaletteContext";
+import { useDnD } from "./context/DnDContext";
+import { usePaletteContext, NodeData } from "./context/PaletteContext";
 
 const charLimit = 25;
 
 
 interface PaletteProps {
-  onAddNode: (type: string, content: string) => void;
+  // onAddNode: (type: string, content: string) => void;
 }
 
 interface PaletteNodeProps {

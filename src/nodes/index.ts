@@ -13,21 +13,21 @@ export const initialNodes: AppNode[] = [
     position: { x: 100, y: 100 },
     data: { content: "bunny on the moon", loading: false, combinable: false } as TextNodeData,
   },
-  {
-    id: "t2i-generator-1",
-    type: "t2i-generator",
-    position: { x: 10, y: 10 },
-    data: {
-      content: "",
-      mode: "ready",
-      yOffset: 0,
-      xOffset: 0,
-      updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
-        console.log(`new node with content: ${content} and mode: ${mode}`);
-        return true;
-      },
-    } as T2IGeneratorNodeData,
-  },
+  // {
+  //   id: "t2i-generator-1",
+  //   type: "t2i-generator",
+  //   position: { x: 10, y: 10 },
+  //   data: {
+  //     content: "",
+  //     mode: "ready",
+  //     yOffset: 0,
+  //     xOffset: 0,
+  //     updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
+  //       console.log(`new node with content: ${content} and mode: ${mode}`);
+  //       return true;
+  //     },
+  //   } as T2IGeneratorNodeData,
+  // },
 ];
 
 export const nodeTypes: NodeTypes = {
