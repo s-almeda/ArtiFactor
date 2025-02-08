@@ -26,3 +26,5 @@ dist-ssr
 # don't include my api key!! :3
 .env
 
+/backend/database.db
+backend/database.db

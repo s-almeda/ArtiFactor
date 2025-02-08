@@ -9,7 +9,7 @@ export const DnDProvider = ({ children }: { children: any }) => {
   const [draggableData, setDraggableData] = useState({});
 
   useEffect(() => {
-    console.log(`DnDProvider receiving: ${draggableType} and ${JSON.stringify(draggableData)}`);
+    //console.log(`DnDProvider receiving: ${draggableType} and ${JSON.stringify(draggableData)}`);
   }, [draggableType, draggableData]);
   
   return (

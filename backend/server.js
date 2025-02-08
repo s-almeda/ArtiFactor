@@ -191,15 +191,22 @@ app.post("/api/authenticate-user", async (req, res) => {
 
 // --------- USER DATA -- Saving and loading the canvas! -------------- //
 
-app.post("/api/save-canvas", async (req, res) => {
-  const { userID, name, nodes } = req.body;
 
-  if (!userID || !name || !Array.isArray(nodes)) {
-    return res.status(400).json({ error: "Missing or invalid fields: userID, name, nodes" });
+app.post("/api/save-canvas", async (req, res) => {
+  const { userID, canvasId, canvasName, nodes } = req.body;
+  console.log("Attempting to save canvas:", req.body);
+
+  // Check for required fields
+  if (!userID) {
+    return res.status(400).json({ error: "Missing field: userID" });
+  }
+  if (!Array.isArray(nodes)) {
+    return res.status(400).json({ error: "Invalid field: nodes should be an array" });
   }
 
   try {
     const db = await dbPromise;
+    const nodesJSON = JSON.stringify(nodes);
 
     // Check if user exists
     const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
@@ -207,39 +214,40 @@ app.post("/api/save-canvas", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Check if the canvas already exists
-    const existingCanvas = await db.get(
-      `SELECT id FROM canvases WHERE user_id = ? AND name = ?`,
-      [userID, name]
-    );
+    let finalCanvasId = canvasId;
+    let existingCanvas = null;
 
-    const nodesJSON = JSON.stringify(nodes); // Convert nodes to JSON
+    // If `canvasId` exists, check if it’s in the database
+    if (canvasId) {
+      existingCanvas = await db.get(`SELECT id FROM canvases WHERE id = ?`, [canvasId]);
+    }
 
-    let canvasId;
     if (existingCanvas) {
-      // ✅ Overwrite existing canvas
-      canvasId = existingCanvas.id;
-      await db.run(`UPDATE canvases SET nodes = ? WHERE id = ?`, [nodesJSON, canvasId]);
-      console.log(`Overwriting existing canvas: ${canvasId}`);
-    } else {
-      // ✅ Generate `{userID}-{canvasNumber}` format
+      console.log(`Updating existing canvas: ${canvasId}`);
+      await db.run(`UPDATE canvases SET name = ?, nodes = ? WHERE id = ?`, [canvasName, nodesJSON, canvasId]);
+    } 
+    else { //no existing canvas under this user with that ID. create a new one!
+      console.log("Creating new canvas...");
+
+      // Generate `{userID}-{canvasNumber}` format
       const lastCanvas = await db.get(
         `SELECT id FROM canvases WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
         [userID]
       );
       const nextCanvasNumber = lastCanvas ? parseInt(lastCanvas.id.split("-")[1]) + 1 : 1;
-      canvasId = `${userID}-${nextCanvasNumber}`;
+      finalCanvasId = `${userID}-${nextCanvasNumber}`;
 
+      console.log(` Assigned new canvas ID: ${finalCanvasId}`);
       await db.run(
         `INSERT INTO canvases (id, user_id, name, nodes) VALUES (?, ?, ?, ?)`,
-        [canvasId, userID, name, nodesJSON]
+        [finalCanvasId, userID, canvasName, nodesJSON]
       );
     }
 
-    console.log(`Canvas ${canvasId} saved with ${nodes.length} nodes`);
-    res.json({ success: true, message: existingCanvas ? "Canvas updated!" : "Canvas saved successfully!", canvasId });
+    console.log(`Canvas ${finalCanvasId} saved with ${nodes.length} nodes`);
+    res.json({ success: true, message: existingCanvas ? "Canvas updated!" : "Canvas saved successfully!", canvasId: finalCanvasId });
   } catch (error) {
-    console.error("Error saving canvas:", error);
+    console.error("❌ Error saving canvas:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -307,16 +315,20 @@ app.get("/api/list-users", async (req, res) => {
 
   //------------- CLIPPINGS (for saving and loading a user's Palette) ---------//
   app.get("/api/get-clippings/:userID", async (req, res) => {
-    const { userID } = req.params;
-  
+    let { userID } = req.params;
+
+    if (!userID) {
+      userID = "default";
+    }
+
     try {
       const db = await dbPromise;
       const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
-  
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-  
+
       res.json({ success: true, clippings: JSON.parse(user.clippings) });
     } catch (error) {
       console.error("Error loading clippings:", error);

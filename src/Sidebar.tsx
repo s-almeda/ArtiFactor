@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useCanvasContext } from "./contexts/CanvasContext";
 
-const Sidebar = ({ onClose, onUserLogin, backend }: { 
+const Sidebar = ({ onClose, onUserLogin, backend, setLoadCanvasRequest }: { 
   onClose: () => void; 
   onUserLogin: (userID: string) => void;
   backend: string; 
+  setLoadCanvasRequest: (value: boolean) => void;
 }) => {
   const { loadCanvas } = useCanvasContext();
-  const [userID, setUserID] = useState("");
+  const [enteredUserID, setEnteredUserID] = useState("");
   const [error, setError] = useState("");
   const [canvases, setCanvases] = useState<{ id: string; name: string }[]>([]);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
@@ -25,16 +26,41 @@ const Sidebar = ({ onClose, onUserLogin, backend }: {
         return;
       }
 
-      const user = data.users.find((u: { id: string }) => u.id === userID);
+      const user = data.users.find((u: { id: string }) => u.id === enteredUserID);
       if (user) {
-        setLoggedInUser(userID);
+        setLoggedInUser(enteredUserID);
         setCanvases(user.canvases);
-        onUserLogin(userID);
+        onUserLogin(enteredUserID);
+        setLoadCanvasRequest(true);
       } else {
         setError("User not found.");
       }
     } catch (error) {
       console.error("Error checking user:", error);
+      setError("Something went wrong.");
+    }
+  };
+
+  const refreshCanvases = async () => {
+    if (!loggedInUser) return;
+
+    try {
+      const response = await fetch(`${backend}/api/list-users`);
+      const data = await response.json();
+
+      if (!data.success) {
+        setError("Error fetching users.");
+        return;
+      }
+
+      const user = data.users.find((u: { id: string }) => u.id === loggedInUser);
+      if (user) {
+        setCanvases(user.canvases);
+      } else {
+        setError("User not found.");
+      }
+    } catch (error) {
+      console.error("Error refreshing canvases:", error);
       setError("Something went wrong.");
     }
   };
@@ -54,9 +80,9 @@ const Sidebar = ({ onClose, onUserLogin, backend }: {
           <form onSubmit={handleSubmit} className="mb-4">
             <input
               type="text"
-              value={userID}
-              onChange={(e) => setUserID(e.target.value)}
-              placeholder="Enter userID"
+              value={enteredUserID}
+              onChange={(e) => setEnteredUserID(e.target.value)} //keep track of what the person types in the login form
+              placeholder="enter userID:" 
               className="w-full p-2 border rounded text-black"
             />
             <button type="submit" className="mt-2 w-full bg-blue-500 text-white p-2 rounded">
@@ -68,6 +94,12 @@ const Sidebar = ({ onClose, onUserLogin, backend }: {
       ) : (
         <>
           <h2 className="text-lg font-bold mb-2">Hello, {loggedInUser}!</h2>
+          <button 
+            onClick={refreshCanvases} 
+            className="mt-2 w-full bg-green-500 text-white p-2 rounded"
+          >
+            Refresh Canvases
+          </button>
           <h3 className="text-md font-semibold mt-4">Your Canvases:</h3>
           <ul className="mt-2">
             {canvases.length > 0 ? (

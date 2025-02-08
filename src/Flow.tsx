@@ -7,10 +7,12 @@ import {
   Background,
   Controls,
   //MiniMap,
+  Node,
+  applyNodeChanges,
   useNodesState,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node } from "@xyflow/react";
+
 import "@xyflow/react/dist/style.css";
 import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, T2IGeneratorNodeData} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
@@ -20,37 +22,72 @@ import { useCanvasContext } from './contexts/CanvasContext';
 
 
 //we now set the backend in App.tsx and grab it here!
-const Flow = ({backend}:{backend: string}) => {
+const Flow = ({ backend, userID, loadCanvasRequest, setLoadCanvasRequest }: { backend: string; userID:string; loadCanvasRequest: boolean; setLoadCanvasRequest: React.Dispatch<React.SetStateAction<boolean>> }) => {
   //the nodes as saved to the context and database
-  const { savedNodes, loadCanvas, saveCanvas } = useCanvasContext(); // We only need to update context
+  const { canvasName, canvasId, savedNodes, saveNodes, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext(); // We only need to update context
+  //saveCanvas uploads the current Canvas to the database. loadCanvas replaces the current canvas with the one from the database.
+  //savedNodes and saveNodes syncs the data in the Flow component with the data in the CanvasContext!
 
   //the nodes as being rendered in the Flow Canvas
-  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(initialNodes);
+  const [flowNodes, setFlowNodes] = useNodesState(initialNodes);
 
   // const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const { getIntersectingNodes, getNodesBounds, screenToFlowPosition } = useReactFlow();
   const [draggableType,__, draggableData,_ ] = useDnD();
-  const [isLoaded, setIsLoaded] = useState(false); // ✅ Prevents auto-sync on mount
-
   // sync and reload the flow canvas when "Load" is triggered
   useEffect(() => {
-    if (isLoaded) {
-      setFlowNodes(savedNodes);
-      setIsLoaded(false);
-    }
-  }, [isLoaded, savedNodes]);
 
-  // ✅ Manually trigger a canvas load
+    if (loadCanvasRequest) { //the App has requested the Flow to reload entirely- the context should already hold the new set of nodes
+      setFlowNodes(savedNodes); //overwrite the Flow Canvas to match what's in the context
+      setLoadCanvasRequest(false); //turn the App flag off!
+    }
+    else{
+      saveNodes(flowNodes); //save the current state of the Flow canvas to the context
+    }
+  }, [loadCanvasRequest, savedNodes]);
+
+    /* 
+    ================================================== 
+    ||            Saving and Loading...             || 
+    =======================================-========== 
+     */
+  // manually trigger the load and save functions
   const handleLoadCanvas = async () => {
-    await loadCanvas("shm-1"); // Example canvasID (update dynamically later)
-    setIsLoaded(true); // ✅ Ensures nodes update in ReactFlow
+    const canvasID = prompt("Enter the Canvas ID to load:");
+    if (canvasID) {
+      await loadCanvas(canvasID);
+      setLoadCanvasRequest(true); 
+    }
   };
+
+  const handleSaveCanvas = async () => {
+    const newCanvasName = prompt("Enter the Canvas Name to save as:", canvasName);
+    if (newCanvasName) {
+      await saveNodes(flowNodes); // Update the context with the current flow nodes
+      saveCanvas(newCanvasName); // Trigger the database save with the new canvas name
+    }
+    else{
+      saveCanvas(canvasName);
+    }
+  };
+  const onNodesChange = useCallback(
+    (changes: any) => {
+      setFlowNodes((prevNodes) => {
+        const updatedNodes = applyNodeChanges(changes, prevNodes);
+        saveNodes(flowNodes);
+        return updatedNodes;
+      });
+
+    },
+    [saveNodes]
+  );
+  /* ---------------------------------------------------- */
+
+      // Update CanvasContext when nodes change
+
+
   const { handleCopy, handleCut, handlePaste } = useClipboard(flowNodes, setFlowNodes); // Use the custom hook
 
-  
-  const deleteNodeById = (id: string) => {
-    setFlowNodes((currentNodes) => currentNodes.filter((node) => node.id !== id))
-  }
 
   
   // Keyboard Event Listener for Copy, Cut, Paste
@@ -66,11 +103,7 @@ const Flow = ({backend}:{backend: string}) => {
     return () => document.removeEventListener("keydown", handleKeydown);
   }, [handleCopy, handleCut, handlePaste]);
 
-  // 🔥 Sync CanvasContext with ReactFlow state on node updates
-  useEffect(() => {
-    setFlowNodes(flowNodes);
-  }, [flowNodes, setFlowNodes]);
-  
+
 
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
@@ -548,44 +581,74 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     },
     [setFlowNodes]
   );
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+
 
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '10px', left: '25%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: '10px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addT2IGenerator()}>New Text to Image Generator</button>
       </div>
 
       {/* Load & Save Buttons */}
-      <div className="absolute top-2 left-2 z-10 space-x-2">
+      <div className="absolute top-10 left-10 z-10 space-x-2">
         <button onClick={handleLoadCanvas} className="bg-blue-500 text-white p-2 rounded">
           Load Canvas
         </button>
-        <button onClick={saveCanvas} className="bg-green-500 text-white p-2 rounded">
+        <button onClick={handleSaveCanvas} className="bg-green-500 text-white p-2 rounded">
           Save Canvas
         </button>
       </div>
 
-      <ReactFlow
-        nodes={flowNodes}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        zoomOnDoubleClick={false}
-        fitView
-//        fitViewOptions={{minZoom: 0.001}}
-        selectionOnDrag
-      >
-        <Background />
-        {/*<MiniMap />*/}
-        <Controls />
-      </ReactFlow>
-    </>
+            
+      <div style={{ width: '100%', height: '100vh' }}>
+        <ReactFlow
+          nodes={flowNodes}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          zoomOnDoubleClick={false}
+          fitView
+          selectionOnDrag
+        >
+          <Background />
+          {/*<MiniMap />*/}
+          <Controls />
+        </ReactFlow>
+      </div>  
+
+
+
+
+      {/* Debug Info */}
+          <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md">
+          <button
+            onClick={() => setShowDebugInfo((prev) => !prev)}
+            className="bg-blue-500 text-white p-2 rounded mb-2"
+          >
+          {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
+          </button>
+          {showDebugInfo && (
+            <div>
+          <p><strong>User ID:</strong> {userID}</p>
+          <p><strong>Canvas Name:</strong> {canvasName}</p>
+          <p><strong>Canvas ID:</strong> {canvasId}</p>
+          <p><strong>Flow Nodes:</strong> {JSON.stringify(flowNodes, null, 2)}</p>
+          <p><strong>Saved Nodes:</strong> {JSON.stringify(savedNodes, null, 2)}</p>
+            </div>
+          )
+          }
+        </div>
+
+
+      </>
+
   );
 };
 
