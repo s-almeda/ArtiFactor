@@ -197,9 +197,9 @@ app.post("/api/authenticate-user", async (req, res) => {
 
 
 
-// --------- USER DATA -- Saving and loading the canvas! -------------- //
+// --------- GETTING USER DATA - list users, list a user's canvasses -------------- //
 
-app.get("/api/get-canvases/:userID", async (req, res) => {
+app.get("/api/list-canvases/:userID", async (req, res) => {
   const { userID } = req.params;
 
   try {
@@ -225,68 +225,6 @@ app.get("/api/get-canvases/:userID", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
-app.post("/api/save-canvas", async (req, res) => {
-  const { userID, canvasId, canvasName, nodes } = req.body;
-  console.log("Attempting to save canvas:", req.body);
-
-  // Check for required fields
-  if (!userID) {
-    return res.status(400).json({ error: "Missing field: userID" });
-  }
-  if (!Array.isArray(nodes)) {
-    return res.status(400).json({ error: "Invalid field: nodes should be an array" });
-  }
-
-  try {
-    const db = await dbPromise;
-    const nodesJSON = JSON.stringify(nodes);
-
-    // Check if user exists
-    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    let finalCanvasId = canvasId;
-    let existingCanvas = null;
-
-    // If `canvasId` exists, check if it’s in the database
-    if (canvasId) {
-      existingCanvas = await db.get(`SELECT id FROM canvases WHERE id = ?`, [canvasId]);
-    }
-
-    if (existingCanvas) {
-      console.log(`Updating existing canvas: ${canvasId}`);
-      await db.run(`UPDATE canvases SET name = ?, nodes = ? WHERE id = ?`, [canvasName, nodesJSON, canvasId]);
-    } 
-    else { //no existing canvas under this user with that ID. create a new one!
-      console.log("Creating new canvas...");
-
-      // Generate `{userID}-{canvasNumber}` format
-      const lastCanvas = await db.get(
-        `SELECT id FROM canvases WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
-        [userID]
-      );
-      const nextCanvasNumber = lastCanvas ? parseInt(lastCanvas.id.split("-")[1]) + 1 : 1;
-      finalCanvasId = `${userID}-${nextCanvasNumber}`;
-
-      console.log(` Assigned new canvas ID: ${finalCanvasId}`);
-      await db.run(
-        `INSERT INTO canvases (id, user_id, name, nodes) VALUES (?, ?, ?, ?)`,
-        [finalCanvasId, userID, canvasName, nodesJSON]
-      );
-    }
-
-    console.log(`Canvas ${finalCanvasId} saved with ${nodes.length} nodes`);
-    res.json({ success: true, message: existingCanvas ? "Canvas updated!" : "Canvas saved successfully!", canvasId: finalCanvasId });
-  } catch (error) {
-    console.error("❌ Error saving canvas:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 
 // list users and their canvases
 app.get("/api/list-users", async (req, res) => {
@@ -321,27 +259,62 @@ app.get("/api/list-users", async (req, res) => {
 
 
 
+// --------- CANVAS DATA - Saving and loading canvases -------------- //
 
+  app.post("/api/save-canvas", async (req, res) => {
+    const { userID, canvasId, canvasName, nodes, viewport } = req.body;
 
-  app.get("/api/load-canvas/:canvasID", async (req, res) => {
-    console.log("Attempting to load canvas:", req.params);
-    const { canvasID } = req.params;
-  
+    if (!userID || !canvasId || !nodes || !viewport) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     try {
       const db = await dbPromise;
-  
-      // Fetch the canvas
+      const existingCanvas = await db.get("SELECT id FROM canvases WHERE id = ?", [canvasId]);
+
+      if (existingCanvas) {
+        // ✅ Update existing canvas
+        await db.run(
+          `UPDATE canvases SET name = ?, nodes = ?, viewport = ? WHERE id = ?`,
+          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), canvasId]
+        );
+        console.log(`✅ Canvas ${canvasId} updated.`);
+      } else {
+        // ✅ Insert new canvas
+        await db.run(
+          `INSERT INTO canvases (id, user_id, name, nodes, viewport) VALUES (?, ?, ?, ?, ?)`,
+          [canvasId, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport)]
+        );
+        console.log(`✅ New canvas ${canvasId} created.`);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving canvas:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+
+
+  app.get("/api/get-canvas/:canvasID", async (req, res) => {
+    console.log("Attempting to pull canvas from database:", req.params);
+    const { canvasID } = req.params;
+
+    try {
+      const db = await dbPromise;
       const canvas = await db.get(`SELECT * FROM canvases WHERE id = ?`, [canvasID]);
+
       if (!canvas) {
         return res.status(404).json({ error: "Canvas not found" });
       }
-  
-      // Parse nodes from JSON
-      canvas.nodes = JSON.parse(canvas.nodes);
-      
-      console.log(`Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes`);
-      res.json({ success: true, canvas });
 
+      // ✅ Parse JSON fields
+      canvas.nodes = JSON.parse(canvas.nodes);
+      canvas.viewport = JSON.parse(canvas.viewport);
+
+      console.log(`✅ Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes.`);
+      res.json({ success: true, canvas });
     } catch (error) {
       console.error("Error loading canvas:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -404,6 +377,9 @@ app.get("/api/list-users", async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+
+
 
   app.post("/api/remove-clipping", async (req, res) => {
     const { userID, clipping } = req.body;

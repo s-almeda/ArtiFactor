@@ -6,7 +6,7 @@ const dbPromise = open({
   driver: sqlite3.Database,
 });
 
-// ✅ Define initial nodes (matches /nodes/index.ts)
+// ✅ Define initial nodes & viewport
 const initialNodes = JSON.stringify([
   {
     id: "example",
@@ -16,25 +16,28 @@ const initialNodes = JSON.stringify([
   }
 ]);
 
+const initialViewport = JSON.stringify({ x: 0, y: 0, zoom: 1 });
+
 (async () => {
   const db = await dbPromise;
 
-  // ✅ Users table (now with a palette of clippings)
+  // ✅ Users table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY, -- Example values: "admin", "P1", "P2"
-      password TEXT DEFAULT '', -- Blank password by default
-      clippings TEXT NOT NULL DEFAULT '[]' -- JSON-encoded list of saved clippings (favorite nodes)
+      id TEXT PRIMARY KEY,
+      password TEXT DEFAULT '',
+      clippings TEXT NOT NULL DEFAULT '[]'
     )
   `);
 
-  // ✅ Canvases table (storing nodes as JSON)
+  // ✅ Canvases table (now with viewport)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS canvases (
-      id TEXT PRIMARY KEY, -- will take the form <userID>-# like so: "shm-1", "admin-2"
-      user_id TEXT NOT NULL, -- Foreign key to users
-      name TEXT NOT NULL, -- Name of the canvas, ex "My Cool Canvas"
-      nodes TEXT NOT NULL DEFAULT '[]', -- JSON-encoded list of nodes
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      nodes TEXT NOT NULL DEFAULT '[]',
+      viewport TEXT NOT NULL DEFAULT '${initialViewport}', -- Store viewport separately
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
@@ -54,25 +57,13 @@ const initialNodes = JSON.stringify([
   const existingCanvas = await db.get(`SELECT id FROM canvases WHERE id = 'new-canvas'`);
   if (!existingCanvas) {
     await db.run(`
-      INSERT INTO canvases (id, user_id, name, nodes)
-      VALUES ('new-canvas', 'default-user', 'Untitled Canvas', ?)
-    `, [initialNodes]);
-    console.log("✅ Default 'new-canvas' created with initial nodes.");
+      INSERT INTO canvases (id, user_id, name, nodes, viewport)
+      VALUES ('new-canvas', 'default-user', 'Untitled Canvas', ?, ?)
+    `, [initialNodes, initialViewport]);
+    console.log("✅ Default 'new-canvas' created with initial nodes and viewport.");
   }
 
-  console.log("Database initialized with Users and Canvases!");
-  const users = await db.all(`
-    SELECT u.id, COUNT(c.id) as canvas_count, GROUP_CONCAT(c.id || ': ' || c.name, ', ') as canvas_details
-    FROM users u
-    LEFT JOIN canvases c ON u.id = c.user_id
-    GROUP BY u.id
-    LIMIT 5
-  `);
-
-  users.forEach(user => {
-    const canvasDetails = user.canvas_details ? user.canvas_details.split(', ').slice(0, 2).join(', ') : 'No canvases';
-    console.log(`User: ${user.id}, Canvases: ${user.canvas_count}, Canvas Details: [${canvasDetails}]`);
-  });
+  console.log("Database initialized!");
 })();
 
 export default dbPromise;
