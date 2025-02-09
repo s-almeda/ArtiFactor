@@ -2,9 +2,9 @@ import type { NodeTypes } from "@xyflow/react";
 import { TextNode } from "./TextNode";
 import { ImageNode } from "./ImageNode";
 import FunctionNode from "./FunctionNode";
-import T2IGeneratorNode from "./T2IGeneratorNode";
+import SynthesizerNode from "./SynthesizerNode";
 import LookupNode from "./LookupNode";
-import { AppNode, TextNodeData, T2IGeneratorNodeData } from "./types";
+import { AppNode } from "./types"; //TextNodeData, SynthesizerNodeData
 
 export const initialNodes: AppNode[] = [
   // {
@@ -14,8 +14,8 @@ export const initialNodes: AppNode[] = [
   //   data: { content: "bunny on the moon", loading: false, combinable: false } as TextNodeData,
   // },
   // {
-  //   id: "t2i-generator-1",
-  //   type: "t2i-generator",
+  //   id: "synthesizer-1",
+  //   type: "synthesizer",
   //   position: { x: 10, y: 10 },
   //   data: {
   //     content: "",
@@ -26,7 +26,7 @@ export const initialNodes: AppNode[] = [
   //       console.log(`new node with content: ${content} and mode: ${mode}`);
   //       return true;
   //     },
-  //   } as T2IGeneratorNodeData,
+  //   } as SynthesizerNodeData,
   // },
 ];
 
@@ -36,5 +36,5 @@ export const nodeTypes: NodeTypes = {
   image: ImageNode,
   function: FunctionNode,
   lookup: LookupNode,
-  "t2i-generator": T2IGeneratorNode,
+  "synthesizer": SynthesizerNode,
 };

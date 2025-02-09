@@ -10,28 +10,58 @@ import {
   Node,
   useNodesState,
   useReactFlow,
-  
-
+  applyNodeChanges,
+  getNodesBounds
 } from "@xyflow/react";
 
+
+
 import "@xyflow/react/dist/style.css";
-import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, T2IGeneratorNodeData} from "./nodes/types";
+import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
-import { calcPositionAfterDrag } from './utils/calcPositionAfterDrag';
-//import { addTextNode, addImageNode, addT2IGenerator } from './utils/nodeAdders';
+import { calcNearbyPosition } from './utils/calcNearbyPosition';
+//import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasId, loadCanvas, saveCanvas, setCanvasName } = useCanvasContext();  //the nodes as saved to the context and database
+  const { canvasName, canvasId, loadCanvas, saveCanvas,  } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes, onNodesChange] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
-  const [draggableType, __, draggableData, _] = useDnD();
-  
+  const [draggableType, setDraggableType, draggableData, setDraggableData, dragStart, setDragStart] = useDnD();
+
+
+  useEffect(() => {
+    if (draggableData) {
+      console.log("Currently dragging:", draggableData);
+    }
+  }, [draggableData]);
+
+  const onNodeDragStart = useCallback(
+    (_: MouseEvent, node: Node) => {
+      setDragStart({ x: node.position.x, y: node.position.y });
+    },
+    []
+  );
+
+  // const handleOnNodesChange = (changes: any) => {
+  //   onNodesChange(changes);
+
+  //   changes.forEach((change: any) => {
+  //     if (change.node.type === 'synthesizer') {
+  //       const synthesizerNode = change.node as Node<SynthesizerNodeData>;
+  //       synthesizerNode.data.updateNode?.(synthesizerNode.data.mode);
+  //     }
+  //   });
+  // };
+  const handleOnNodesChange = useCallback(
+    (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    [setNodes],
+  );
 
     /* 
     ================================================== 
@@ -75,225 +105,7 @@ const Flow = () => {
   }, [handleCopy, handleCut, handlePaste]);
 
   /* ----------------------------------------------------*/
-
-
-  const onNodeDrag = useCallback(
-    (_: MouseEvent, draggedNode: Node) => {
-      setNodes((currentNodes: AppNode[]) =>
-        currentNodes.map((node: AppNode) => {
-          if (node.id === draggedNode.id) {
-            return {
-              ...node,
-              position: draggedNode.position,
-            };
-          }
-          return node;
-        })
-      );
-      const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      handleIntersectionsOnDrag(draggedNode, intersections);
-    },
-    [setNodes, getIntersectingNodes]
-  );
-
-  /* -- when something else is dragged over the canvas -- */
-  const onDragOver = useCallback((event: { preventDefault: () => void; dataTransfer: { dropEffect: string; }; }) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
   
- 
-  const onDrop = useCallback(
-    (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
-      event.preventDefault();
-      console.log(`you just dropped: ${draggableType} and ${draggableData}`);
-      // check if the dropped element is valid
-      if (!draggableType) {
-        return;
-      }
- 
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      if (draggableType === "image" && "content" in draggableData && "prompt" in draggableData) {
-        addImageNode(draggableData["content"] as string, position, draggableData["prompt"] as string);
-      } else if ("content" in draggableData) {
-        addTextNode(draggableData["content"] as string, position);
-      }
-      
-    },
-    [draggableType, draggableData,screenToFlowPosition],
-    
-  );
-
-  const onNodeDragStop = useCallback(
-    (_: MouseEvent, draggedNode: Node) => {
-      //console.log("user stopped dragging a node ", draggedNode)
-      const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      handleIntersectionsOnDrop(draggedNode, intersections);
-    },
-    [getIntersectingNodes, setNodes]
-  );
-
-
-  // --- HELPER FUNCTIONS --- //
-
-   /*** ---- this is the code that makes stuff fly away lol --- */
-
-
-  const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
-    /* takes a node and a new position as input, moves the node there */
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => {
-        if (node.id === nodeId) {
-          if (node.position.x !== newPosition.x || node.position.y !== newPosition.y) {
-            return {
-              ...node,
-              position: newPosition,
-              className: `${node.className} node-transition`, // Add transition class
-            };
-          }
-        }
-        return node;
-      })
-    );
-    // Remove the transition class after the animation completes
-    setTimeout(() => {
-      setNodes((currentNodes) =>
-        currentNodes.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              className: node.className ? node.className.replace(" node-transition", "") : "",
-            };
-          }
-          return node;
-        })
-      );
-    }, 1000); // Match the duration of the CSS transition
-  };
-
-  
-const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) => {
-  setNodes((currentNodes) => {
-    const updatedNodes = currentNodes.map((node) => {
-      /*--- If the draggedNode and the node it overlaps with are BOTH text nodes ---*/
-      if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
-        const draggedTextNode = draggedNode as Node<TextNodeData>;
-        const textNode = node as Node<TextNodeData>;
-        draggedTextNode.data.combinable = true;
-        textNode.data.combinable = true;
-      } 
-      else if (node.type === "text") {
-        const textNode = node as Node<TextNodeData>;
-        textNode.data.combinable = false;
-      }
-      /*this node is a generator node and something is hovering over it */
-      else if ((node.type === "t2i-generator") && intersections.includes(node.id)) {
-        const generatorNode = node as Node<T2IGeneratorNodeData>;
-        generatorNode.data.updateNode?.("", "dragging"); // Trigger dragging mode
-        return {
-          ...generatorNode,
-          className: "highlight-green",
-        };
-      } else if (node.type === "t2i-generator") {
-        const generatorNode = node as Node<T2IGeneratorNodeData>;
-        generatorNode.data.updateNode?.("", "ready");
-      }
-
-      return {
-        ...node,
-        className: "",
-      };
-    });
-    return updatedNodes;
-  });
-};
-
-  const handleIntersectionsOnDrop = (draggedNode: Node, intersections: string[]) => {
-    setNodes((currentNodes) => {
-      const updatedNodes = currentNodes.map((node) => {
-        if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
-          const draggedTextNode = draggedNode as Node<TextNodeData>;
-          const textNode = node as Node<TextNodeData>;
-          draggedTextNode.data.combinable = true;
-          textNode.data.combinable = true;
-          addTextNode(textNode.data.content + ", " + draggedTextNode.data.content, { x: textNode.position.x + 20, y: textNode.position.y + 20 });
-          console.log(draggedTextNode.data.content + " " + textNode.data.content);
-
-          // deleteNodeById(draggedTextNode.id);
-          // deleteNodeById(textNode.id);
-        } else if (node.type === "text") {
-          const textNode = node as Node<TextNodeData>;
-          textNode.data.combinable = false;
-        }
-        /*--- If a node has been dragged on top of a t2i generator ---*/
-        else if (node.type === "t2i-generator" && intersections.includes(node.id)) {
-          const generatorNode = node as Node<T2IGeneratorNodeData>;
-          const overlappingNode = currentNodes.find((n) => n.id === draggedNode.id);
-
-          const inputNodeContent =
-            //grab the content of the node that was dragged on top, and use it as input for our generator
-            overlappingNode && "content" in overlappingNode.data
-              ? overlappingNode.data.content
-              : overlappingNode && "label" in overlappingNode.data
-              ? overlappingNode.data.label
-              : "No content";
-
-          // Check if the node is ready for generation
-          const isReady = generatorNode.data.updateNode?.("", "check") === true;
-
-          if (
-            isReady &&
-            typeof inputNodeContent === "string" &&
-            inputNodeContent.trim() !== ""
-          ) {
-            // Rerender the node in "generating" mode with the prompt
-            generatorNode.data.updateNode?.(inputNodeContent, "generating");
-
-            // Generate a new image node, use helper function to decide where it should appear
-            generateNode(inputNodeContent, calcPositionAfterDrag(node.position, node, "below"))
-              .then(() => {
-                console.log("Generation complete!");
-
-                generatorNode.data.updateNode?.("", "ready");
-              })
-              .catch((error) => {
-                console.error("Image generation failed:", error);
-                generatorNode.data.updateNode?.("", "ready"); // Reset even on failure
-              });
-
-            // For the original overlapping node we just used as input,
-            // let's move it out of the way so it's not overlapping anymore.
-            if (overlappingNode) {
-              const overlappingNodePrevPosition = { x: overlappingNode.position.x, y: overlappingNode.position.y };
-              const newPosition = calcPositionAfterDrag(overlappingNodePrevPosition, node, "above");
-              updatePosition(overlappingNode.id, newPosition); //move it
-            }
-
-            return {
-              ...node, className: "", // Reset the highlight
-            };
-          }
-        } else if (node.type === "t2i-generator") { // the node is a generator, but nothing is intersecting with it
-          const generatorNode = node as Node<T2IGeneratorNodeData>;
-          generatorNode.data.updateNode?.("", "ready");
-        }
-        return {
-          ...node,
-          className: "",
-        };
-      });
-
-      return updatedNodes;
-    });
-  };
-
-
-
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
@@ -341,10 +153,10 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
 
-  const addT2IGenerator = (position ?:{ x:number, y:number}) => {
-    const newT2IGeneratorNode: AppNode = {
-      id: `t2i-generator-${nodes.length + 1}`,
-      type: "t2i-generator",
+  const addSynthesizer = (position ?:{ x:number, y:number}) => {
+    const newSynthesizerNode: AppNode = {
+      id: `synthesizer-${nodes.length + 1}`,
+      type: "synthesizer",
       position: position ?? {
       x: Math.random() * 250,
       y: Math.random() * 250,
@@ -358,10 +170,11 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
         console.log(`new node passed with content: ${content} and mode: ${mode}`);
         return true;
       }
-      } as T2IGeneratorNodeData,
+      } as SynthesizerNodeData,
     };
+    
 
-    setNodes((prevNodes) => [...prevNodes, newT2IGeneratorNode]);
+    setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
   };
 
   /*-- adds a lookup window ---*/
@@ -435,11 +248,185 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
 
 
 
+  /*------------ functions to handle changes to the Flow canvas ---------------*/
 
+
+  /* -- when something else is dragged over the canvas -- */
+  const onDragOver = useCallback((event: { preventDefault: () => void; dataTransfer: { dropEffect: string; }; }) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  
+ 
+  const onDrop = useCallback(
+    (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
+      event.preventDefault();
+      console.log(`you just dropped: ${draggableType} and ${draggableData}`);
+      // check if the dropped element is valid
+      if (!draggableType) {
+        return;
+      }
+ 
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      if (draggableType === "image" && "content" in draggableData && "prompt" in draggableData) {
+        addImageNode(draggableData["content"] as string, position, draggableData["prompt"] as string);
+      } else if ("content" in draggableData) {
+        addTextNode(draggableData["content"] as string, position);
+      }
+      
+    },
+    [draggableType, draggableData,screenToFlowPosition],
+  );
+
+
+  /* -------------------------------- NODE DRAGGING -------------------------*/
+
+  const onNodeDrag = useCallback(
+    (_: MouseEvent, draggedNode: Node) => {
+      const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
+      
+      setNodes((currentNodes: AppNode[]) =>
+        currentNodes.map((node: AppNode) => {
+          if (node.id === draggedNode.id) {
+            return {
+              ...node,
+              position: draggedNode.position,
+              combinable: intersections.includes(node.id),
+            };
+          }
+          if (node.type === "text" && draggedNode.type === "text") {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                combinable: intersections.includes(node.id),
+              },
+            };
+          }
+          if (node.type === "synthesizer") {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                mode: intersections.includes(node.id) ? "dragging" : "ready",
+              },
+            };
+          }
+          return node;
+        })
+      );
+    },
+    [setNodes, getIntersectingNodes]
+  );
+
+
+  const onNodeDragStop = useCallback(
+  (_: MouseEvent, draggedNode: Node) => {
+    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
+
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        /**** 2 text Nodes have been dragged together! ****/
+        if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
+          const draggedTextNode = draggedNode as Node<TextNodeData>;
+          const textNode = node as Node<TextNodeData>;
+
+          // Combine text and create a new text node
+          addTextNode(textNode.data.content + ", " + draggedTextNode.data.content, { 
+                x: textNode.position.x + (Math.random() * 10 - 5), 
+                y: textNode.position.y - 10,
+                });
+
+          deleteNodeById(draggedNode.id);
+          deleteNodeById(node.id);
+          
+          return { ...node, data: { ...node.data, combinable: true } };
+        } 
+        
+        if (node.type === "text") {
+          return { ...node, data: { ...node.data, combinable: false } };
+        }
+
+        /* --- If a node has been dragged on top of a synthesizer --- */
+        if (node.type === "synthesizer" && intersections.includes(node.id)) {
+              const inputNodeContent =(
+              "content" in draggedNode.data
+                ? draggedNode.data.content
+                : "label" in draggedNode.data
+                ? draggedNode.data.label
+                : "No content") as string;
+              // Determine the mode based on inputNodeContent
+              const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(inputNodeContent);
+              const mode = isValidImage ? "generating-image" : "generating-text";
+              // Generate a new node with the inputNodeContent
+              generateNode(inputNodeContent, calcNearbyPosition(getNodesBounds([node, draggedNode])));  // Set synthesizer node to the appropriate mode
+              // Move the draggedNode out of the way, back to where it was before the drag 
+              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode]), dragStart));
+              return { 
+              ...node, 
+              data: { ...node.data, mode, inputNodeContent }, 
+              className: "" // Reset highlight
+              };  
+            }
+        return { ...node, className: "" };
+      })
+    );
+  },
+  [setNodes, getIntersectingNodes, addTextNode]
+);
+
+
+
+  // ------------------- HELPER FUNCTIONS ------------------- //
+  const deleteNodeById = (nodeId: string) => {  
+    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
+  };
+
+  const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
+    /* takes a node and a new position as input, moves the node there */
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        if (node.id === nodeId) {
+          if (node.position.x !== newPosition.x || node.position.y !== newPosition.y) {
+            return {
+              ...node,
+              position: newPosition,
+              className: `${node.className} node-transition`, // Add transition class
+            };
+          }
+        }
+        return node;
+      })
+    );
+    // Remove the transition class after the animation completes
+    setTimeout(() => {
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              className: node.className ? node.className.replace(" node-transition", "") : "",
+            };
+          }
+          return node;
+        })
+      );
+    }, 1000); // Match the duration of the CSS transition
+  };
+
+
+
+
+
+// ------------------ GENERATE NODE FUNCTION ------------------ //
   const generateNode = useCallback(
     // Requests through reagent, generates an image node with a prompt and optional position
     async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
-      
 
       // True if the "prompt" is actually an image
       const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(prompt);
@@ -525,7 +512,6 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
             console.error("Unknown error occurred:", error);
           }
         }
-      
     },
     [setNodes]
   );
@@ -537,7 +523,7 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
       <div style={{ position: 'absolute', top: '10px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
-        <button onClick={() => addT2IGenerator()}>New Text to Image Generator</button>
+        <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
       </div>
 
       {/* Load & Save Buttons */}
@@ -555,9 +541,10 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
         <ReactFlow
           nodes={nodes}
           nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleOnNodesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
+          onNodeDragStart={onNodeDragStart}
           onDrop={onDrop}
           onDragOver={onDragOver}
           zoomOnDoubleClick={false}
@@ -582,13 +569,19 @@ const handleIntersectionsOnDrag = (draggedNode: Node, intersections: string[]) =
           {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
           </button>
           {showDebugInfo && (
-            <div>
-          <p><strong>User ID:</strong> {userID}</p>
-          <p><strong>Canvas Name:</strong> {canvasName}</p>
-          <p><strong>Canvas ID:</strong> {canvasId}</p>
-          <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
-          <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
-            </div>
+          //   <div> //debug info for debugging user state
+          // <p><strong>User ID:</strong> {userID}</p>
+          // <p><strong>Canvas Name:</strong> {canvasName}</p>
+          // <p><strong>Canvas ID:</strong> {canvasId}</p>
+          // <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
+          // <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
+          //   </div>
+
+          <div>
+            <p><strong>Draggable Type:</strong> {draggableType}</p>
+            <p><strong>Draggable Data:</strong> {JSON.stringify(draggableData, null, 2)}</p>
+            <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStart, null, 2)}</p>
+          </div>
           )
           }
         </div>

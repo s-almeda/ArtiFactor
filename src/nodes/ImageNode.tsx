@@ -41,12 +41,12 @@ const controlStyle: React.CSSProperties = {
   };
 
 
-interface ImageNodeProps extends NodeProps<ImageNode> {
-  //ons: (imageUrl: string) => void;
-}
+// interface ImageNodeProps extends NodeProps<ImageNode> {
+//   //ons: (imageUrl: string) => void;
+// }
 
 
-export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: ImageNodeProps) {
+export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: NodeProps<ImageNode>) {
   const { addClippedNode } = usePaletteContext(); 
   const [imageUrl, setImageUrl] = useState("");
   const [showPrompt, setShowPrompt] = useState(false);

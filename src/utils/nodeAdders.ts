@@ -1,4 +1,4 @@
-import { AppNode, TextNodeData, ImageNodeData, LookupNode, T2IGeneratorNodeData } from '../nodes/types'; // Adjust the import path as needed
+import { AppNode, TextNodeData, ImageNodeData, LookupNode, SynthesizerNodeData } from '../nodes/types'; // Adjust the import path as needed
 import axios from 'axios';
 import { useCallback } from 'react';
 import { Artwork } from '../nodes/types'; // TODO- move Artwork definition somewhere else maybe?
@@ -45,10 +45,10 @@ export const addImageNode = (setFlowNodes: Function, content?: string, position?
     setFlowNodes((prevNodes: AppNode[]) => [...prevNodes, newNode]);
 };
 
-export const addT2IGenerator = (setFlowNodes: Function, position?: { x: number; y: number }) => {
-    const newT2IGeneratorNode: AppNode = {
-        id: `t2i-generator-${Date.now()}`,
-        type: "t2i-generator",
+export const addSynthesizer = (setFlowNodes: Function, position?: { x: number; y: number }) => {
+    const newSynthesizerNode: AppNode = {
+        id: `synthesizer-${Date.now()}`,
+        type: "synthesizer",
         position: position ?? {
             x: Math.random() * 250,
             y: Math.random() * 250,
@@ -62,10 +62,10 @@ export const addT2IGenerator = (setFlowNodes: Function, position?: { x: number; 
                 console.log(`new node passed with content: ${content} and mode: ${mode}`);
                 return true;
             }
-        } as T2IGeneratorNodeData,
+        } as SynthesizerNodeData,
     };
 
-    setFlowNodes((prevNodes: AppNode[]) => [...prevNodes, newT2IGeneratorNode]);
+    setFlowNodes((prevNodes: AppNode[]) => [...prevNodes, newSynthesizerNode]);
 };
 
 export const handleImageLookUp = (setFlowNodes: Function) => {

@@ -24,9 +24,10 @@ export type LookupNodeData = ArtifactorNodeData & {
   artworks: Artwork[];
 };
 
-export type T2IGeneratorNodeData = ArtifactorNodeData & {
-  mode: "ready" | "generating" | "dragging" | "check";
-  updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
+export type SynthesizerNodeData = ArtifactorNodeData & {
+  mode: "ready" | "generating-image" | "dragging" | "generating-text";
+  inputNodeContent?: string;
+  //updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
 };
 
 /** Generalized AppNode Type */
@@ -36,7 +37,7 @@ export type AppNode<T extends ArtifactorNodeData = ArtifactorNodeData> = Node<T>
 export type TextNode = AppNode<TextNodeData>;
 export type ImageNode = AppNode<ImageNodeData>;
 export type LookupNode = AppNode<LookupNodeData>;
-export type T2IGeneratorNode = AppNode<T2IGeneratorNodeData>;
+export type SynthesizerNode = AppNode<SynthesizerNodeData>;
 
 /** Node Props for Custom Components */
 export type AppNodeProps = NodeProps<AppNode>;

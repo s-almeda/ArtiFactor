@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 import { useAppContext } from "./AppContext";
-import { useReactFlow, type ReactFlowJsonObject } from "@xyflow/react";
+import { type ReactFlowJsonObject } from "@xyflow/react";
 
 interface CanvasContextType {
   canvasId: string;
