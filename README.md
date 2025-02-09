@@ -14,7 +14,7 @@
 - - different kinds of node component are each defined in the /nodes folder, so here is where you could add a new kind of node
   - each type of node is defined in types.ts
   - the nodes that the application "starts" with are defined under index.ts
-  - we're mostly using the ImageNode, TextNode, and T2IGenerator Node rn. the other ones are from the documentation/are prototypes for the ones that exist now.
+  - we're mostly using the ImageNode, TextNode, and Synthesizer Node rn. the other ones are from the documentation/are prototypes for the ones that exist now.
 - The About page is About.tsx
 - The left Sidebar component is in Sidebar.tsx
 ### PUSHING YOUR CHANGES
