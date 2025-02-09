@@ -46,20 +46,34 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
   }, [content, data]);
 
   return (
-    <motion.div
-    initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75,  filter: "drop-shadow(6px 6px 6px rgba(0, 0, 0, 0.65))"}}
-    animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1, filter: "drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.25))"}}
-    transition={{ duration: 0.01, type: "spring", bounce: 0.5 }}
-    className={`${data.combinable ? 'bg-yellow-50' : ''} p-3 border border-gray-700 rounded bg-white transition-all duration-300`}
-    >
-      {data.loading ? (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
-        {content.split('\n').map((line, index) => (
-        <div className="text-gray-500" key={index}>{line}</div>
-        ))}
-        <div className="loader"></div>
-      </div>
-      ) : (
+      <>
+        {data.loading ? (
+          // initial animation for loading nodes
+        <motion.div
+        initial={{ opacity: 0, x:0, y: 3, scale: 0.6, filter: "blur(10px)"}}
+        animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1, filter: ""}}
+        transition={{ duration: 0.4, type: "spring", bounce: 0.1 }}
+        className ="p-3 border border-gray-700 rounded bg-white"
+        >
+        
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
+          {content.split('\n').map((line, index) => (
+          <div className="text-gray-500" key={index}>{line}</div>
+          ))}
+          <div className="loader"></div>
+        </div>
+        </motion.div>
+
+
+        ) : (
+
+        //animation for editable text nodes, looks like a paper card
+        <motion.div
+        initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75,  filter: "drop-shadow(6px 6px 6px rgba(0, 0, 0, 0.65))"}}
+        animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1, filter: "drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.25))"}}
+        transition={{ duration: 0.15, type: "spring", bounce: 0.1 }}
+        className={`${data.combinable ? 'bg-yellow-50' : ''} p-3 border border-gray-700 rounded bg-white`}
+        >
       <div style={{ border: "1px solid black", padding: "1px" }} className="nodrag">
         <textarea className={`nodrag, ${data.combinable ? 'bg-yellow-50' : ''}`}
         ref={textareaRef}
@@ -95,7 +109,9 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         </NodeToolbar>
         )}
       </div>
+      </motion.div>
       )}
-    </motion.div>
+      </>
+
   );
 }
