@@ -49,9 +49,9 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
 
   return (
     <motion.div
-    initial={{ opacity: 0, y: 10, scale: 1.1, rotateY: 0,  filter: "blur(1px)"}}
-    animate={ !hasRendered && { opacity: 1, y: 0, scale: 1, rotateY: 0, scaleX:1, filter: ""}}
-    transition={{ duration: 0.01, type: "spring", bounce: 0.05 }}
+    initial={{ opacity: 0, x:0, y: 10, scale: 1.1, rotateY: -45,  filter: "blur(1px) drop-shadow(10px 10px 10px rgba(0, 0, 0, 0.65))"}}
+    animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY: 0, scaleX:1, filter: "drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.25))"}}
+    transition={{ duration: 0.01, type: "spring", bounce: 0.5 }}
     className={`${data.combinable ? 'bg-yellow-50' : ''} p-3 border border-gray-700 rounded bg-white transition-all duration-300`}
     >
       {data.loading ? (
@@ -62,7 +62,7 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         <div className="loader"></div>
       </div>
       ) : (
-      <div style={{ border: "1px solid black", padding: "1px" }}>
+      <div style={{ border: "1px solid black", padding: "1px" }} className="nodrag">
         <textarea className={`nodrag, ${data.combinable ? 'bg-yellow-50' : ''}`}
         ref={textareaRef}
         value={content}
