@@ -77,17 +77,17 @@ function AppContent() {
                         <Flow />
 
                       </div>
-                      <div
-                        className="border border-gray-500"
+                        <div
+                        className="border border-gray-500 ml-5 rounded-lg"
                         style={{
                           height: "90vh",
                           width: "30vw",
                           margin: 0,
-                          padding: 0,
+                          zIndex: 3, 
                         }}
-                      >
+                        >
                         <Palette />
-                      </div>
+                        </div>
                     </div>
                   }
                 />

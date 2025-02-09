@@ -25,6 +25,7 @@ import { calcNearbyPosition } from './utils/calcNearbyPosition';
 //import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
+import { data } from "react-router-dom";
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
@@ -236,10 +237,14 @@ const Flow = () => {
         };
 
         setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === loadingNodeId ? newLookupNode : node
-          )
-        );
+          nodes.map((node) => {
+            if (node.id === loadingNodeId) {
+              newLookupNode.position = node.position;
+              return newLookupNode;
+            }
+            return node;
+          })
+        );  
       }
     } catch (error) {
       console.error("Failed to lookup image:", error);
@@ -267,10 +272,9 @@ const Flow = () => {
       if (!draggableType) {
         return;
       }
- 
       const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
+        x: event.clientX - 60,
+        y: event.clientY - 60,
       });
 
       if (draggableType === "image" && "content" in draggableData && "prompt" in draggableData) {
@@ -495,10 +499,14 @@ const Flow = () => {
               };
 
               setNodes((nodes) =>
-                nodes.map((node) =>
-                  node.id === loadingNodeId ? newImageNode : node
-                )
-              );
+                nodes.map((node) => {
+                  if (node.id === loadingNodeId) {
+                    newImageNode.position = node.position;
+                    return newImageNode;
+                  }
+                  return node;
+                })
+              );  
             } // response error
             else {
               console.error(`Image generation Error: ${response.status}`);
@@ -524,7 +532,8 @@ const Flow = () => {
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
-      </div>
+      </div> 
+      {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 
       {/* Load & Save Buttons */}
       <div className="absolute top-10 left-10 z-10 space-x-2">
@@ -537,7 +546,7 @@ const Flow = () => {
       </div>
 
             
-      <div style={{ width: '100%', height: '100vh' }}>
+      <div style={{ width: '100%', height: '100%' }}>
         <ReactFlow
           nodes={nodes}
           nodeTypes={nodeTypes}
@@ -549,7 +558,7 @@ const Flow = () => {
           onDragOver={onDragOver}
           zoomOnDoubleClick={false}
           fitView
-          selectionOnDrag
+          selectionOnDrag={true}
         >
           <Background />
           {/*<MiniMap />*/}
