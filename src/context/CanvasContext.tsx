@@ -1,5 +1,5 @@
 // handle saving and loading the canvas! 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 import { useAppContext } from "./AppContext";
 import { type ReactFlowJsonObject } from "@xyflow/react";
@@ -63,6 +63,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Load Canvas from Browser
   const loadCanvasFromBrowser = (canvasID: string) => {
+
     try {
       const localStorageKey = `${canvasID}`; 
       const storedCanvas = localStorage.getItem(localStorageKey);

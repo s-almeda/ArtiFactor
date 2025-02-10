@@ -7,7 +7,7 @@ import {
   Background,
   Controls,
   //MiniMap,
-  ReactFlowJsonObject,
+  //ReactFlowJsonObject,
   Node,
   useNodesState,
   useReactFlow,
@@ -31,7 +31,7 @@ import { useCanvasContext } from './context/CanvasContext';
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasID, loadCanvas, saveCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
