@@ -50,7 +50,7 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         {data.loading ? (
           // initial animation for loading nodes
         <motion.div
-        initial={{ opacity: 0, x:0, y: 3, scale: 0.6, filter: "blur(10px)"}}
+        initial={{ opacity: 0, x:0, y: 3, scale: 0.6, filter: "blur(`10px`)"}}
         animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1, filter: ""}}
         transition={{ duration: 0.4, type: "spring", bounce: 0.1 }}
         className ="p-3 border border-gray-700 rounded bg-white"

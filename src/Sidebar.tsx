@@ -5,42 +5,63 @@ import { useAppContext } from "./context/AppContext";
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { loadCanvas } = useCanvasContext();
-  const { backend, handleUserLogin, setLoadCanvasRequest, userID } = useAppContext();
+  const { loadCanvas, setCanvasName, setCanvasId, saveCanvas } = useCanvasContext();
+  const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
+
   const [enteredUserID, setEnteredUserID] = useState("");
+  const [enteredPassword, setEnteredPassword] = useState("");
 
   const [error, setError] = useState("");
   const [canvasList, setCanvasList] = useState<{ id: string; name: string }[]>([]); // Initialize as an empty array
-  const [loggedInUser, setLoggedInUser] = useState<string | null>(userID); // for displaying in the top left! 
+
+  useEffect(() => { // check if the user has logged in
+    if (userID && userID !== "default") {
+      refreshCanvases();
+    }
+  }, [userID]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      await handleUserLogin(enteredUserID);
-      setLoadCanvasRequest(true);
-      setLoggedInUser(enteredUserID); // Update to use enteredUserID
+      await handleUserLogin(enteredUserID, "");
+      //save the login to local storage
+      localStorage.setItem("last_userID", enteredUserID);
+      localStorage.setItem("last_password", ""); //todo, fix when we make passwords a thing
+
     } catch (error) {
       console.error("Error logging in user:", error);
       setError("Something went wrong.");
     }
   };
+  const handleUserLogout = () => {
+    const confirmLogout = window.confirm("Are you sure you want to log out? (You may lose unsaved changes)");
+    if (confirmLogout) {
+      handleUserLogin("default", "");
+    }
+  };
 
   const refreshCanvases = async () => {
-    if (!loggedInUser) return;
+
+    if (!userID || userID === "default") return; //user isn't logged in
 
     try {
+      console.log("Refreshing canvases...");
       const response = await fetch(`${backend}/api/list-users`);
       const data = await response.json();
+
 
       if (!data.success) {
         setError("Error fetching users.");
         return;
       }
 
-      const user = data.users.find((u: { id: string }) => u.id === loggedInUser);
+      const user = data.users.find((u: { id: string }) => u.id === userID);
       if (user) {
+        console.log("found user", user);
+        console.log("user's canvasList", user.canvasList);
         setCanvasList(user.canvasList);
       } else {
         setError("User not found.");
@@ -51,11 +72,12 @@ const Sidebar = ({ onClose }: {
     }
   };
 
-  useEffect(() => {
-    if (userID) {
-      setLoggedInUser(userID);
-    }
-  }, [userID]);
+  // useEffect(() => {
+  //   if (userID) {
+  //     setLoggedInUser(userID);
+  //   }
+  // }, [userID]);
+
 
   return (
     <div className="fixed top-0 left-0 w-64 h-full bg-gray-800 text-white p-4 z-40">
@@ -66,31 +88,45 @@ const Sidebar = ({ onClose }: {
         Close
       </button>
 
-      <h2 className="text-lg font-bold mb-2">Enter UserID</h2>
-      <form onSubmit={handleSubmit} className="mb-4">
-        <input
-          type="text"
-          value={enteredUserID}
-          onChange={(e) => setEnteredUserID(e.target.value)} //keep track of what the person types in the login form
-          placeholder="enter userID:" 
-          className="w-full p-2 border rounded text-black"
-        />
-        <button type="submit" className="mt-2 w-full bg-blue-500 text-white p-2 rounded">
-          Submit
-        </button>
-      </form>
-      {error && <p className="text-red-500">{error}</p>}
-
-      {loggedInUser && (
+      {/* Login Form */}
+      {(!userID || userID === "default") && (
         <>
-          <h2 className="text-lg font-bold mb-2">Hello, {loggedInUser}!</h2>
-          <button 
-            onClick={refreshCanvases} 
-            className="mt-2 w-full bg-green-500 text-white p-2 rounded"
-          >
-            Refresh Canvases
-          </button>
-          <h3 className="text-md font-semibold mt-4">Your Canvases:</h3>
+          <h2 className="text-lg font-bold mb-2">Enter UserID</h2>
+          <form onSubmit={handleSubmit} className="mb-4">
+            <input
+              type="text"
+              value={enteredUserID}
+              onChange={(e) => setEnteredUserID(e.target.value)} //keep track of what the person types in the login form
+              placeholder="enter userID:"
+              className="w-full p-2 border rounded text-black"
+            />
+            <button type="submit" className="mt-2 w-full bg-blue-500 text-white p-2 rounded">
+              Submit
+            </button>
+          </form>
+          <p className="text-red-500">{error}</p>
+        </>
+      )}
+
+      {/* Logged in (not default) user view */}
+      {userID && userID !== "default" && (
+        <>
+        <button 
+          onClick={saveCanvas} 
+          className="mt-2 w-full bg-green-500 text-white p-2 rounded">
+          Save Canvas
+        </button>
+        
+          <h2 className="text-lg font-bold mb-2">Hi, {userID}!</h2>
+            <div className="flex items-center justify-between mt-2">
+              <h3 className="text-md font-semibold">Your Canvases:</h3>
+              <button 
+              onClick={refreshCanvases} 
+              className="text-white p-2 rounded"
+              >
+              🔄
+              </button>
+            </div>
           <ul className="mt-2">
             {canvasList && canvasList.length > 0 ? ( // Add a check to ensure canvasList is defined
               canvasList.map((canvas) => (
@@ -107,7 +143,50 @@ const Sidebar = ({ onClose }: {
               <p className="text-gray-400">No canvases yet.</p>
             )}
           </ul>
+          <button 
+            onClick={handleUserLogout} 
+            className="mt-4 w-full bg-red-500 text-white p-2 rounded"
+          >
+            Log Out
+          </button>
         </>
+      )}
+
+
+      
+      {/* Admin Controls  TODO: make this its own component */}
+      {userID && admins.includes(userID) && (
+        <div className="mt-4 p-4 bg-black rounded">
+          <h2 className="text-lg font-bold mb-2">Admin Controls</h2>
+
+          <h3>Add new user</h3>
+            <input
+            type="text"
+            placeholder="Enter new user ID"
+            value={enteredUserID}
+            onChange={(e) => setEnteredUserID(e.target.value)}
+            className="w-full p-2 border rounded text-black mb-2"
+            />
+            <input
+            type="password"
+            placeholder="Enter new user password"
+            value={enteredPassword}
+            onChange={(e) => setEnteredPassword(e.target.value)}
+            className="w-full p-2 border rounded text-black mb-2"
+            />
+            <button 
+            onClick={() => addUser(enteredUserID, enteredPassword)} 
+            className="w-full bg-green-500 text-white p-2 rounded"
+            >
+            Add User
+            </button>
+            <button 
+            onClick={() => console.log(localStorage)} 
+            className="w-full bg-blue-500 text-white p-2 rounded mt-2"
+            >
+            Print Local Storage to console
+            </button>
+        </div>
       )}
     </div>
   );

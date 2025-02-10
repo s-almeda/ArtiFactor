@@ -7,6 +7,7 @@ import {
   Background,
   Controls,
   //MiniMap,
+  ReactFlowJsonObject,
   Node,
   useNodesState,
   useReactFlow,
@@ -25,55 +26,62 @@ import { calcNearbyPosition } from './utils/calcNearbyPosition';
 //import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
-import { data } from "react-router-dom";
+// import { data } from "react-router-dom";
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasId, loadCanvas, saveCanvas,  } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const [ nodes, setNodes, onNodesChange] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { canvasName, canvasId, loadCanvas, saveCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
+  const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
+
+  //attempt (just once) to load the canvas from the browser storage
   useEffect(() => {
-    if (draggableData) {
-      console.log("Currently dragging:", draggableData);
+    if (!attemptedQuickLoad) {
+      //console.log ("ATTEMPTING A CANVAS QUICK LOAD");
+      //TODO: check if they have saved user data / specific canvas they are working on.       
+      const savedCanvas = loadCanvasFromBrowser("new-canvas");
+      if (savedCanvas) {
+        console.log("Canvas loaded from browser storage!");
+        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas;
+        setNodes(nodes);
+        setViewport(viewport);
+      }
+      else{
+        console.log("No saved canvas found in browser storage.");
+      }
+      setattemptedQuickLoad(true); 
     }
-  }, [draggableData]);
+  }, [attemptedQuickLoad, canvasId, setNodes, setViewport]);
 
-  const onNodeDragStart = useCallback(
-    (_: MouseEvent, node: Node) => {
-      setDragStartPosition({ x: node.position.x, y: node.position.y });
-    },
-    []
-  );
 
-  // const handleOnNodesChange = (changes: any) => {
-  //   onNodesChange(changes);
-
-  //   changes.forEach((change: any) => {
-  //     if (change.node.type === 'synthesizer') {
-  //       const synthesizerNode = change.node as Node<SynthesizerNodeData>;
-  //       synthesizerNode.data.updateNode?.(synthesizerNode.data.mode);
-  //     }
-  //   });
-  // };
+  //our custom nodes change function called everytime a node changes, even a little
   const handleOnNodesChange = useCallback(
-    (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [setNodes],
+    (changes: any) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
+    },
+    [setNodes]
   );
+
+  
+  
 
     /* 
-    ================================================== 
-    ||            Saving and Loading...             || 
-    =======================================-========== 
+    =============================================================================== 
+    ||      Saving and Loading... (quick save functions are in CanvasContext)    || 
+    =============================================================================== 
      */
+    
+    /* ----- call the CanvasContext save to the backend database  ----*/
     const handleLoadCanvas = useCallback(async () => {
       console.log("loading canvas data for: ", canvasId);
       const canvasData = await loadCanvas(canvasId);
       console.log("Loaded Canvas Data:", canvasData); // Print to console for debugging
-
       if (canvasData !== undefined) {
         const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = canvasData;
         setNodes(nodes);
@@ -81,11 +89,7 @@ const Flow = () => {
       }
     }, [canvasId, loadCanvas, setNodes, setViewport]);
 
-  const handleSaveCanvas = async () => {
-    const canvasData = toObject();
-    saveCanvas(canvasData);
-    //todo
-  };
+
 
 
   /* ---------------------------------------------------- */
@@ -110,7 +114,6 @@ const Flow = () => {
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
-  
 
   const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
     const newTextNode: AppNode = {
@@ -132,13 +135,14 @@ const Flow = () => {
   };
 
   const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
-    console.log("adding an image to the canvas: ", content);
+    content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
+    prompt = prompt ?? "default alligator image";
+    console.log("adding an image to the canvas: ", content, prompt);
     position = position ?? { 
       x: Math.random() * 250,
       y: Math.random() * 250,
     };
-    content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
-    prompt = prompt ?? "None";
+    
     const newNode: AppNode = {
       id: `image-${nodes.length + 1}`,
       type: "image",
@@ -289,10 +293,21 @@ const Flow = () => {
 
   /* -------------------------------- NODE DRAGGING -------------------------*/
 
+
+  //when someone starts dragging, send the starting position to the DnD Context
+  const onNodeDragStart = useCallback(
+    (_: MouseEvent, node: Node) => {
+      setDragStartPosition({ x: node.position.x, y: node.position.y });
+    },
+    []
+  );
+
+  //keep track o fhte node dragging 
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      
+      setDraggableType(draggedNode.type as string);
+      setDraggableData(draggedNode.data);
       setNodes((currentNodes: AppNode[]) =>
         currentNodes.map((node: AppNode) => {
           if (node.id === draggedNode.id) {
@@ -388,6 +403,7 @@ const Flow = () => {
   // ------------------- HELPER FUNCTIONS ------------------- //
   const deleteNodeById = (nodeId: string) => {  
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
+    quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
   };
 
   const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
@@ -539,7 +555,7 @@ const Flow = () => {
         <button onClick={handleLoadCanvas} className="bg-blue-500 text-white p-2 rounded">
           Load Canvas
         </button>
-        <button onClick={handleSaveCanvas} className="bg-green-500 text-white p-2 rounded">
+        <button onClick={saveCanvas} className="bg-green-500 text-white p-2 rounded">
           Save Canvas
         </button>
       </div>

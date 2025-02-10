@@ -25,7 +25,7 @@ export const DnDProvider = ({ children }: { children: any }) => {
   return (
     <DnDContext.Provider value={[draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition]}>
       {children}
-      {console.log(`you are dragging a ${draggableType} with this data: ${JSON.stringify(draggableData)}`)}
+      {/* {console.log(`you are dragging a <${draggableType}> node with this data: ${JSON.stringify(draggableData)}`)} */}
     </DnDContext.Provider>
   );
 }
