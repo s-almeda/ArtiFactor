@@ -3,22 +3,12 @@
 interface PaletteNodeProps {
   content: string;
   type: "text" | "image";
-  onAddNode: (type: string, content: string) => void;
 }
 
-export function PaletteNode({ type, content, onAddNode }: PaletteNodeProps) {
+
+export function PaletteNode({ type, content }: PaletteNodeProps) {
   return (
-    <div
-      className="bg-white border border-gray-600 rounded-md p-2 cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
-      onClick={() => onAddNode(type, content)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          onAddNode(type, content);
-        }
-      }}
-      tabIndex={0}
-      style={{ width: "21vw" }}
-    >
+      <div>
       {type === "text" ? (
         <div>
           {content.length > 25 ? `${content.substring(0, 25)}...` : content}

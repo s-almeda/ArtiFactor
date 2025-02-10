@@ -2,9 +2,9 @@ import { Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
 import { ChevronLeft, ChevronRight} from 'lucide-react';
 import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
-import type { LookupNode, Artwork } from "../types";
+import type { LookupNode, Artwork } from "./types";
 
-import { useDnD } from "../DnDContext";
+import { useDnD } from "../context/DnDContext";
 
 const controlStyle: React.CSSProperties = {
   background: 'white',
