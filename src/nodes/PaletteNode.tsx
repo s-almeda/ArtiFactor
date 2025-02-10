@@ -18,14 +18,35 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({ data, charLimit, type }) => {
     setDraggableData(data);
   };
 
-  // Download image as a .png file (Fixed)
-  const downloadImage = () => {
-    const link = document.createElement("a");
-    link.href = data.content; // Directly use the image URL
-    link.download = "palette-image.png"; // Suggested filename
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async () => {
+    try {
+      const imageUrl = data.content;
+
+      // Fetch the image as a blob
+      const response = await fetch(imageUrl);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch the image.");
+      }
+
+      const blob = await response.blob(); // Convert the image into a Blob
+      const blobUrl = URL.createObjectURL(blob); // Create a URL for the Blob
+
+      // Create a link element to trigger the download
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "palette-image.png"; // Set the desired filename
+
+      // Trigger the download by clicking the link programmatically
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL after use
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Error downloading image:", error);
+    }
   };
 
   return (
