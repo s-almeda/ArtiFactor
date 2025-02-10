@@ -34,7 +34,7 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({
 
   return (
     <div
-      className="bg-white border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
+      className="border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
       draggable
       onDragStart={(event) => onDragStart(event)}
       tabIndex={0}
@@ -77,7 +77,7 @@ const Palette: React.FC<PaletteProps> = ({  }) => {//onAddNode
 
 
   return (
-    <div className="bg-white p-4 w-[23vw]">
+    <div className="p-4 w-[23vw]">
       {/* Toggle Tabs */}
       <div className="flex space-x-2 mb-4">
         <button

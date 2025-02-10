@@ -33,7 +33,7 @@ const Flow = () => {
   const { canvasName, canvasId, loadCanvas, saveCanvas,  } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes, onNodesChange] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
-  const [draggableType, setDraggableType, draggableData, setDraggableData, dragStart, setDragStart] = useDnD();
+  const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
 
   useEffect(() => {
@@ -44,7 +44,7 @@ const Flow = () => {
 
   const onNodeDragStart = useCallback(
     (_: MouseEvent, node: Node) => {
-      setDragStart({ x: node.position.x, y: node.position.y });
+      setDragStartPosition({ x: node.position.x, y: node.position.y });
     },
     []
   );
@@ -132,7 +132,7 @@ const Flow = () => {
   };
 
   const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
-    console.log(content);
+    console.log("adding an image to the canvas: ", content);
     position = position ?? { 
       x: Math.random() * 250,
       y: Math.random() * 250,
@@ -267,8 +267,7 @@ const Flow = () => {
   const onDrop = useCallback(
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
-      console.log(`you just dropped: ${draggableType} and ${draggableData}`);
-      // check if the dropped element is valid
+      console.log(`you just dropped and: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
       if (!draggableType) {
         return;
       }
@@ -370,7 +369,7 @@ const Flow = () => {
               // Generate a new node with the inputNodeContent
               generateNode(inputNodeContent, calcNearbyPosition(getNodesBounds([node, draggedNode])));  // Set synthesizer node to the appropriate mode
               // Move the draggedNode out of the way, back to where it was before the drag 
-              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode]), dragStart));
+              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode]), dragStartPosition));
               return { 
               ...node, 
               data: { ...node.data, mode, inputNodeContent }, 
@@ -420,7 +419,7 @@ const Flow = () => {
           return node;
         })
       );
-    }, 1000); // Match the duration of the CSS transition
+    }, 500); // Match the duration of the CSS transition
   };
 
 
@@ -589,7 +588,7 @@ const Flow = () => {
           <div>
             <p><strong>Draggable Type:</strong> {draggableType}</p>
             <p><strong>Draggable Data:</strong> {JSON.stringify(draggableData, null, 2)}</p>
-            <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStart, null, 2)}</p>
+            <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStartPosition, null, 2)}</p>
           </div>
           )
           }

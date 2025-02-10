@@ -16,16 +16,16 @@ const DnDContext = createContext<
 export const DnDProvider = ({ children }: { children: any }) => {
   const [draggableType, setDraggableType] = useState("default");
   const [draggableData, setDraggableData] = useState({});
-  const [dragStart, setDragStart] = useState({x: 0, y: 0});
+  const [dragStartPosition, setDragStartPosition] = useState({x: 0, y: 0});
 
   // useEffect(() => {
   //   //console.log(`DnDProvider receiving: ${draggableType} and ${JSON.stringify(draggableData)}`);
   // }, [draggableType, draggableData]);
   
   return (
-    <DnDContext.Provider value={[draggableType, setDraggableType, draggableData, setDraggableData, dragStart, setDragStart]}>
+    <DnDContext.Provider value={[draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition]}>
       {children}
-      {console.log(`${draggableType} and ${JSON.stringify(draggableData)}`)}
+      {console.log(`you are dragging a ${draggableType} with this data: ${JSON.stringify(draggableData)}`)}
     </DnDContext.Provider>
   );
 }
