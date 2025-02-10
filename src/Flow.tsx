@@ -31,7 +31,7 @@ import { useCanvasContext } from './context/CanvasContext';
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasId, loadCanvas, saveCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, loadCanvas, saveCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
@@ -56,7 +56,7 @@ const Flow = () => {
       }
       setattemptedQuickLoad(true); 
     }
-  }, [attemptedQuickLoad, canvasId, setNodes, setViewport]);
+  }, [attemptedQuickLoad, canvasID, setNodes, setViewport]);
 
 
   //our custom nodes change function called everytime a node changes, even a little
@@ -65,29 +65,11 @@ const Flow = () => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
     },
-    [setNodes]
+    [setNodes, quickSaveToBrowser, canvasID]
   );
 
   
   
-
-    /* 
-    =============================================================================== 
-    ||      Saving and Loading... (quick save functions are in CanvasContext)    || 
-    =============================================================================== 
-     */
-    
-    /* ----- call the CanvasContext save to the backend database  ----*/
-    const handleLoadCanvas = useCallback(async () => {
-      console.log("loading canvas data for: ", canvasId);
-      const canvasData = await loadCanvas(canvasId);
-      console.log("Loaded Canvas Data:", canvasData); // Print to console for debugging
-      if (canvasData !== undefined) {
-        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = canvasData;
-        setNodes(nodes);
-        setViewport(viewport);
-      }
-    }, [canvasId, loadCanvas, setNodes, setViewport]);
 
 
 
@@ -403,7 +385,7 @@ const Flow = () => {
   // ------------------- HELPER FUNCTIONS ------------------- //
   const deleteNodeById = (nodeId: string) => {  
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-    quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
+    quickSaveToBrowser(toObject(), canvasID); //everytime a node is changed, save it to the browser storage
   };
 
   const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
@@ -550,15 +532,6 @@ const Flow = () => {
       </div> 
       {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 
-      {/* Load & Save Buttons */}
-      <div className="absolute top-10 left-10 z-10 space-x-2">
-        <button onClick={handleLoadCanvas} className="bg-blue-500 text-white p-2 rounded">
-          Load Canvas
-        </button>
-        <button onClick={saveCanvas} className="bg-green-500 text-white p-2 rounded">
-          Save Canvas
-        </button>
-      </div>
 
             
       <div style={{ width: '100%', height: '100%' }}>
@@ -593,19 +566,19 @@ const Flow = () => {
           {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
           </button>
           {showDebugInfo && (
-          //   <div> //debug info for debugging user state
-          // <p><strong>User ID:</strong> {userID}</p>
-          // <p><strong>Canvas Name:</strong> {canvasName}</p>
-          // <p><strong>Canvas ID:</strong> {canvasId}</p>
-          // <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
-          // <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
-          //   </div>
-
-          <div>
-            <p><strong>Draggable Type:</strong> {draggableType}</p>
-            <p><strong>Draggable Data:</strong> {JSON.stringify(draggableData, null, 2)}</p>
-            <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStartPosition, null, 2)}</p>
+           <div> //debug info for debugging user state
+          <p><strong>User ID:</strong> {userID}</p>
+          <p><strong>Canvas Name:</strong> {canvasName}</p>
+          <p><strong>Canvas ID:</strong> {canvasID}</p>
+          <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
+          <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
           </div>
+
+          // <div>
+          //   <p><strong>Draggable Type:</strong> {draggableType}</p>
+          //   <p><strong>Draggable Data:</strong> {JSON.stringify(draggableData, null, 2)}</p>
+          //   <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStartPosition, null, 2)}</p>
+          // </div>
           )
           }
         </div>
@@ -617,3 +590,23 @@ const Flow = () => {
 };
 
 export default Flow;
+
+
+
+    // /* 
+    // =============================================================================== 
+    // ||      Saving and Loading... (quick save functions are in CanvasContext)    || 
+    // =============================================================================== 
+    //  */
+    
+    // /* ----- call the CanvasContext save to the backend database  ----*/
+    // const handleLoadCanvas = useCallback(async () => {
+    //   console.log("loading canvas data for: ", canvasID);
+    //   const canvasData = await loadCanvas(canvasID);
+    //   console.log("Loaded Canvas Data:", canvasData); // Print to console for debugging
+    //   if (canvasData !== undefined) {
+    //     const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = canvasData;
+    //     setNodes(nodes);
+    //     setViewport(viewport);
+    //   }
+    // }, [canvasID, loadCanvas, setNodes, setViewport]);

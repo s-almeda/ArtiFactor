@@ -201,7 +201,7 @@ app.post("/api/authenticate-user", async (req, res) => {
 
 app.get("/api/list-canvases/:userID", async (req, res) => {
   const { userID } = req.params;
-
+  console.log("Attempting to list canvases for user:", userID);
   try {
     const db = await dbPromise;
 
@@ -218,6 +218,7 @@ app.get("/api/list-canvases/:userID", async (req, res) => {
       id: canvas.id,
       name: canvas.name
     }));
+    console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}`);
 
     res.json({ success: true, canvases: formattedCanvases });
   } catch (error) {
@@ -260,37 +261,82 @@ app.get("/api/list-users", async (req, res) => {
 
 
 // --------- CANVAS DATA - Saving and loading canvases -------------- //
+app.get("/api/next-canvas-id/:userID", async (req, res) => {
+  const { userID } = req.params;
+  console.log("Attempting to get next canvas ID for user:", userID);
+  try {
+    const db = await dbPromise;
+    // Check if user exists
+    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // Get the number of canvases for the user
+    const canvasCount = await db.get(`SELECT COUNT(*) as count FROM canvases WHERE user_id = ?`, [userID]);
+    // Generate the next canvas ID
+    console.log(`found ${canvasCount.count} canvases for user ${userID}.`);
+    const nextCanvasId = `${userID}-${canvasCount.count + 1}`;
+    console.log(`Next canvas ID for user ${userID} is ${nextCanvasId}`);
+    res.json({ success: true, nextCanvasId });
+  } catch (error) {
+    console.error("Error getting next canvas ID:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
   app.post("/api/save-canvas", async (req, res) => {
-    const { userID, canvasId, canvasName, nodes, viewport } = req.body;
-
-    if (!userID || !canvasId || !nodes || !viewport) {
+    const { userID, canvasID, canvasName, nodes, viewport } = req.body;
+    console.log("Attempting to save canvas:", req.body);
+    if (!userID || !canvasID || !nodes || !viewport) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     try {
       const db = await dbPromise;
-      const existingCanvas = await db.get("SELECT id FROM canvases WHERE id = ?", [canvasId]);
-
+      const existingCanvas = await db.get("SELECT id FROM canvases WHERE id = ?", [canvasID]);
+      
       if (existingCanvas) {
-        // ✅ Update existing canvas
+        console.log(`found canvas ${canvasID} for user ${userID}.`);
         await db.run(
           `UPDATE canvases SET name = ?, nodes = ?, viewport = ? WHERE id = ?`,
-          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), canvasId]
+          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), canvasID]
         );
-        console.log(`✅ Canvas ${canvasId} updated.`);
+        console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}.`);
       } else {
         // ✅ Insert new canvas
         await db.run(
           `INSERT INTO canvases (id, user_id, name, nodes, viewport) VALUES (?, ?, ?, ?, ?)`,
-          [canvasId, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport)]
+          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport)]
         );
-        console.log(`✅ New canvas ${canvasId} created.`);
+        console.log(`New canvas ${canvasID} created for user ${userID} with name ${canvasName}.`);
       }
 
       res.json({ success: true });
     } catch (error) {
       console.error("Error saving canvas:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/delete-canvas/:userID/:canvasID", async (req, res) => {
+    const { userID, canvasID } = req.params;
+    console.log(`Attempting to delete canvas ${canvasID} for user ${userID}`);
+
+    if (canvasID === "new-canvas") {
+      return res.status(400).json({ error: "Cannot delete the 'new-canvas'" });
+    }
+
+    try {
+      const db = await dbPromise;
+      const result = await db.run(`DELETE FROM canvases WHERE id = ? AND user_id = ?`, [canvasID, userID]);
+
+      if (result.changes === 0) {
+        return res.status(404).json({ error: "Canvas not found or does not belong to the user" });
+      }
+      console.log(`Canvas ${canvasID} deleted successfully for user ${userID}.`);
+      res.json({ success: true, message: "Canvas deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting canvas:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

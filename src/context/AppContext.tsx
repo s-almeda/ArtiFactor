@@ -69,9 +69,12 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
             console.log("Attempting quick login...");
             const storedUserID = localStorage.getItem("last_userID");
             const storedPassword = localStorage.getItem("last_password");
-            if (storedUserID && storedPassword) {
+            if (storedUserID && storedPassword !== null) {
                 handleUserLogin(storedUserID, storedPassword);
                 console.log(`Quick login with userID: ${storedUserID}`);
+            } else {
+                //console.log(`Quick login failed: ${storedUserID ? "Password is missing" : "UserID is missing"}`);
+                console.log(`FAILED: Stored UserID: ${storedUserID}, Stored Password: ${storedPassword}`);
             }
             setAttemptedQuickLogin(true);
         }
