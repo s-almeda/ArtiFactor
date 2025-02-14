@@ -36,5 +36,5 @@ export const nodeTypes: NodeTypes = {
   image: ImageNode,
   function: FunctionNode,
   lookup: LookupNode,
-  "synthesizer": SynthesizerNode,
+  synthesizer: SynthesizerNode,
 };

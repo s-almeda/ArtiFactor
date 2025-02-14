@@ -8,7 +8,6 @@ export type ArtifactorNodeData = {
   yOffset?: number;
 }
 
-
 /**  Specific Node Data Types */
 export type TextNodeData = ArtifactorNodeData & {
   loading?: boolean;
@@ -30,6 +29,10 @@ export type SynthesizerNodeData = ArtifactorNodeData & {
   //updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
 };
 
+export type TextWithKeywordsNodeData = ArtifactorNodeData & {
+  textWithKeywords: TextWithKeywords;
+};
+
 /** Generalized AppNode Type */
 export type AppNode<T extends ArtifactorNodeData = ArtifactorNodeData> = Node<T>;
 
@@ -38,18 +41,37 @@ export type TextNode = AppNode<TextNodeData>;
 export type ImageNode = AppNode<ImageNodeData>;
 export type LookupNode = AppNode<LookupNodeData>;
 export type SynthesizerNode = AppNode<SynthesizerNodeData>;
+export type TextWithKeywordsNode = AppNode<TextWithKeywordsNodeData>;
 
 /** Node Props for Custom Components */
 export type AppNodeProps = NodeProps<AppNode>;
 
 /** Artwork & Keyword Types */
-export interface Keyword {
+export type Word = {
+  value: string;
+}
+
+export type Keyword = Word & {
   id: string;
+  databaseValue: string;
+  isArtist?: boolean;
+  isArtwork?: boolean;
   aliases?: string[];
   type: string;
-  value: string;
   description: string;
+  relatedKeywordStrings: string[];
+  relatedKeywordIds: string[];
 }
+// id TEXT PRIMARY KEY,
+// value TEXT NOT NULL,
+// isArtist BOOLEAN,
+// isArtwork BOOLEAN,
+// type TEXT NOT NULL,
+// aliases TEXT,
+// description TEXT,
+// relatedKeywordIds TEXT
+
+export type TextWithKeywords = Array<Word | Keyword>;
 
 export interface Artwork {
   title: string;
@@ -60,10 +82,10 @@ export interface Artwork {
   image: string;
 }
 
-export interface Artist {
-  id: string;
-  name: string;
-  aliases?: string[];
-  relatedArtists: string[];
-  relatedKeywords: Keyword[];
-}
+// export interface Artist {
+//   id: string;
+//   name: string;
+//   aliases?: string[];
+//   relatedArtists: string[];
+//   relatedKeywords: Keyword[];
+// }

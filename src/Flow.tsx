@@ -65,12 +65,17 @@ const Flow = () => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
     },
-    [setNodes, quickSaveToBrowser, canvasID]
+      [setNodes, quickSaveToBrowser, canvasID]
   );
-
-  
-  
-
+    const handleNodeClick = useCallback(
+    (event: MouseEvent, node: Node) => {
+      if (event.altKey) { 
+      console.log("you clicked me while pressing the 'option' key!");
+      console.log("Node Data:", node.data);
+      }
+    },
+    []
+    );
 
 
 
@@ -445,7 +450,7 @@ const Flow = () => {
 
       try {
         if (isValidImage){// the user has sent an image for text generation
-          console.log(`Describing this image: ${prompt}`);
+          //console.log(`Describing this image: ${prompt}`);
           const response = await axios.post(`${backend}/api/generate-text`, {
             imageUrl: prompt, // Send the imageUrl as part of the request body
           });
@@ -542,6 +547,7 @@ const Flow = () => {
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           onNodeDragStart={onNodeDragStart}
+          onNodeClick={(event, node) => handleNodeClick(event, node)}
           onDrop={onDrop}
           onDragOver={onDragOver}
           zoomOnDoubleClick={false}

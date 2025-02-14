@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
+// const flask_server = "https://data.snailbunny.site";
+const flask_server = "http://0.0.0.0:8080";
 
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
@@ -33,6 +35,28 @@ app.get("/overview", (req, res) => {
   res.end('if you can see this, that means the backend server is working!');
 });
 
+app.post("/api/check-for-keywords", async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: "Missing 'text' in request body" });
+  }
+
+  try {
+    const response = await axios.post(
+      `${flask_server}/keyword_check`,
+      { text },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error checking for keywords:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 // new /api/get-similar-images route takes an image: base64string or image: imageURL within a .json file and returns a list of similar images as urls or as base64
 app.post("/api/get-similar-images", async (req, res) => {
   const { image } = req.body;
@@ -57,14 +81,14 @@ app.post("/api/get-similar-images", async (req, res) => {
   }
 
   try {
-    console.log("Sending image to data.SnailBunny...");
+    console.log("Sending image to ml/data server...");
     const response = await axios.post(
-      "https://data.snailbunny.site/image",
+      `${flask_server}/image`,
       {
         image: imageData,
       }
     );
-    console.log("Got response from data.SnailBunny:", response.data);
+    console.log(`Got response from ${flask_server}:`, response.data);
     res.json(response.data);
   } catch (error) {
     console.error("Error getting similar images:", error);

@@ -15,17 +15,17 @@ import { AppProvider } from "./context/AppContext"; //useAppContext
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
-//const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
+const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
 
 // TURN THIS ONLINE ONE back on before you run "npm build" and deploy to Vercel!
-const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
+//const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
 //const backend_url = "http://104.200.25.53/"; //IP address of backend server hosted online, probably don't use this one.
 
 function AppContent() {
   //const { backend, loadCanvasRequest, setLoadCanvasRequest, userID, handleUserLogin } = useAppContext();
 
   /*--- should the sidebar be showing? ----*/
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const toggleSidebar = () => {
     setShowSidebar((prev) => !prev);
   };
