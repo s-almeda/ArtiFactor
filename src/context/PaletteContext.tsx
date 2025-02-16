@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 // Define the type of a node
 export interface NodeData {
-  type: "image" | "text"; 
+  type: "image" | "text";
   content: string; // is either text, or an imageUrl
   prompt: string; // for storing the prompt, or the title/artist alt text for the artwork
 }
@@ -13,6 +13,7 @@ export interface NodeData {
 // Define the context type
 interface PaletteContextType {
   clippedNodes: NodeData[];
+  setClippedNodes: (nodes: NodeData[]) => void;
   addClippedNode: (node: NodeData) => void;
   activeTab: "images" | "text";
   setActiveTab: (tab: "images" | "text") => void;
@@ -22,7 +23,9 @@ interface PaletteContextType {
 const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 
 // Create a provider component
-export const PaletteProvider: React.FC<{ children: ReactNode; } > = ({children}) => {
+export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   // const { userID, backend } = useAppContext(); //add this back when we start saving palette data to the database
   const [clippedNodes, setClippedNodes] = useState<NodeData[]>([]);
   const [activeTab, setActiveTab] = useState<"images" | "text">("images");
@@ -41,7 +44,15 @@ export const PaletteProvider: React.FC<{ children: ReactNode; } > = ({children})
   };
 
   return (
-    <PaletteContext.Provider value={{ clippedNodes, addClippedNode, activeTab, setActiveTab }}>
+    <PaletteContext.Provider
+      value={{
+        clippedNodes,
+        setClippedNodes,
+        addClippedNode,
+        activeTab,
+        setActiveTab,
+      }}
+    >
       {children}
     </PaletteContext.Provider>
   );

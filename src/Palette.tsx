@@ -1,11 +1,32 @@
-import type React from "react";
+import React from "react";
 import { usePaletteContext } from "./context/PaletteContext";
 import PaletteNode from "./nodes/PaletteNode";
 
 const charLimit = 25;
 
 const Palette: React.FC = () => {
-  const { activeTab, setActiveTab, clippedNodes = [] } = usePaletteContext() as { activeTab: "text" | "image"; setActiveTab: (tab: "text" | "image") => void; clippedNodes: any[] };
+  const {
+    activeTab,
+    setActiveTab,
+    clippedNodes = [],
+    setClippedNodes, // Add setClippedNodes from context
+  } = usePaletteContext() as {
+    activeTab: "text" | "image";
+    setActiveTab: (tab: "text" | "image") => void;
+    clippedNodes: any[];
+    setClippedNodes: (nodes: any[]) => void; // Ensure this function is in context
+  };
+
+  // Ensure there's always an active tab when new nodes are added
+  React.useEffect(() => {
+    if (clippedNodes.length > 0) {
+      setActiveTab(clippedNodes[clippedNodes.length - 1].type); // Set tab to the latest clipped node type
+    }
+  }, [clippedNodes, setActiveTab]);
+
+  const removeNode = (index: number) => {
+    setClippedNodes(clippedNodes.filter((_, i) => i !== index)); // Update state
+  };
 
   const filteredNodes = clippedNodes.filter((node) => node.type === activeTab);
 
@@ -17,10 +38,11 @@ const Palette: React.FC = () => {
           <button
             key={tab}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === tab ? "bg-gray-800 text-white" : "bg-gray-200 text-gray-600"
+              activeTab === tab
+                ? "bg-gray-800 text-white"
+                : "bg-gray-200 text-gray-600"
             }`}
             onClick={() => setActiveTab(tab as "image" | "text")}
-
             type="button"
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -31,7 +53,14 @@ const Palette: React.FC = () => {
       {/* Tab Content */}
       <div className="space-y-3">
         {filteredNodes.map((data, index) => (
-          <PaletteNode key={index} data={data} charLimit={charLimit} type={activeTab as "text" | "image"} />
+          <div key={index} className="relative">
+            <PaletteNode
+              data={data}
+              charLimit={charLimit}
+              type={activeTab as "text" | "image"}
+              removeNode={() => removeNode(index)} // Pass correct function
+            />
+          </div>
         ))}
       </div>
     </div>
