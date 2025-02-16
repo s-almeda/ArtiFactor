@@ -15,7 +15,6 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
     setContent(data.content); // re-render with the new content
   };
 
-  const maxWidth = 120; // Maximum width of the text area
   const maxLines = 10;
 
 
@@ -25,13 +24,6 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
       textArea.style.height = "auto"; // Reset height to get the correct scrollHeight
       textArea.style.height = `${textArea.scrollHeight}px`;
 
-      const context = document.createElement("canvas").getContext("2d");
-      if (context) {
-        context.font = getComputedStyle(textArea).font;
-        const width = Math.max(...content.split('\n').map(line => context.measureText(line).width));
-        textArea.style.width = `${Math.min(width + 10, maxWidth)}px`; // Add some padding and limit width to 70px
-        textArea.style.whiteSpace = width > maxWidth ? "pre-wrap" : "pre"; // Wrap text if width exceeds 70px
-      }
 
       // Make textarea scrollable if content exceeds 4 lines
       const lineHeight = parseInt(getComputedStyle(textArea).lineHeight, 10);

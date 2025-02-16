@@ -1,5 +1,6 @@
 import { useAppContext } from '../context/AppContext';
-import { type Word, type Keyword } from './types';
+import type { NodeProps } from "@xyflow/react";
+import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import React, { useRef, useState, useEffect } from 'react';
 
 export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
@@ -39,9 +40,12 @@ export const KeywordComponent: React.FC<{ keyword: Keyword }> = ({ keyword }) =>
         }}
       >
         {keyword.databaseValue && <div><strong>{keyword.databaseValue}</strong></div>}
-        {keyword.type && <div><strong>Type:</strong> {keyword.type}</div>}
-        {keyword.description && <div><strong>Description:</strong> {keyword.description}</div>}
-        {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
+        {keyword.description && (
+            <div style={{ maxHeight: '200px', overflowY: 'scroll' }}>
+              <strong>Description:</strong> {keyword.description}
+            </div>
+          )}
+          {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
         <div>
           <strong>Related Keywords:</strong>
           <ul>
@@ -57,38 +61,17 @@ export const KeywordComponent: React.FC<{ keyword: Keyword }> = ({ keyword }) =>
   );
 };
 
-export const TextWithKeywords: React.FC<{ words: (Word | Keyword)[] }> = ({ words = [] }) => {
-  if (!Array.isArray(words)) {
-    console.error('Expected words to be an array, but got:', words);
-    return null;
-  }
-  return (
-    <div>
-      {words.map((word, index) => (
-        <React.Fragment key={index}>
-          {'id' in word ? (
-            <KeywordComponent keyword={word} />
-          ) : (
-            <>
-              <span> </span>
-              <WordComponent word={word} />
-              <span> </span>
-            </>
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-};
 
-export const TextWithKeywordsNode: React.FC<{ data: any;}> = ({ data }) => {
-// handling typing into the text area that appears after clicking the edit button
-// handling typing into the text area that appears after clicking the edit button
+
+export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywordsNode>) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(data.content || '');
   const [isEditing, setIsEditing] = useState(false);
   const [words, setWords] = useState<(Word | Keyword)[]>(data.words || []);
-      const { backend } = useAppContext();
+  const [width, setWidth] = useState(100);
+  const [height, setHeight] = useState(100);
+  const { backend } = useAppContext();
+
   useEffect(() => {
     setWords(data.words || []);
     console.log('current data in this node:', data);
@@ -117,10 +100,10 @@ export const TextWithKeywordsNode: React.FC<{ data: any;}> = ({ data }) => {
   const stringToWords = (str: string): Word[] => {
     return str.split(' ').map((word) => ({ value: word } as Word));
   };
+
   const checkForKeywords = async (words: Word[]): Promise<(Word | Keyword)[]> => {
     console.log('Checking for keywords in:', words);
 
-   //const backend = 'http://localhost:3000';
     try {
       const response = await fetch(`${backend}/api/check-for-keywords`, {
         method: 'POST',
@@ -164,33 +147,79 @@ export const TextWithKeywordsNode: React.FC<{ data: any;}> = ({ data }) => {
       return words;
     }
   };
+  const adjustNodeSize = () => {
+    const totalTextLength = words.reduce((acc, word) => acc + word.value.length, 0);
+    const maxLineWidth = 200;
+    const newWidth = Math.min(Math.max(totalTextLength * 8, 100), maxLineWidth);
+    const lines = Math.ceil(totalTextLength * 8 / maxLineWidth);
+    setWidth(newWidth);
+  };
+
+  //ADJUST SIZE OF TEXT AREA ON EDIT
+  useEffect(() => {
+    const maxLines = 10;
+    if (textareaRef.current) {
+      const textArea = textareaRef.current;
+      textArea.style.height = "auto"; // Reset height to get the correct scrollHeight
+      textArea.style.height = `${textArea.scrollHeight}px`;
+
+      // Make textarea scrollable if content exceeds 4 lines
+      const lineHeight = parseInt(getComputedStyle(textArea).lineHeight, 10);
+      const maxHeight = lineHeight * maxLines;
+      if (textArea.scrollHeight > maxHeight) {
+        textArea.style.height = `${maxHeight}px`;
+        textArea.style.overflowY = "scroll";
+      } else {
+        textArea.style.overflowY = "hidden";
+      }
+    }
+  }, [content, data]);
+
+  useEffect(() => {
+    if (!selected && isEditing) {
+      setIsEditing(false);
+    }
+    adjustNodeSize();
+  }, [words]);
+
 
   return (
-    <div style={{ border: "1px solid black", padding: "1px" }} className="nodrag">
+    <>
       {isEditing ? (
-        <textarea
-          className={`nodrag`}
-          ref={textareaRef}
-          value={content}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          style={{
-            resize: "none",
-            border: "none",
-            outline: "none",
-            overflow: "hidden",
-            color: "inherit",
-            fontFamily: "inherit",
-            fontSize: "10px",
-            padding: "3px"
-          }}
-        />
+        <>
+          <span style={{ fontSize: '0.75rem', color: 'gray' }}>ENTER TO CONFIRM</span>
+          <div className="text-xs p-3 border border-gray-700 rounded bg-white nowheel" style={{ width: `${width}px`, height: `${height}px` }}>
+            <textarea
+              className="nowheel nodrag resize-none border  overflow-auto text-inherit font-inherit p-1 w-full h-full"
+              ref={textareaRef}
+              value={content}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              style={{ fontSize: 'inherit', width: '100%', height: '100%', fontStyle: 'italic', color: '#333' }}
+            />
+          </div>
+        </>
       ) : (
         <>
-          <button onClick={handleEditClick}>Edit</button>
-          <TextWithKeywords words={words} />
+          <button onClick={handleEditClick}>✎</button>
+          <div className="nowheel p-3 border border-gray-700 rounded bg-white overflow-visible" style={{ width: `${width}px`, height: `${height}px` }}>
+            {words.map((word, index) => (
+                <React.Fragment key={index}>
+                  {'id' in word ? (
+                    <KeywordComponent keyword={word} />
+                  ) : (
+                    <>
+                      <span> </span>
+                      <WordComponent word={word} />
+                      <span> </span>
+                    </>
+                  )}
+                </React.Fragment>
+              ))}
+          </div>
         </>
       )}
-    </div>
+    </>
   );
 };
+
