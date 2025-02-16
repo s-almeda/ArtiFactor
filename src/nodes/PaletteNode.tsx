@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, type FC, type DragEvent } from "react";
 import { useDnD } from "../context/DnDContext";
 import type { NodeData } from "../context/PaletteContext";
 
@@ -8,11 +8,11 @@ interface PaletteNodeProps {
   type: "text" | "image";
 }
 
-const PaletteNode: React.FC<PaletteNodeProps> = ({ data, charLimit, type }) => {
+const PaletteNode: FC<PaletteNodeProps> = ({ data, charLimit, type }) => {
   const [___, setIsHovered] = useState(false);
   const [_, setDraggableType, __, setDraggableData] = useDnD();
 
-  const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+  const onDragStart = (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.effectAllowed = "move";
     setDraggableType(type);
     setDraggableData(data);
@@ -35,7 +35,8 @@ const PaletteNode: React.FC<PaletteNodeProps> = ({ data, charLimit, type }) => {
       // Create a link element to trigger the download
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = "palette-image.png"; // Set the desired filename
+      // set the filename based on the prompt
+      link.download = `${data.prompt}.png`; // Set the desired filename
 
       // Trigger the download by clicking the link programmatically
       document.body.appendChild(link);
