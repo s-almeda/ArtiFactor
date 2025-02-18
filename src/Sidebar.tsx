@@ -5,7 +5,7 @@ import { useAppContext } from "./context/AppContext";
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { canvasID, canvasName, loadCanvas, saveNewCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext();
+  const { canvasID, canvasName, loadCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext(); // saveNewCanvas
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");

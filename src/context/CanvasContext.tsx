@@ -31,14 +31,14 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   // Quick Save to Browser
   const quickSaveToBrowser = useCallback((canvasData: ReactFlowJsonObject, targetCanvasID?: string) => {
     const idToSave = targetCanvasID || canvasID;
-    console.log("Quick saving to browser storage for canvasID:", idToSave);
+    //console.log("Quick saving to browser storage for canvasID:", idToSave);
     try {
       const { nodes, viewport } = canvasData;
       localStorage.setItem(
         `${idToSave}`,
         JSON.stringify({ nodes, viewport })
       );
-      console.log(`Canvas saved to browser storage! CanvasID: ${idToSave}, CanvasName: ${canvasName}`);
+      //console.log(`Canvas saved to browser storage! CanvasID: ${idToSave}, CanvasName: ${canvasName}`);
     } catch (error) {
       console.error("Error saving canvas to browser:", error);
     }

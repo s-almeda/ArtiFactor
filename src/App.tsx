@@ -25,7 +25,7 @@ function AppContent() {
   //const { backend, loadCanvasRequest, setLoadCanvasRequest, userID, handleUserLogin } = useAppContext();
 
   /*--- should the sidebar be showing? ----*/
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const toggleSidebar = () => {
     setShowSidebar((prev) => !prev);
   };
@@ -72,7 +72,7 @@ function AppContent() {
                         className="border border-gray-500"
                         style={{
                           height: "90vh",
-                          width: "70vw",
+                          width: "80vw",
                           margin: 0,
                           padding: 0,
                         }}
@@ -81,11 +81,12 @@ function AppContent() {
                         <Flow />
 
                       </div>
-                        <div
+                      {/*SET PALETTE WIDTH HERE */}
+                        <div 
                         className="border border-gray-500 ml-5 rounded-lg"
                         style={{
                           height: "90vh",
-                          width: "30vw",
+                          width: "20vw",
                           margin: 0,
                           zIndex: 3, 
                         }}
