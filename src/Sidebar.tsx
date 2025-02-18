@@ -125,7 +125,6 @@ const Sidebar = ({ onClose }: {
         Close
       </button>
 
-
       {/* Login Form */}
       {(!userID || userID === "default") && (
         <>
