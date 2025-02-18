@@ -73,7 +73,7 @@ export const KeywordDescription: React.FC<{
           type: "spring", 
           bounce: 0.2 
         }}
-        className="z-20 nowheel overflow-hidden nodrag bg-white border-10 border-white-300 rounded-md shadow-md p-2 h-full"
+        className="z-20 nowheel overflow-scroll nodrag bg-white border-10 border-white-300 rounded-md shadow-md p-2 h-full"
       >
         <div
           className=" flex flex-col justify-between"
