@@ -59,6 +59,7 @@ export type Keyword = Word & {
   aliases?: string[];
   type: string;
   description: string;
+  shortDescription?: string;
   relatedKeywordStrings: string[];
   relatedKeywordIds: string[];
 }

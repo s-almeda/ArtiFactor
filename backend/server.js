@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
-// const flask_server = "https://data.snailbunny.site";
-const flask_server = "http://0.0.0.0:8080";
+const flask_server = "https://data.snailbunny.site";
+//const flask_server = "http://localhost:8080";
 
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
@@ -81,7 +81,7 @@ app.post("/api/get-similar-images", async (req, res) => {
   }
 
   try {
-    console.log("Sending image to ml/data server...");
+    console.log(`Sending image to ml/data server... ${flask_server}/image`);
     const response = await axios.post(
       `${flask_server}/image`,
       {

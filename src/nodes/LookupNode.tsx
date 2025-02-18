@@ -2,7 +2,7 @@ import { Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
 import { ChevronLeft, ChevronRight} from 'lucide-react';
 import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
-import type { LookupNode, Artwork } from "./types";
+import type { LookupNode, Artwork, Keyword, Word} from "./types";
 
 import { useDnD } from "../context/DnDContext";
 
@@ -107,33 +107,11 @@ const LookupNode = ({ data, selected }: LookupNodeProps) => {
         date: 1872,
         artist: "Claude Monet",
         keywords: [
-          { id: "1", type: "genre", value: "Landscape", description: "A genre of art that depicts natural scenery." },
-          { id: "2", type: "style", value: "Impressionism", description: "An art movement characterized by small, thin brush strokes and an emphasis on light and its changing qualities." }
+          { id: "1", type: "genre", value: "Landscape", description: "A genre of art that depicts natural scenery." } as Keyword,
+          { id: "2", type: "style", value: "Impressionism", description: "An art movement characterized by small, thin brush strokes and an emphasis on light and its changing qualities." }as Keyword 
         ],
         description: "This painting is a depiction of the port of Le Havre at sunrise, with small rowboats in the foreground and ships and cranes in the background. The orange sun is shown as a distinct circle, reflecting on the water below. This piece gave the Impressionist movement its name when critics seized upon the title of this painting to give the entire movement a derisive moniker.",
         image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Monet_-_Impression%2C_Sunrise.jpg/600px-Monet_-_Impression%2C_Sunrise.jpg"
-      },
-      {
-        title: "Morning on the Seine",
-        date: 1897,
-        artist: "Claude Monet",
-        keywords: [
-          { id: "1", type: "genre", value: "Landscape", description: "A genre of art that depicts natural scenery." },
-          { id: "2", type: "style", value: "Impressionism", description: "An art movement characterized by small, thin brush strokes and an emphasis on light and its changing qualities." }
-        ],
-        description: "Part of a series of paintings depicting the Seine River, this work showcases Monet's mastery of light and atmosphere. The artist painted the same scene at different times of day to capture varying effects of light and weather conditions.",
-        image: "https://www.claude-monet.com/assets/img/paintings/morning-on-the-seine-near-giverny.jpg"
-      },
-      {
-        title: "Water Lilies",
-        date: 1919,
-        artist: "Claude Monet",
-        keywords: [
-          { id: "1", type: "genre", value: "Landscape", description: "A genre of art that depicts natural scenery." },
-          { id: "2", type: "style", value: "Impressionism", description: "An art movement characterized by small, thin brush strokes and an emphasis on light and its changing qualities." }
-        ],
-        description: "This painting is part of Monet's famous Water Lilies series, which he painted in his garden at Giverny. The series captures the beauty and tranquility of the water garden, with its reflections and play of light.",
-        image: "https://upload.wikimedia.org/wikipedia/commons/9/9e/WLA_metmuseum_Water_Lilies_by_Claude_Monet.jpg"
       }
     ]);
 

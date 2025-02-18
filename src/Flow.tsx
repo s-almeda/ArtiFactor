@@ -12,7 +12,6 @@ import {
   useNodesState,
   useReactFlow,
   applyNodeChanges,
-  getNodesBounds
 } from "@xyflow/react";
 
 
@@ -33,7 +32,7 @@ const Flow = () => {
   const { userID, backend } = useAppContext();
   const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);

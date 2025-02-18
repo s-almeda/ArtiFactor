@@ -24,7 +24,6 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
       textArea.style.height = "auto"; // Reset height to get the correct scrollHeight
       textArea.style.height = `${textArea.scrollHeight}px`;
 
-
       // Make textarea scrollable if content exceeds 4 lines
       const lineHeight = parseInt(getComputedStyle(textArea).lineHeight, 10);
       const maxHeight = lineHeight * maxLines;
@@ -42,8 +41,8 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         {data.loading ? (
           // initial animation for loading nodes
         <motion.div
-        initial={{ opacity: 0, x:0, y: 3, scale: 0.6, filter: "blur(10px)"}}
-        animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1, filter: "blur(0px)"}}
+        initial={{ opacity: 0, x:0, y: 3, scale: 0.6}}
+        animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1}}
         transition={{ duration: 0.4, type: "spring", bounce: 0.1 }}
         className ="p-3 border border-gray-700 rounded bg-white"
         >

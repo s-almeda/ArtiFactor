@@ -2,32 +2,60 @@ import { useAppContext } from '../context/AppContext';
 import type { NodeProps } from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import React, { useRef, useState, useEffect } from 'react';
+import { useDnD } from '../context/DnDContext';
 
 export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
   return <span>{word.value}</span>;
 };
-export const KeywordComponent: React.FC<{ keyword: Keyword }> = ({ keyword }) => {
-  const [showDescription, setShowDescription] = useState(false);
+export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: () => void }> = ({ keyword, handleKeywordClick }) => {
+  const [isSelected, setIsSelected] = useState(false);
+
   useEffect(() => {
     if (!keyword.relatedKeywordStrings || keyword.relatedKeywordStrings.length === 0) {
       keyword.relatedKeywordStrings = ["insert", "related", "words", "here"];
     }
   }, [keyword.relatedKeywordStrings]);
-  const handleKeywordClick = () => {
-    setShowDescription(!showDescription);
+
+  const handleClick = () => {
+    handleKeywordClick();
+    setIsSelected(!isSelected);
   };
 
   return (
     <span style={{ position: 'relative', display: 'inline-block' }}>
       <span
-      onClick={handleKeywordClick}
-      style={{ backgroundColor: 'yellow', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', margin: '0 2px' }}
-      >
-      {keyword.value}
-      </span>
-      {showDescription && (
-      <div
+        onClick={handleClick}
         style={{
+          backgroundColor: 'yellow',
+          cursor: 'pointer',
+          padding: '1px 1px',
+          borderRadius: '2px',
+          margin: '0 1px',
+          outline: isSelected ? '2px solid blue' : 'none',
+        }}
+      >
+        {keyword.value}
+      </span>
+    </span>
+  );
+};
+
+export const KeywordDescription: React.FC<{ keyword: Keyword | null }> = ({ keyword }) => {
+  const [_, setDraggableType, __, setDraggableData] = useDnD();
+  if (!keyword) return null;
+
+  const onDragStart = (
+    event: React.DragEvent<HTMLDivElement>,
+    content: string
+  ) => {
+    event.dataTransfer.effectAllowed = "move";
+    setDraggableType("text");
+    setDraggableData({content: content});
+  };
+
+  return (
+    <div className="nowheel nodrag"
+      style={{
         position: 'absolute',
         top: '100%',
         left: '0',
@@ -37,29 +65,34 @@ export const KeywordComponent: React.FC<{ keyword: Keyword }> = ({ keyword }) =>
         borderRadius: '4px',
         zIndex: 1,
         width: '200px',
-        }}
-      >
-        {keyword.databaseValue && <div><strong>{keyword.databaseValue}</strong></div>}
-        {keyword.description && (
-            <div style={{ maxHeight: '200px', overflowY: 'scroll' }}>
-              <strong>Description:</strong> {keyword.description}
-            </div>
-          )}
-          {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
+      }}
+    >
+      {keyword.databaseValue && <div><strong>{keyword.databaseValue}</strong></div>}
+
+      {keyword.description && (
+        <div draggable 
+        onDragStart={(event) => onDragStart(event, keyword.description)} style={{ maxHeight: '200px', overflowY: 'scroll' }}>
+          <strong>Description:</strong> {keyword.description}
+        </div>
+      )}
+
+      {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
         <div>
           <strong>Related Keywords:</strong>
+         
           <ul>
-          {keyword.relatedKeywordStrings.map((relatedKeyword, index) => (
-            <li key={index}>{relatedKeyword}</li>
-          ))}
+            {keyword.relatedKeywordStrings.map((relatedKeyword, index) => (
+               <div key={index} draggable onDragStart={(event) => onDragStart(event, relatedKeyword)} >
+              <li>{relatedKeyword}</li>
+              </div>
+            ))}
           </ul>
         </div>
-        )}
-      </div>
       )}
-    </span>
+    </div>
   );
 };
+  
 
 
 
@@ -68,8 +101,10 @@ export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywor
   const [content, setContent] = useState(data.content || '');
   const [isEditing, setIsEditing] = useState(false);
   const [words, setWords] = useState<(Word | Keyword)[]>(data.words || []);
-  const [width, setWidth] = useState(100);
+  const [width, setWidth] = useState(200);
   const [height, setHeight] = useState(100);
+  const [showDescription, setShowDescription] = useState(false);
+  const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
   const { backend } = useAppContext();
 
   useEffect(() => {
@@ -89,8 +124,9 @@ export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywor
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
+      const updatedWords = stringToWords(content);
+      setWords(updatedWords); // set it to the updated words quickly, then add the highlights for keywords
       setIsEditing(false);
-      const updatedWords = await stringToWords(content);
       const checkedWords = await checkForKeywords(updatedWords);
       setWords(checkedWords);
       data.words = checkedWords; // Update the data object with the new words
@@ -118,42 +154,36 @@ export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywor
       }
 
       const data = await response.json();
-      const { words: newWords, keywords } = data;
-
-      const newWordsArray = newWords.map((word: any) => {
-        if (word.id) {
-          const keywordInfo = keywords.find((keyword: any) => keyword.id === word.id);
-          if (keywordInfo) {
-            console.log("found keyword:", keywordInfo);
+      console.log('response from server found:', data.words);
+      const result = data.words.map((item: any) => {
+        if (item.id) {
             return {
-              id: keywordInfo.id,
-              value: word.value,
-              databaseValue: keywordInfo.databaseValue,
-              description: keywordInfo.description,
-              relatedKeywordIds: keywordInfo.relatedKeywordIds,
-              relatedKeywordStrings: keywordInfo.relatedKeywordStrings,
-              type: keywordInfo.type,
+            id: item.id,
+            value: item.value,
+            databaseValue: item.database_value,
+            description: item.description,
+            relatedKeywordIds: item.relatedKeywordIds,
+            relatedKeywordStrings: item.relatedKeywordStrings,
+            type: item.type,
             } as Keyword;
-          }
+        } else {
+          return { value: item.value } as Word;
         }
-        return { value: word.value } as Word;
       });
+      return result;
 
-      console.log('New words and keywords array:', newWordsArray);
-      return newWordsArray;
+
     } catch (error) {
       console.error('Error checking for keywords:', error);
       console.log('Fallback words array:', words);
       return words;
     }
   };
-  const adjustNodeSize = () => {
-    const totalTextLength = words.reduce((acc, word) => acc + word.value.length, 0);
-    const maxLineWidth = 200;
-    const newWidth = Math.min(Math.max(totalTextLength * 8, 100), maxLineWidth);
-    const lines = Math.ceil(totalTextLength * 8 / maxLineWidth);
-    setWidth(newWidth);
-  };
+
+  const handleKeywordClick = (keyword: Keyword) => {
+    setSelectedKeyword(keyword);
+    setShowDescription(!showDescription);
+  }
 
   //ADJUST SIZE OF TEXT AREA ON EDIT
   useEffect(() => {
@@ -173,18 +203,22 @@ export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywor
         textArea.style.overflowY = "hidden";
       }
     }
-  }, [content, data]);
 
-  useEffect(() => {
-    if (!selected && isEditing) {
+    if (!selected) {
+      setSelectedKeyword(null);
       setIsEditing(false);
     }
-    adjustNodeSize();
-  }, [words]);
+    if (isEditing){
+      setSelectedKeyword(null);
+    }
+
+  }, [content, data, words, isEditing, selected]);
 
 
   return (
     <>
+      {showDescription &&  <KeywordDescription keyword={selectedKeyword}/>}
+      
       {isEditing ? (
         <>
           <span style={{ fontSize: '0.75rem', color: 'gray' }}>ENTER TO CONFIRM</span>
@@ -202,11 +236,11 @@ export function TextWithKeywordsNode({ data, selected}: NodeProps<TextWithKeywor
       ) : (
         <>
           <button onClick={handleEditClick}>✎</button>
-          <div className="nowheel p-3 border border-gray-700 rounded bg-white overflow-visible" style={{ width: `${width}px`, height: `${height}px` }}>
+          <div className="nowheel p-3 border border-gray-700 rounded bg-white overflow-scroll" style={{ width: `${width}px`, height: `${height}px` }}>
             {words.map((word, index) => (
                 <React.Fragment key={index}>
                   {'id' in word ? (
-                    <KeywordComponent keyword={word} />
+                    <KeywordComponent keyword={word} handleKeywordClick={() => handleKeywordClick(word)} />
                   ) : (
                     <>
                       <span> </span>
