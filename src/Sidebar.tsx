@@ -9,7 +9,7 @@ const Sidebar = ({ onClose, updateLastSaved, updateCanvasName }: {
   canvasID: string;
   canvasName: string;
 }) => {
-  const { canvasID, canvasName, loadCanvas, saveNewCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext();
+  const { canvasID, canvasName, loadCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext(); // saveNewCanvas
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");

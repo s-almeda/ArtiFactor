@@ -1,20 +1,7 @@
-import { type Word, type Keyword } from './nodes/types';
-import { TextWithKeywordsNode } from './nodes/TextWithKeywordsNode'; // Adjust the import path as necessary
+// import { type Word, type Keyword } from './nodes/types';
+// import { TextWithKeywordsNode } from './nodes/TextWithKeywordsNode'; // Adjust the import path as necessary
 
 const About = () => {
-  // const data = {
-  //   words: [
-  //     { value: 'This', id: '1' } as Keyword,
-  //     { value: 'is' } as Word,
-  //     { value: 'a' },
-  //     { value: 'test', id: '4' },
-  //     { value: 'sentence', id: '5' },
-  //   ],
-  // };
-
-  // const handleKeywordClick = (keyword: Keyword) => {
-  //   alert(`Keyword clicked: ${keyword.value}`);
-  // };
 
   return (
     <div>

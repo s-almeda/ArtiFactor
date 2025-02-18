@@ -2,7 +2,7 @@ import { Position,  NodeResizeControl , NodeToolbar } from "@xyflow/react";
 import { ChevronLeft, ChevronRight} from 'lucide-react';
 import { useState, useEffect, memo, useRef } from "react";
 import type { NodeProps } from "@xyflow/react";
-import type { LookupNode, Artwork, Keyword, Word} from "./types";
+import type { LookupNode, Artwork, Keyword} from "./types";
 
 import { useDnD } from "../context/DnDContext";
 
