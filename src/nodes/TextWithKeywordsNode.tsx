@@ -38,7 +38,7 @@ export const KeywordDescription: React.FC<{
   containerWidth?: number;
   showDescription: boolean; 
   toggleDescription: () => void;
-}> = ({ keyword, containerHeight = 100, containerWidth = 100, showDescription = false, toggleDescription }) => {
+}> = ({ keyword, containerHeight = 100,  showDescription = false, toggleDescription }) => { //containerWidth = 100,
 
   const [_, setDraggableType, __, setDraggableData] = useDnD();
   if (!keyword) return null;

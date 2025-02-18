@@ -39,7 +39,7 @@ const Sidebar = ({ onClose }: {
       const newCanvasName = canvasName === "Untitled" ? prompt("Give this canvas a name:") || "Untitled" : canvasName;
 
       if (newCanvasName) {
-        await saveNewCanvas(data.nextCanvasId, newCanvasName);
+        //await saveNewCanvas(data.nextCanvasId, newCanvasName);
         refreshCanvases();
       } else {
         setError("Canvas save canceled. You've gotta name it something!");
