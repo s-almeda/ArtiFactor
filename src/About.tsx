@@ -1,6 +1,21 @@
-//import Sidebar from "./Sidebar";
+import { type Word, type Keyword } from './nodes/types';
+import { TextWithKeywordsNode } from './nodes/TextWithKeywordsNode'; // Adjust the import path as necessary
 
 const About = () => {
+  // const data = {
+  //   words: [
+  //     { value: 'This', id: '1' } as Keyword,
+  //     { value: 'is' } as Word,
+  //     { value: 'a' },
+  //     { value: 'test', id: '4' },
+  //     { value: 'sentence', id: '5' },
+  //   ],
+  // };
+
+  // const handleKeywordClick = (keyword: Keyword) => {
+  //   alert(`Keyword clicked: ${keyword.value}`);
+  // };
+
   return (
     <div>
       <div className="flex h-screen">
@@ -11,30 +26,15 @@ const About = () => {
           {/* Section 1 */}
           <div id="section1" className="mb-8">
             <h3 className="text-2xl font-semibold mb-2">Our Project</h3>
-            <p>
-              Pretend we filled this out.
-            </p>
+            <p>Pretend we filled this out.</p>
           </div>
-
-          {/* Section 2
-          <div id="section2" className="mb-8">
-            <h3 className="text-2xl font-semibold mb-2">Dev Log</h3>
-            <p>
-              Curabitur luctus nulla nec metus dictum, id vehicula elit mollis.
-              Nulla facilisi. Cras scelerisque erat ut nisl vehicula, et
-              consequat purus venenatis.
-            </p>
+ 
+          {/* Example Section */}
+          <div id="exampleSection" className="mb-8">
+            <h3 className="text-2xl font-semibold mb-2">Text with keywords test</h3>
+            
           </div>
-
-          {/* Section 3 */}
-          {/* <div id="section3" className="mb-8">
-            <h3 className="text-2xl font-semibold mb-2">Contributors</h3>
-            <p>
-              Phasellus in ligula eget justo condimentum tincidunt ut id dui.
-              Nulla euismod quam vitae justo sollicitudin, sit amet fermentum
-              risus tincidunt.
-            </p> */}
-          </div> 
+        </div>
       </div>
     </div>
   );

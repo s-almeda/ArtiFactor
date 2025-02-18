@@ -62,12 +62,12 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 0, y: 10, scale: 1.1, rotateY: -45, filter: "blur(10px) drop-shadow(10px 10px 10px rgba(0, 0, 0, 0.55))" }}
+      initial={{ opacity: 0, x: 0, y: 10, scale: 1.1, rotateY: -45, filter: "drop-shadow(10px 10px 10px rgba(0, 0, 0, 0.55))" }}
       animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY: 0, scaleX: 1, filter: "drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.15))" }}
       transition={{ duration: 0.3, type: "spring", bounce: 0.1 }}
     >
       <div
-        className="react-flow__node-default"
+        className={`react-flow__node-default ${selected ? 'border-3 border-blue-500' : ''}`}
         style={{
           width: `${width}px`,
           height: `${height}px`,

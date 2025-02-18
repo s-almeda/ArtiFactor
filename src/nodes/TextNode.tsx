@@ -15,7 +15,6 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
     setContent(data.content); // re-render with the new content
   };
 
-  const maxWidth = 120; // Maximum width of the text area
   const maxLines = 10;
 
 
@@ -24,14 +23,6 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
       const textArea = textareaRef.current;
       textArea.style.height = "auto"; // Reset height to get the correct scrollHeight
       textArea.style.height = `${textArea.scrollHeight}px`;
-
-      const context = document.createElement("canvas").getContext("2d");
-      if (context) {
-        context.font = getComputedStyle(textArea).font;
-        const width = Math.max(...content.split('\n').map(line => context.measureText(line).width));
-        textArea.style.width = `${Math.min(width + 10, maxWidth)}px`; // Add some padding and limit width to 70px
-        textArea.style.whiteSpace = width > maxWidth ? "pre-wrap" : "pre"; // Wrap text if width exceeds 70px
-      }
 
       // Make textarea scrollable if content exceeds 4 lines
       const lineHeight = parseInt(getComputedStyle(textArea).lineHeight, 10);
@@ -50,8 +41,8 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         {data.loading ? (
           // initial animation for loading nodes
         <motion.div
-        initial={{ opacity: 0, x:0, y: 3, scale: 0.6, filter: "blur(`10px`)"}}
-        animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1, filter: ""}}
+        initial={{ opacity: 0, x:0, y: 3, scale: 0.6}}
+        animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1}}
         transition={{ duration: 0.4, type: "spring", bounce: 0.1 }}
         className ="p-3 border border-gray-700 rounded bg-white"
         >

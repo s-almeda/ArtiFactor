@@ -1,10 +1,12 @@
 import type { NodeTypes } from "@xyflow/react";
 import { TextNode } from "./TextNode";
 import { ImageNode } from "./ImageNode";
-import FunctionNode from "./FunctionNode";
+import { TextWithKeywordsNode } from "./TextWithKeywordsNode";
+// import FunctionNode from "./FunctionNode";
 import SynthesizerNode from "./SynthesizerNode";
 import LookupNode from "./LookupNode";
 import { AppNode } from "./types"; //TextNodeData, SynthesizerNodeData
+
 
 export const initialNodes: AppNode[] = [
   // {
@@ -34,7 +36,8 @@ export const nodeTypes: NodeTypes = {
   default: TextNode,
   text: TextNode,
   image: ImageNode,
-  function: FunctionNode,
+  // function: FunctionNode,
   lookup: LookupNode,
-  "synthesizer": SynthesizerNode,
+  synthesizer: SynthesizerNode,
+  textWithKeywords: TextWithKeywordsNode,
 };
