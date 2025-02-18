@@ -2,12 +2,8 @@ import { useState, useEffect } from "react";
 import { useCanvasContext } from "./context/CanvasContext";
 import { useAppContext } from "./context/AppContext";
 
-const Sidebar = ({ onClose, updateLastSaved, updateCanvasName }: { 
+const Sidebar = ({ onClose }: { 
   onClose: () => void; 
-  updateLastSaved: () => void;
-  updateCanvasName: (newName: string) => void;
-  canvasID: string;
-  canvasName: string;
 }) => {
   const { canvasID, canvasName, loadCanvas, saveNewCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext();
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
@@ -26,58 +22,33 @@ const Sidebar = ({ onClose, updateLastSaved, updateCanvasName }: {
   }, [userID]);
 
   const handleSaveCanvas = async () => {
-
-    let newCanvasName = canvasName;
-
-    if (canvasName === "Untitled") {
-      newCanvasName = prompt("Give this canvas a name:") || "Untitled";
-      if (newCanvasName !== "Untitled") {
-        updateCanvasName(newCanvasName);
-      }
-    }
-
     if (canvasID !== "new-canvas") {
-      await saveCanvas();
-      updateLastSaved();
+      saveCanvas();
       return;
     }
     try {
-      // save canvas in backend with correct canvasID
-      await fetch(`${backend}/api/save-canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvasID, canvasName: newCanvasName }),
-      });
+      const response = await fetch(`${backend}/api/next-canvas-id/${userID}`);
+      const data = await response.json();
 
-      updateLastSaved();
-      console.log(`Canvas "${newCanvasName}" saved successfully.`);
+      if (!data.success) {
+        setError("Error fetching new canvas ID.");
+        return;
+      }
+      console.log("will use new canvas ID:", data.nextCanvasId);
+
+      const newCanvasName = canvasName === "Untitled" ? prompt("Give this canvas a name:") || "Untitled" : canvasName;
+
+      if (newCanvasName) {
+        await saveNewCanvas(data.nextCanvasId, newCanvasName);
+        refreshCanvases();
+      } else {
+        setError("Canvas save canceled. You've gotta name it something!");
+      }
     } catch (error) {
-      console.error("Error saving canvas:", error);
-      setError("Failed to save canvas.");
+      console.error("Error fetching new canvas ID:", error);
+      setError("Something went wrong.");
     }
   };
-    // try {
-    //   const response = await fetch(`${backend}/api/next-canvas-id/${userID}`);
-    //   const data = await response.json();
-
-    //   if (!data.success) {
-    //     setError("Error fetching new canvas ID.");
-    //     return;
-    //   }
-    //   console.log("will use new canvas ID:", data.nextCanvasId);
-
-    //   if (newCanvasName.trim() && newCanvasName !== "Untitled") {
-    //     await saveNewCanvas(data.nextCanvasId, newCanvasName);
-    //     updateCanvasName(newCanvasName);
-    //     updateLastSaved();
-    //     refreshCanvases();
-    //   } else {
-    //     setError("Canvas save canceled. You've gotta name it something!");
-    //   }
-    // } catch (error) {
-    //   console.error("Error fetching new canvas ID:", error);
-    //   setError("Something went wrong.");
-    // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +124,7 @@ const Sidebar = ({ onClose, updateLastSaved, updateCanvasName }: {
       >
         Close
       </button>
+
 
       {/* Login Form */}
       {(!userID || userID === "default") && (

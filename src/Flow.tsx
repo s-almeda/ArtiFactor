@@ -27,28 +27,17 @@ import { calcNearbyPosition } from './utils/calcNearbyPosition';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 // import { data } from "react-router-dom";
-import TitleBar from "./TitleBar";
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser, setCanvasName } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
-  // for TitleBar
-  const [lastSaved, setLastSaved] = useState("");
-  useEffect(() => {
-    const updateLastSaved = () => {
-      const now = new Date();
-      setLastSaved(now.toLocaleString());
-    };
-    const saveInterval = setInterval(updateLastSaved, 30000); // Update every 30 seconds
-    return () => clearInterval(saveInterval);
-  }, []);
 
   //attempt (just once) to load the canvas from the browser storage
   useEffect(() => {
@@ -534,14 +523,73 @@ const Flow = () => {
 
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
+
+  // ------------------------ DRAGGABLE TOOLBAR ------------------------
+  const [toolbarPosition, setToolbarPosition] = useState({ x: 20, y: 100 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleDragStart = (event: MouseEvent<HTMLDivElement>) => {
+    setDragging(true);
+    setDragStart({ x: event.clientX - toolbarPosition.x, y: event.clientY - toolbarPosition.y });
+  };
+
+  const handleDragMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (dragging) {
+      setToolbarPosition({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragging(false);
+  };
+  
+
   return (
     <>
+      {/* Draggable Toolbar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: `${toolbarPosition.y}px`,
+          left: `${toolbarPosition.x}px`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          background: 'rgba(0,0,0,0.8)',
+          padding: '10px',
+          borderRadius: '10px',
+          zIndex: 10,
+          cursor: dragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseMove={handleDragMove}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+      >
+        {/* Draggable Handle */}
+        <div
+          onMouseDown={handleDragStart}
+          style={{
+            cursor: 'grab',
+            padding: '5px',
+            textAlign: 'center',
+            background: '#444',
+            color: 'white',
+            borderRadius: '5px',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          {/* Hamburger Dragger (Now I'm Hungry) */}
+          ☰
+        </div>
 
-      <div style={{ position: 'absolute', top: '70px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
-        <button onClick={() => addTextNode()}>Text</button>
-        <button onClick={() => addImageNode()}>Image</button>
-        <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
-      </div> 
+        {/* Da Buttons */}
+        <button onClick={() => addTextNode()}>T</button>
+        <button onClick={() => addImageNode()}>🌄</button>
+        <button onClick={() => addSynthesizer()}>✨</button>
+      </div>
       {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 
 

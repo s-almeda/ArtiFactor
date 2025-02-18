@@ -1,11 +1,10 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Flow from "./Flow";
 import About from "./About";
 import Sidebar from "./Sidebar";
 import Palette from "./Palette";
-import TitleBar from "./TitleBar";
 
 import { DnDProvider } from "./context/DnDContext";
 import { PaletteProvider } from "./context/PaletteContext";
@@ -31,80 +30,7 @@ function AppContent() {
     setShowSidebar((prev) => !prev);
   };
 
-  const [lastSaved, setLastSaved] = useState("Never");
-  const [canvasName, setCanvasName] = useState("Untitled");
-  const [canvasID, setCanvasID] = useState("null");
 
-  // load canvas when the app starts
-  useEffect(() => {
-    const loadCanvas = async () => {
-      try {
-        const response = await fetch(`${backend_url}/api/get-latest-canvas`);
-        const data = await response.json();
-        
-        if (data.success && data.canvas) {
-          setCanvasID(data.canvas.id); // ensure correct ID
-          setCanvasName(data.canvas.name);
-        } else {
-          console.warn("No existing canvas found. Creating a new one.");
-          await createNewCanvas();
-        }
-      } catch (error) {
-        console.error("Error loading canvas:", error);
-      }
-    };
-
-    loadCanvas();
-  }, []);
-
-    // create new canvas if none exists
-    const createNewCanvas = async () => {
-      try {
-        const response = await fetch(`${backend_url}/api/create-canvas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-  
-        const data = await response.json();
-        if (data.success) {
-          setCanvasID(data.canvas.id);
-          setCanvasName(data.canvas.name);
-        } else {
-          console.error("Error creating a new canvas:", data.message);
-        }
-      } catch (error) {
-        console.error("Error creating canvas:", error);
-      }
-    };
-
-  // update last saved time
-  const updateLastSaved = () => {
-    const now = new Date();
-    setLastSaved(now.toLocaleString());
-  };
-
-  // update canvas name
-  const updateCanvasName = async (newName: string) => {
-    if (!newName.trim() || newName === canvasName) return; // ignore empty names
-
-    setCanvasName(newName);
-
-    try {
-      const response = await fetch(`${backend_url}/api/update-canvas-name`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvasID, newCanvasName: newName }), // ensure canvasID sent
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update canvas name.");
-      }
-
-      console.log(`Canvas name updated to "${newName}" in the backend.`);
-    } catch (error) {
-      console.error("Error updating canvas name:", error);
-    }
-  }
 
   return (
     <CanvasProvider>
@@ -117,17 +43,21 @@ function AppContent() {
             }`}
             style={{ zIndex: 50 }}
           >
-            <Sidebar 
-              onClose={toggleSidebar} 
-              updateLastSaved={updateLastSaved} 
-              updateCanvasName={updateCanvasName} 
-              canvasID={canvasID}
-              canvasName={canvasName} 
-            />
+            <Sidebar onClose={toggleSidebar} />
           </div>
 
           {/* Sidebar Toggle Button */}
-          <TitleBar toggleSidebar={toggleSidebar} canvasName={canvasName} onCanvasNameChange={updateCanvasName} lastSaved={lastSaved} />
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="absolute top-4 left-64 z-50 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-r focus:outline-none transition-all duration-300"
+            style={{
+              transform: showSidebar ? "translateX(0)" : "translateX(-256px)", // Move button along with sidebar
+              transition: "transform 0.3s ease",
+            }}
+          >
+            {showSidebar ? "⬅️" : "➡️"}
+          </button>
 
           {/* Main Content */}
           <ReactFlowProvider>
