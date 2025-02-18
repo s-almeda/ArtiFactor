@@ -56,6 +56,30 @@ app.post("/api/check-for-keywords", async (req, res) => {
   }
 });
 
+// get similar texts
+app.post("/api/get-similar-texts", async (req, res) => {
+  console.log("received a get-similar-texts request:", req.body);
+  const { query, top_k = 5 } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Missing 'query' in request body" });
+  }
+  console.log("sending to flask server...");
+  try {
+    const response = await axios.post(
+      `${flask_server}/lookup_text`,
+      { query, top_k },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    res.json(response.data);
+    console.log("got response from flask server:", response.data);
+  } catch (error) {
+    console.error("Error getting similar texts:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // new /api/get-similar-images route takes an image: base64string or image: imageURL within a .json file and returns a list of similar images as urls or as base64
 app.post("/api/get-similar-images", async (req, res) => {
