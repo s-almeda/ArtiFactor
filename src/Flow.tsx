@@ -12,13 +12,12 @@ import {
   useNodesState,
   useReactFlow,
   applyNodeChanges,
-  getNodesBounds
 } from "@xyflow/react";
 
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData} from "./nodes/types";
+import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData, Word, Keyword, TextWithKeywordsNodeData, TextWithKeywordsNode} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
@@ -27,17 +26,28 @@ import { calcNearbyPosition } from './utils/calcNearbyPosition';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 // import { data } from "react-router-dom";
+import TitleBar from "./TitleBar";
 
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser, setCanvasName } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
+  // for TitleBar
+  const [lastSaved, setLastSaved] = useState("");
+  useEffect(() => {
+    const updateLastSaved = () => {
+      const now = new Date();
+      setLastSaved(now.toLocaleString());
+    };
+    const saveInterval = setInterval(updateLastSaved, 30000); // Update every 30 seconds
+    return () => clearInterval(saveInterval);
+  }, []);
 
   //attempt (just once) to load the canvas from the browser storage
   useEffect(() => {
@@ -100,6 +110,48 @@ const Flow = () => {
   
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
+
+  const addTextWithKeywordsNode = (content: string = "your text here", position?: { x: number; y: number }) => {
+    // const keywordedContent: TextWithKeywords = content.split(" ").map((word, index) => {
+    //   if (index % 5 === 0) { // Just an example condition to mark some words as keywords
+    //     return { id: `keyword-${index}`, value: word } as Keyword;
+    //   }
+    //   return { value: word } as Word;
+    // });
+
+    // const newTextWithKeywordsNode: AppNode = {
+    //   id: `text-${Date.now()}`,
+    //   type: "textWithKeywords",
+    //   position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
+    //     x: Math.random() * 250,
+    //     y: Math.random() * 250,
+    //   },
+    //   data: {
+    //     content: content,
+    //     textWithKeywords: keywordedContent 
+    //   } as TextWithKeywordsNodeData,
+    // };
+    const data: TextWithKeywordsNodeData = {
+      words: [
+        { value: 'This', id: '1' },
+        { value: 'is' },
+        { value: 'a' },
+        { value: 'test', id: '4' },
+        { value: 'sentence', id: '5' },
+      ],
+    };
+    const newTextWithKeywordsNode: AppNode = {
+      id: `text-${Date.now()}`,
+      type: "textWithKeywords",
+      position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
+        x: Math.random() * 250,
+        y: Math.random() * 250,
+      },
+      data: data,
+    };
+
+    setNodes((prevNodes) => [...prevNodes, newTextWithKeywordsNode]);
+  };
 
 
   const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
@@ -530,10 +582,12 @@ const Flow = () => {
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '10px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
+
+      <div style={{ position: 'absolute', top: '70px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
+        <button onClick={() => addTextWithKeywordsNode()}> text with keywords</button>
       </div> 
       {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 

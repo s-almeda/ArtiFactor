@@ -30,7 +30,7 @@ export type SynthesizerNodeData = ArtifactorNodeData & {
 };
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {
-  textWithKeywords: TextWithKeywords;
+  words: Array<Word | Keyword>;
 };
 
 /** Generalized AppNode Type */
@@ -59,6 +59,7 @@ export type Keyword = Word & {
   aliases?: string[];
   type: string;
   description: string;
+  shortDescription?: string;
   relatedKeywordStrings: string[];
   relatedKeywordIds: string[];
 }
@@ -71,7 +72,7 @@ export type Keyword = Word & {
 // description TEXT,
 // relatedKeywordIds TEXT
 
-export type TextWithKeywords = Array<Word | Keyword>;
+// export type TextWithKeywords = Array<Word | Keyword>;
 
 export interface Artwork {
   title: string;

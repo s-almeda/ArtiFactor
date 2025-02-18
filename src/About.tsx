@@ -2,15 +2,15 @@ import { type Word, type Keyword } from './nodes/types';
 import { TextWithKeywordsNode } from './nodes/TextWithKeywordsNode'; // Adjust the import path as necessary
 
 const About = () => {
-  const data = {
-    words: [
-      { value: 'This', id: '1' },
-      { value: 'is' },
-      { value: 'a' },
-      { value: 'test', id: '4' },
-      { value: 'sentence', id: '5' },
-    ],
-  };
+  // const data = {
+  //   words: [
+  //     { value: 'This', id: '1' } as Keyword,
+  //     { value: 'is' } as Word,
+  //     { value: 'a' },
+  //     { value: 'test', id: '4' },
+  //     { value: 'sentence', id: '5' },
+  //   ],
+  // };
 
   // const handleKeywordClick = (keyword: Keyword) => {
   //   alert(`Keyword clicked: ${keyword.value}`);
@@ -28,11 +28,11 @@ const About = () => {
             <h3 className="text-2xl font-semibold mb-2">Our Project</h3>
             <p>Pretend we filled this out.</p>
           </div>
-
+ 
           {/* Example Section */}
           <div id="exampleSection" className="mb-8">
-            <h3 className="text-2xl font-semibold mb-2">Example Components</h3>
-            <TextWithKeywordsNode data={data}/>
+            <h3 className="text-2xl font-semibold mb-2">Text with keywords test</h3>
+            
           </div>
         </div>
       </div>

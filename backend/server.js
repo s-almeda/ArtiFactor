@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 import dbPromise from "./database.js"; // Import the database module
 import fetch from 'node-fetch'; // Ensure you have node-fetch installed
 
-// const flask_server = "https://data.snailbunny.site";
-const flask_server = "http://0.0.0.0:8080";
+const flask_server = "https://data.snailbunny.site";
+//const flask_server = "http://localhost:8080";
 
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
@@ -56,6 +56,30 @@ app.post("/api/check-for-keywords", async (req, res) => {
   }
 });
 
+// get similar texts
+app.post("/api/get-similar-texts", async (req, res) => {
+  console.log("received a get-similar-texts request:", req.body);
+  const { query, top_k = 5 } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Missing 'query' in request body" });
+  }
+  console.log("sending to flask server...");
+  try {
+    const response = await axios.post(
+      `${flask_server}/lookup_text`,
+      { query, top_k },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    res.json(response.data);
+    console.log("got response from flask server:", response.data);
+  } catch (error) {
+    console.error("Error getting similar texts:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // new /api/get-similar-images route takes an image: base64string or image: imageURL within a .json file and returns a list of similar images as urls or as base64
 app.post("/api/get-similar-images", async (req, res) => {
@@ -81,7 +105,7 @@ app.post("/api/get-similar-images", async (req, res) => {
   }
 
   try {
-    console.log("Sending image to ml/data server...");
+    console.log(`Sending image to ml/data server... ${flask_server}/image`);
     const response = await axios.post(
       `${flask_server}/image`,
       {
