@@ -36,8 +36,9 @@ export const KeywordDescription: React.FC<{
   keyword: Keyword | null;
   containerHeight?: number;
   containerWidth?: number;
-  onClose?: () => void;
-}> = ({ keyword, containerHeight = 100, containerWidth = 100, onClose }) => {
+  showDescription: boolean; 
+  toggleDescription: () => void;
+}> = ({ keyword, containerHeight = 100, containerWidth = 100, showDescription = false, toggleDescription }) => {
 
   const [_, setDraggableType, __, setDraggableData] = useDnD();
   if (!keyword) return null;
@@ -51,61 +52,78 @@ export const KeywordDescription: React.FC<{
     setDraggableData({ content: content });
   };
 
-  return (
-    <div
-      className="nowheel nodrag bg-white border border-gray-300 rounded-md shadow-md overflow-auto z-10"
-      style={{
-        maxHeight: `${containerHeight * 1.5}px`,
-        width: `${containerWidth}px`,
-      }}
-    >
+  return ( 
+    <div className="relative" 
+    style={{
+      height: `${containerHeight}px`,
+      overflow: "visible"
+    }}
+    >{/* div to contain everything including the button */}
 
-      {keyword.description && (
+    {/* DIV TO CONTAIN THE DESCRIPTION ONLY. animate getting shrunk to fit behind the main node, as this section is bigger than the height.*/}
+    <div className="overflow-hidden" style={{ height: `calc(${containerHeight-24}px`}}> 
+      <motion.div 
+        initial={{}}
+        animate={{ 
+          scaleY: showDescription ? 1 : 0.5, 
+          rotateX: showDescription ? 0 : 90 
+        }}
+        transition={{ 
+          duration: showDescription ? 0.5 : 0.1, 
+          type: "spring", 
+          bounce: 0.2 
+        }}
+        className="z-20 nowheel overflow-hidden nodrag bg-white border-10 border-white-300 rounded-md shadow-md p-2 h-full"
+      >
         <div
-          draggable
-          onDragStart={(event) => onDragStart(event, keyword.description)}
-          className="p-3 flex flex-col gap-3 overflow-y-auto text-xs"
-          style={{ maxHeight: `calc(${containerHeight * 1.5}px - 3rem)` }}
+          className=" flex flex-col justify-between"
         >
-          {keyword.description}
-        </div>
-      )}
+          {keyword.description && (
+            <div
+              draggable
+              onDragStart={(event) => onDragStart(event, keyword.description)}
+              className="p-3 flex flex-col gap-3 overflow-y-auto text-xs flex-grow"
+            >
+              {keyword.description}
+            </div>
+          )}
 
-      {/* RELATED KEYWORDS */}
-      {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
-        <div className="p-2">
-          <div className="flex flex-wrap gap-0.5">
-          <strong className="text-gray-900 text-md">Related:</strong>
-            {keyword.relatedKeywordStrings.map((relatedKeyword, index) => (
-              <div
-                key={index}
-                className="text-xs text-gray-700 p-1 bg-gray-100 hover:bg-gray-300 rounded-sm cursor-grab"
-                draggable
-                onDragStart={(event) => onDragStart(event, relatedKeyword)}
-              >
-                {relatedKeyword}
+          {/* RELATED KEYWORDS */}
+          {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
+            <div className="p-2 flex flex-wrap gap-0.5"
+            >
+                <strong className="text-gray-900 text-sm">see also:</strong>
+                {keyword.relatedKeywordStrings.map((relatedKeyword, index) => (
+                  <div
+                    key={index}
+                    className="text-xs text-gray-700 p-1 bg-gray-100 hover:bg-gray-300 rounded-sm cursor-grab"
+                    draggable
+                    onDragStart={(event) => onDragStart(event, relatedKeyword)}
+                  >
+                    {relatedKeyword}
+                  </div>
+                ))}
               </div>
-            ))} 
-          </div>
+          )}
         </div>
-      )}
+      </motion.div>
 
-      <button 
-          className={`absolute -bottom-6
-                right-4 
-                w-20 h-6 z-0 bg-gray-200 
-                flex items-center justify-center 
-                rounded-md
-                cursor-pointer 
-                hover:bg-gray-300 
-                transition-colors duration-200
-                text-gray-600
-                `}
-          onClick={onClose}
-          >
-        <Bookmark size={16} />
-      </button>
     </div>
+
+    {/* Bookmark button */}
+    <div
+      className={`
+            w-12 h-12 p-1
+            bg-amber-200
+            flex items-center justify-center rounded-br-md rounded-bl-md
+            cursor-pointer hover:bg-yellow-300 transition-colors duration-200 
+            absolute bottom-0 right-2
+            ${showDescription ? 'bg-amber-200' : ''}`}
+      onClick={toggleDescription}
+    >
+      <Bookmark size={20} className="text-gray-600" /> {/* BOOKMARK ICON */}
+    </div>
+  </div>
   );
 };
 
@@ -167,7 +185,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
   return (
     <>
-    {/* move the folder icon button all the way to the left -6 (relative to the panel)*/}
+    {/* SEARCH ICON BUTTON -- move it all the way to the left -6 (relative to the panel)*/}
       <div
         className={`absolute left-0 top-2 transform -translate-x-7 -translate-y-2 
                     w-12 h-20 p-1
@@ -179,12 +197,13 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
       >
         <Search size={20} className="text-gray-600" /> {/* FOLDER ICON */}
       </div>
+
       <motion.div
       initial={{ transform: `rotateX(-45deg)` }}
       animate={{ 
         transform: showFolder ? `rotateX(0deg)` : `rotateX(-60deg)`
       }}
-      transition={{ duration: 0.2, type: "spring", bounce: 0.1 }}
+      transition={{ duration: 0.3, type: "spring", bounce: 0.2 }}
       className="absolute"
       >
       <div
@@ -193,7 +212,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
       >
         <div className="p-3 ml-0 h-full overflow-y-auto">
           <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-medium text-gray-900">This is reminiscent of...</h3>
+        <h2 className="text-xs font-medium text-gray-900 italic font-bold">This could be related...</h2>
           </div>
           {contentState === null ? (
         <div className="nodrag nowheel text-xs text-gray-600 flex flex-col items-center">
@@ -316,17 +335,9 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     setShowDescription(!showDescription);
   }
 
-  const toggleBookmark = () => {
+  const toggleDescription= () => {
     setShowDescription(!showDescription);
     console.log(selectedKeyword);
-    if (showDescription === false && selectedKeyword === null) {
-      // If we're opening the bookmark panel but no keyword is selected
-      // Pick the first keyword from the words array if it exists
-      const firstKeyword = words.find(word => 'id' in word) as Keyword;
-      if (firstKeyword) {
-        setSelectedKeyword(firstKeyword);
-      }
-    }
   };
 
   const toggleFolder = () => {
@@ -337,8 +348,16 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
   useEffect(() => {
     setWords(data.words || []);
+    if (selectedKeyword === null) {
+      // If we're opening the bookmark panel but no keyword is selected
+      // Pick the first keyword from the words array if it exists
+      const firstKeyword = words.find(word => 'id' in word) as Keyword;
+      if (firstKeyword) {
+        setSelectedKeyword(firstKeyword);
+      }
+    }
     //console.log('current data in this node:', data);
-  }, [data.words]);
+  }, [data.words, selectedKeyword]);
 
   // --- ADJUST SIZE OF TEXT AREA ON EDIT --- //
   useEffect(() => {
@@ -360,6 +379,8 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     }
 
     if (!selected) {
+      setShowDescription(false);
+      setShowFolder(false);
       setSelectedKeyword(null);
       setIsEditing(false);
     }
@@ -378,8 +399,8 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
   return (
     <motion.div
-    initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75,  filter: "drop-shadow(6px 6px 6px rgba(0, 0, 0, 0.65))"}}
-    animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1, filter: "drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.25))"}}
+    initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75}}
+    animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1}}
     transition={{ duration: 0.15, type: "spring", bounce: 0.1 }}
     className={``} 
     > {/*TODO: implement combinability `${data.combinable ? 'bg-yellow-50' : ''} */}
@@ -390,7 +411,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             <div style={{ fontSize: '0.75rem', color: 'gray', filter: 'none' }}>ENTER TO CONFIRM</div>
           <div className="text-xs p-3 border border-gray-700 rounded bg-white nowheel" style={{ width: `${width}px`, height: `${height}px` }}>
             <textarea
-              className="nowheel nodrag resize-none border  overflow-auto text-inherit font-inherit p-2 w-full h-full"
+              className="nowheel nodrag resize-none border  overflow-auto text-inherit font-inherit  p-2 w-full h-full"
               ref={textareaRef}
               value={content}
               onChange={handleChange}
@@ -401,6 +422,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         </>
       ) : (
         <>
+
         {/* --- FOLDER PANEL --- */}
         <motion.div
           initial={{ left: '-6px', transform: `scaleY(0.5)` }}
@@ -414,12 +436,12 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           <FolderPanel width={width} height={height} showFolder={showFolder} toggleFolder={toggleFolder} content={wordsToString(words)} />
         </motion.div>
         {/* MAIN BODY OF NODE CONTENT */}
-        <div className={nodeStyles} style={{ height: `${height}px`, whiteSpace: 'normal', wordWrap: 'break-word'}}>
+        <div className={`${nodeStyles} z-10`} z-10 style={{ height: `${height}px`, whiteSpace: 'normal', wordWrap: 'break-word', filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>
           
             {/* Edit button */}
             <button 
               onClick={handleEditClick}
-              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100 z-10"
+              className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100 z-20"
             >
               <Edit2 size={16} />
             </button>
@@ -437,37 +459,23 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           </div>
         </div>
 
-       { /* Bookmark button */}
-        <button 
-          className={`absolute -bottom-6
-          right-4 
-          w-20 h-6 z-0 bg-gray-200 
-          flex items-center justify-center 
-          rounded-md
-          cursor-pointer 
-          hover:bg-gray-300 
-          transition-colors duration-200
-          text-gray-600
-          ${showDescription || selectedKeyword == null ? 'display-none' : 'bg-gray-300'}`}
-          onClick={toggleBookmark}
-          >
-        <Bookmark size={16} />
-            </button>
-      
-      {/* Description panel that appears below */}
-      {showDescription && selectedKeyword && (
-        <div 
-          className="absolute mt-0 right-0 z-0" //move it down under the node
-          style={{ top: `${height}px`}}
+         {/* Description panel that appears below. motion.div animates it moving up and down.  */}
+        <motion.div
+          initial={{ top: 0 }}
+          animate={{ top: showDescription ? height : -(height)+40}}
+          transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
+          className="absolute mt-0"
         >
           <KeywordDescription 
             keyword={selectedKeyword} 
-            containerHeight={height}
+            containerHeight={height*2}
             containerWidth={width}
-            onClose={() => setShowDescription(false)}
+            showDescription={showDescription}
+            toggleDescription={toggleDescription} 
           />
-        </div>
-      )}
+        </motion.div>
+
+
     </>
   )}
 </div>
