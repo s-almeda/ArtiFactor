@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 export function TextNode({ data, selected }: NodeProps<TextNode>) {
   const [content, setContent] = useState(data.content || "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { addClippedNode } = usePaletteContext();
+  const { addClippedNode, getNextPaletteIndex } = usePaletteContext();
     
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     data.content = e.target.value; // update this node's data
@@ -88,6 +88,7 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
           type="button"
           onClick={() => addClippedNode(
             {
+              id: getNextPaletteIndex(),
             type: 'text',
             content: content,
             prompt: "none"

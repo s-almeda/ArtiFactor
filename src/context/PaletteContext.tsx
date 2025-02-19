@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 // Define the type of a node
 export interface NodeData {
+  id: number;
   type: "image" | "text";
   content: string; // is either text, or an imageUrl
   prompt: string; // for storing the prompt, or the title/artist alt text for the artwork
@@ -17,6 +18,7 @@ interface PaletteContextType {
   addClippedNode: (node: NodeData) => void;
   activeTab: "images" | "text";
   setActiveTab: (tab: "images" | "text") => void;
+  getNextPaletteIndex: () => number;
 }
 
 // Create the context with a default value
@@ -43,6 +45,10 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
     setClippedNodes((prevNodes) => [...prevNodes, node]);
   };
 
+  const getNextPaletteIndex = () => {
+    return clippedNodes.length;
+  };
+
   return (
     <PaletteContext.Provider
       value={{
@@ -51,6 +57,7 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
         addClippedNode,
         activeTab,
         setActiveTab,
+        getNextPaletteIndex,
       }}
     >
       {children}

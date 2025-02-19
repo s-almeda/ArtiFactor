@@ -6,7 +6,7 @@ interface PaletteNodeProps {
   data: NodeData;
   charLimit: number;
   type: "text" | "image";
-  removeNode: (id: string) => void; // Function to remove the node
+  removeNode: (id: number) => void; // Function to remove the node
 }
 
 const PaletteNode: FC<PaletteNodeProps> = ({

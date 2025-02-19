@@ -42,13 +42,8 @@ const controlStyle: React.CSSProperties = {
   };
 
 
-// interface ImageNodeProps extends NodeProps<ImageNode> {
-//   //ons: (imageUrl: string) => void;
-// }
-
-
 export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY }: NodeProps<ImageNode>) {
-  const { addClippedNode } = usePaletteContext(); 
+  const { addClippedNode, getNextPaletteIndex } = usePaletteContext(); 
   const [imageUrl, setImageUrl] = useState("");
   const [showPrompt, setShowPrompt] = useState(false);
   const [width, setWidth] = useState(80);
@@ -117,6 +112,7 @@ export function ImageNode({ data, selected, positionAbsoluteX, positionAbsoluteY
             type="button"
             onClick={() => addClippedNode(
               {
+                id: getNextPaletteIndex(),
                 type: 'image',
                 content: imageUrl,
                 prompt: data.prompt || ""

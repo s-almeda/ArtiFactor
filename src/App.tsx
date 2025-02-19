@@ -1,6 +1,6 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Flow from "./Flow";
 import About from "./About";
 import Sidebar from "./Sidebar";
@@ -11,6 +11,7 @@ import { PaletteProvider } from "./context/PaletteContext";
 import { CanvasProvider } from "./context/CanvasContext";
 import { AppProvider } from "./context/AppContext"; //useAppContext
 
+import TitleBar from "./TitleBar";
 
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
@@ -30,35 +31,98 @@ function AppContent() {
     setShowSidebar((prev) => !prev);
   };
 
+  const [lastSaved, _] = useState("Never"); //setLastSaved
+  const [canvasName, setCanvasName] = useState("Untitled");
+  const [canvasID, __] = useState("null");
+  // load canvas when the app starts
+  useEffect(() => {
+    const loadCanvas = async () => {
+      console.log("todo")
+      // try {
+      //   const response = await fetch(`${backend_url}/api/get-latest-canvas`);
+      //   const data = await response.json();
+        
+      //   if (data.success && data.canvas) {
+      //     setCanvasID(data.canvas.id); // ensure correct ID
+      //     setCanvasName(data.canvas.name);
+      //   } else {
+      //     console.warn("No existing canvas found. Creating a new one.");
+      //     await createNewCanvas();
+      //   }
+      // } catch (error) {
+      //   console.error("Error loading canvas:", error);
+      // }
+    };
+    loadCanvas();
+  }, []);
+    // create new canvas if none exists
+    // const createNewCanvas = async () => {
+    //   try {
+    //     const response = await fetch(`${backend_url}/api/create-canvas`, {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //     });
+  
+    //     const data = await response.json();
+    //     if (data.success) {
+    //       setCanvasID(data.canvas.id);
+    //       setCanvasName(data.canvas.name);
+    //     } else {
+    //       console.error("Error creating a new canvas:", data.message);
+    //     }
+    //   } catch (error) {
+    //     console.error("Error creating canvas:", error);
+    //   }
+    // };
+  // update last saved time
+  // const updateLastSaved = () => {
+  //   const now = new Date();
+  //   setLastSaved(now.toLocaleString());
+  // };
+  // update canvas name
+  const updateCanvasName = async (newName: string) => {
+    if (!newName.trim() || newName === canvasName) return; // ignore empty names
+    setCanvasName(newName);
 
+    try {
+      const response = await fetch(`${backend_url}/api/update-canvas-name`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canvasID, newCanvasName: newName }), // ensure canvasID sent
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update canvas name.");
+      }
+      console.log(`Canvas name updated to "${newName}" in the backend.`);
+    } catch (error) {
+      console.error("Error updating canvas name:", error);
+    }
+  };
 
   return (
     <CanvasProvider>
       <PaletteProvider>
-        <div className="relative h-screen w-screen">
+        <div className="relative h-screen w-screen overflow-hidden">
           {/* Sidebar */}
           <div
             className={`fixed top-0 left-0 h-full bg-gray-800 text-white w-64 transition-transform duration-300 ${
               showSidebar ? "translate-x-0" : "-translate-x-64"
             }`}
-            style={{ zIndex: 50 }}
+            style={{ zIndex: 50, overflow: "hidden" }}
           >
             <Sidebar onClose={toggleSidebar} />
           </div>
-
-          {/* Sidebar Toggle Button */}
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className="absolute top-4 left-64 z-50 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-r focus:outline-none transition-all duration-300"
-            style={{
-              transform: showSidebar ? "translateX(0)" : "translateX(-256px)", // Move button along with sidebar
-              transition: "transform 0.3s ease",
-            }}
+          <div
+            className={`fixed top-0 left-0 w-full h-12 bg-gray-800 text-white transition-transform duration-300`}
+            style={{ overflow: "hidden" }}
           >
-            {showSidebar ? "⬅️" : "➡️"}
-          </button>
-
+            <TitleBar
+              toggleSidebar={toggleSidebar}
+              canvasName={canvasName}
+              onCanvasNameChange={updateCanvasName}
+              lastSaved={lastSaved}
+            />
+          </div>
           {/* Main Content */}
           <ReactFlowProvider>
             <DnDProvider>
@@ -67,33 +131,33 @@ function AppContent() {
                 <Route
                   path="/"
                   element={
-                    <div className="flex">
+                    <div className="flex fixed" style={{height: "calc(100vh - 80px)", marginTop: "24px", overflow: "hidden" }}>
                       <div
                         className="border border-gray-500"
                         style={{
-                          height: "90vh",
+                          height: '100%',
                           width: "80vw",
                           margin: 0,
                           padding: 0,
+                          overflow: "hidden",
                         }}
                       >
                         {/*<!-- maybe move the toolbar here? -->*/}
-
                         <Flow />
-
                       </div>
                       {/*SET PALETTE WIDTH HERE */}
-                        <div 
+                      <div
                         className="border border-gray-500 ml-5 rounded-lg"
                         style={{
-                          height: "90vh",
-                          width: "20vw",
+                          height: "100%",
+                          width: "15vw",
                           margin: 0,
-                          zIndex: 3, 
+                          zIndex: 3,
+                          overflow: "hidden",
                         }}
-                        >
+                      >
                         <Palette />
-                        </div>
+                      </div>
                     </div>
                   }
                 />
@@ -116,3 +180,4 @@ export default function App() {
     </Router>
   );
 }
+

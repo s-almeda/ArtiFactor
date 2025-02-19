@@ -33,6 +33,7 @@ import { useCanvasContext } from './context/CanvasContext';
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
+  //const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
@@ -303,7 +304,7 @@ const Flow = () => {
       if (draggableType === "image" && "content" in draggableData && "prompt" in draggableData) {
         addImageNode(draggableData["content"] as string, position, draggableData["prompt"] as string);
       } else if ("content" in draggableData) {
-        addTextNode(draggableData["content"] as string, position);
+        addTextWithKeywordsNode(draggableData["content"] as string, position);
       }
       
     },
@@ -629,15 +630,14 @@ const Flow = () => {
         <button onClick={() => addImageNode()}>🌄</button>
         <button onClick={() => addSynthesizer()}>✨</button>
       </div>
-
+{/* 
       <div style={{ position: 'absolute', top: '70px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
         <button onClick={() => addTextWithKeywordsNode()}> text with keywords</button>
-      </div> 
+      </div>  */}
 
-      {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 
 
             

@@ -1,15 +1,23 @@
 import { useAppContext } from '../context/AppContext';
-import type { NodeProps } from "@xyflow/react";
+import type { NodeProps} from "@xyflow/react";
+import {NodeToolbar, Position} from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import React, { useRef, useState, useEffect } from 'react';
 import { useDnD } from '../context/DnDContext';
 import { Bookmark, Search, Edit2 } from 'lucide-react';
 import {motion} from 'framer-motion';
+import { usePaletteContext } from '../context/PaletteContext';
+import NavigationButtons from '../utils/commonComponents';
 
 export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
-  return <span className='px-0.5 py-1'>{word.value}</span>;
+  return (
+  <span style={{ position: 'relative', display: 'inline-block' }}>
+    <span className='cursor-pointer rounded-sm m-0.5 p-0.5'>
+      {word.value}
+    </span>
+  </span>
+  );
 };
-
 export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: () => void }> = ({ keyword, handleKeywordClick }) => {
   const [isSelected, setIsSelected] = useState(false);
 
@@ -19,29 +27,26 @@ export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: 
   };
 
   return (
-    <span style={{ position: 'relative', display: 'inline-block' }}>
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{ position: 'relative', display: 'inline-block' }}>
       <span
-        className={`cursor-pointer px-0.5 py-0 rounded-sm m-0 transition-all duration-200 
-                    bg-amber-100 hover:bg-amber-200
-                    ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+        className={`cursor-pointer 
+                    rounded-sm mx-0.5 p-0 z-10
+                    transition-all duration-200 
+                    bg-amber-100 hover:bg-amber-200`}
         onClick={handleClick}
       >
         {keyword.value}
       </span>
-    </span>
+    </motion.div>
   );
 };
 
-export const KeywordDescription: React.FC<{ 
-  keyword: Keyword | null;
-  containerHeight?: number;
-  containerWidth?: number;
-  showDescription: boolean; 
-  toggleDescription: () => void;
-}> = ({ keyword, containerHeight = 100,  showDescription = false, toggleDescription }) => { //containerWidth = 100,
-
+export const RelatedKeywords: React.FC<{ relatedKeywords: string[] }> = ({ relatedKeywords }) => {
   const [_, setDraggableType, __, setDraggableData] = useDnD();
-  if (!keyword) return null;
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -51,6 +56,44 @@ export const KeywordDescription: React.FC<{
     setDraggableType("text");
     setDraggableData({ content: content });
   };
+
+  return (
+    <div className="nodrag p-2 flex flex-wrap gap-0.5">
+      <strong className="text-gray-900 text-sm">see also:</strong>
+      {relatedKeywords.map((relatedKeyword, index) => (
+        <div
+          key={index}
+          className="text-xs text-stone-50 p-0.5 bg-stone-500 hover:bg-stone-400 rounded-sm cursor-grab"
+          draggable
+          onDragStart={(event) => onDragStart(event, relatedKeyword)}
+        >
+          {relatedKeyword}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const KeywordDescription: React.FC<{ 
+  keyword: Keyword | null;
+  containerHeight?: number;
+  containerWidth?: number;
+  showDescription: boolean; 
+  toggleDescription: () => void;
+}> = ({ keyword, containerHeight = 100, showDescription = false, toggleDescription }) => { //containerWidth = 100,
+
+  const [_, setDraggableType, __, setDraggableData] = useDnD();
+
+  const onDragStart = (
+    event: React.DragEvent<HTMLDivElement>,
+    content: string
+  ) => {
+    event.dataTransfer.effectAllowed = "move";
+    setDraggableType("text");
+    setDraggableData({ content: content });
+  };
+
+  if (!keyword) return null;
 
   return ( 
     <div className="relative" 
@@ -70,14 +113,28 @@ export const KeywordDescription: React.FC<{
         }}
         transition={{ 
           duration: showDescription ? 0.5 : 0.1, 
+          opacity: showDescription ? 1 : 0,
           type: "spring", 
           bounce: 0.2 
         }}
-        className="z-20 nowheel overflow-scroll nodrag bg-white border-10 border-white-300 rounded-md shadow-md p-2 h-full"
+        className="z-20 nowheel overflow-scroll nodrag bg-white border rounded-md shadow-md p-0 h-full"
       >
-        <div
-          className=" flex flex-col justify-between"
-        >
+        <div className="flex flex-col justify-between">
+          {keyword.databaseValue && (
+            <div 
+              className="text-sm font-bold text-gray-800 mb-2 cursor-pointer" 
+              style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '8px 12px',
+              backgroundColor: '#f8fafc',
+              borderBottom: '1px solid #e2e8f0'
+              }}
+            >
+              {keyword.databaseValue}
+            </div>
+          )}
           {keyword.description && (
             <div
               draggable
@@ -90,20 +147,7 @@ export const KeywordDescription: React.FC<{
 
           {/* RELATED KEYWORDS */}
           {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
-            <div className="p-2 flex flex-wrap gap-0.5"
-            >
-                <strong className="text-gray-900 text-sm">see also:</strong>
-                {keyword.relatedKeywordStrings.map((relatedKeyword, index) => (
-                  <div
-                    key={index}
-                    className="text-xs text-gray-700 p-1 bg-gray-100 hover:bg-gray-300 rounded-sm cursor-grab"
-                    draggable
-                    onDragStart={(event) => onDragStart(event, relatedKeyword)}
-                  >
-                    {relatedKeyword}
-                  </div>
-                ))}
-              </div>
+            <RelatedKeywords relatedKeywords={keyword.relatedKeywordStrings} />
           )}
         </div>
       </motion.div>
@@ -113,7 +157,7 @@ export const KeywordDescription: React.FC<{
     {/* Bookmark button */}
     <div
       className={`
-            w-12 h-12 p-1
+            w-12 h-10 p-1
             bg-amber-200
             flex items-center justify-center rounded-br-md rounded-bl-md
             cursor-pointer hover:bg-yellow-300 transition-colors duration-200 
@@ -126,13 +170,23 @@ export const KeywordDescription: React.FC<{
   </div>
   );
 };
-
 // -- FOLDER PANEL COMPONENT (the panel that opens on the left side) --- //
 const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean; toggleFolder: () => void; content?: string }> = ({ width, height, showFolder, toggleFolder, content }) => {
   const [similarTexts, setSimilarTexts] = useState<Keyword[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [contentState, setContentState] = useState<string | null>(content || '');
   const { backend } = useAppContext();
+  const [_, setDraggableType, __, setDraggableData] = useDnD();
+
+  const onDragStart = (
+    event: React.DragEvent<HTMLDivElement>,
+    content: string
+  ) => {
+    event.dataTransfer.effectAllowed = "move";
+    setDraggableType("text");
+    setDraggableData({ content: content });
+  };
+
 
   useEffect(() => {
     const fetchSimilarTexts = async () => {
@@ -185,7 +239,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
   return (
     <>
-    {/* SEARCH ICON BUTTON -- move it all the way to the left -6 (relative to the panel)*/}
+      {/* SEARCH ICON BUTTON -- move it all the way to the left -6 (relative to the panel) */}
       <div
         className={`absolute left-0 top-2 transform -translate-x-7 -translate-y-2 
                     w-12 h-20 p-1
@@ -199,46 +253,58 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
       </div>
 
       <motion.div
-      initial={{ transform: `rotateX(-45deg)` }}
-      animate={{ 
-        transform: showFolder ? `rotateX(0deg)` : `rotateX(-60deg)`
-      }}
-      transition={{ duration: 0.3, type: "spring", bounce: 0.2 }}
-      className="absolute"
+        initial={{ transform: `rotateX(-45deg)` }}
+        animate={{ 
+          transform: showFolder ? `rotateX(0deg)` : `rotateX(-60deg)`
+        }}
+        transition={{ duration: 0.3, type: "spring", bounce: 0.2 }}
+        className="absolute"
       >
-      <div
-        className={`absolute left-0 top-0 transform -translate-x-[${width+6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md z-3`}
-        style={{ height: `${height * 2}px`, width: `${width}px` }}
-      >
-        <div className="p-3 ml-0 h-full overflow-y-auto">
-          <div className="flex justify-between items-center mb-2">
-        <h2 className="text-xs font-medium text-gray-900 italic font-bold">This could be related...</h2>
+        <div
+          className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md z-3`}
+          style={{ height: `${height * 2}px`, width: `${width}px` }}
+        >
+            {/* LEFT AND RIGHT BUTTONS */}
+            <div className="p-3 ml-0 h-full overflow-y-auto">
+            <h2 className="text-xs font-medium text-gray-900 italic font-bold">This could be related...</h2>
+
+              <NavigationButtons currentIndex={currentIndex} totalItems={similarTexts.length} handlePrev={handlePrev} handleNext={handleNext} />
+              
+            {contentState === null ? (
+              <div className="nodrag nowheel text-xs text-gray-600 flex flex-col items-center">
+                <p>Look-up similar concepts</p>
+                <button className="mt-2 px-3 py-1 bg-gray-200 rounded-md text-gray-700 hover:bg-gray-300">Placeholder Button</button>
+              </div>
+            ) : (
+              currentText && (
+                <div className="nodrag nowheel text-gray-600 overflow-y-auto">
+                  <p draggable onDragStart={(event) => onDragStart(event, currentText.value)}
+                   className="text-md font-bold">{currentText.value}</p>
+                  <p draggable onDragStart={(event) => onDragStart(event, currentText.type)}
+                  className="italic text-xs">{currentText.type}</p>
+                  <p 
+                    draggable 
+                    onDragStart={(event) => onDragStart(event, currentText.description)}
+                    className="text-sm/5 mt-2 p-0.5 rounded-sm hover:bg-amber-200"
+                  >
+                    {currentText.description}
+                  </p>
+
+                  {/* RELATED KEYWORDS */}
+                  {currentText.relatedKeywordStrings && currentText.relatedKeywordStrings.length > 0 && (
+                  <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} />
+                  )}
+                </div>
+              )
+            )}
           </div>
-          {contentState === null ? (
-        <div className="nodrag nowheel text-xs text-gray-600 flex flex-col items-center">
-          <p>Look-up similar concepts</p>
-          <button className="mt-2 px-3 py-1 bg-gray-200 rounded-md text-gray-700 hover:bg-gray-300">Placeholder Button</button>
         </div>
-          ) : (
-        currentText && (
-          <div className="text-xs text-gray-600 overflow-y-auto nowheel">
-            <p><strong>Database Value:</strong> {currentText.value}</p>
-            <p><strong>Type:</strong> {currentText.type}</p>
-            <p><strong>Description:</strong> {currentText.description}</p>
-            <p><strong>Related Keywords:</strong> {currentText.relatedKeywordStrings.join(', ')}</p>
-            <div className="flex justify-between mt-2">
-          <button onClick={handlePrev} className="text-gray-600 hover:text-gray-800">&larr; Prev</button>
-          <button onClick={handleNext} className="text-gray-600 hover:text-gray-800">Next &rarr;</button>
-            </div>
-          </div>
-        )
-          )}
-        </div>
-      </div>
       </motion.div>
     </>
   );
 };
+
+
 
 
 //------------------- TEXT WITH KEYWORDS NODE ------------------//
@@ -254,6 +320,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   const [showFolder, setShowFolder] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
   const { backend } = useAppContext();
+  const { addClippedNode, getNextPaletteIndex } = usePaletteContext();
+
+  const [initialCheck, setInitialCheck] = useState(true);
+
   const isAIGenerated = false; //TODO implement: data.isAIGenerated || false;
 
   // --- HELPER functions for the text with keywords node --- //
@@ -297,6 +367,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           return { value: item.value } as Word;
         }
       });
+      setInitialCheck(false);
       return result;
 
 
@@ -349,8 +420,6 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   useEffect(() => {
     setWords(data.words || []);
     if (selectedKeyword === null) {
-      // If we're opening the bookmark panel but no keyword is selected
-      // Pick the first keyword from the words array if it exists
       const firstKeyword = words.find(word => 'id' in word) as Keyword;
       if (firstKeyword) {
         setSelectedKeyword(firstKeyword);
@@ -358,6 +427,18 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     }
     //console.log('current data in this node:', data);
   }, [data.words, selectedKeyword]);
+
+  useEffect(() => {
+    if(initialCheck){
+      const onCreate = async () => {
+        console.log('A new TextWithKeywordsNode has been created');
+        const updatedWords = await checkForKeywords(words);
+        setWords(updatedWords);
+        data.words = updatedWords;
+      };  
+    onCreate();
+    }
+  }, []);
 
   // --- ADJUST SIZE OF TEXT AREA ON EDIT --- //
   useEffect(() => {
@@ -409,7 +490,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       {isEditing ? (
         <>
             <div style={{ fontSize: '0.75rem', color: 'gray', filter: 'none' }}>ENTER TO CONFIRM</div>
-          <div className="text-xs p-3 border border-gray-700 rounded bg-white nowheel" style={{ width: `${width}px`, height: `${height}px` }}>
+          <div className="text-xs p-2 border border-gray-700 rounded bg-white nowheel" style={{ width: `${width}px`, height: `${height}px` }}>
             <textarea
               className="nowheel nodrag resize-none border  overflow-auto text-inherit font-inherit  p-2 w-full h-full"
               ref={textareaRef}
@@ -435,28 +516,62 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         >
           <FolderPanel width={width} height={height} showFolder={showFolder} toggleFolder={toggleFolder} content={wordsToString(words)} />
         </motion.div>
-        {/* MAIN BODY OF NODE CONTENT */}
-        <div className={`${nodeStyles} z-10`} z-10 style={{ height: `${height}px`, whiteSpace: 'normal', wordWrap: 'break-word', filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>
-          
-            {/* Edit button */}
-            <button 
-              onClick={handleEditClick}
-              className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100 z-20"
-            >
-              <Edit2 size={16} />
-            </button>
 
-          <div className="nowheel p-0 overflow-y-auto h-full text-12 text-gray-800">
-            {words.map((word, index) => (
-                <React.Fragment key={index}>
-                  {'id' in word ? ( // if its a keyword, render the keyword component
-                    <KeywordComponent keyword={word} handleKeywordClick={() => handleKeywordClick(word)} />
-                  ) : ( //otherwise, render a normal word
-                      <WordComponent word={word} />
-                  )}
-                </React.Fragment>
-              ))}
-          </div>
+        {/* ---- NODE TOOLBAR ---- */}
+
+        <NodeToolbar isVisible={selected} position={Position.Top}>
+          <button
+          className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+          type="button"
+          onClick={() => addClippedNode(
+            {
+            id: getNextPaletteIndex(),
+            type: 'text',
+            content: wordsToString(words),
+            prompt: "none"
+            })}
+          aria-label="Save to Palette"
+          style={{ marginRight: '0px' }}
+          >
+          📎
+          </button>
+        </NodeToolbar>
+
+
+        {/* ---- MAIN BODY OF NODE CONTENT -----*/}
+        
+        <div className={`${nodeStyles} z-10`} style={{ height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
+            
+            {initialCheck ? (
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
+                {content.split('\n').map((line, index) => (
+                  <div className="text-gray-500" key={index}>{line}</div>
+                ))}
+                <div className="loader"></div> {/*display a loader until the initial check for keywords is done*/}
+              </div>
+            ) : (
+              <>
+                <button 
+                  onClick={handleEditClick}
+                  className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+                >
+                  <Edit2 size={16} />
+                </button>
+
+                <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
+                  {words.map((word, index) => (
+                    <React.Fragment key={index}>
+                      {'id' in word ? ( // if its a keyword, render the keyword component
+                        <KeywordComponent keyword={word} handleKeywordClick={() => handleKeywordClick(word)} />
+                      ) : ( //otherwise, render a normal word
+                        <WordComponent word={word} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </>
+            )}
+
         </div>
 
          {/* Description panel that appears below. motion.div animates it moving up and down.  */}
