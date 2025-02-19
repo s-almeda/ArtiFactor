@@ -16,10 +16,10 @@ import TitleBar from "./TitleBar";
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
-//const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
+const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
 
 // TURN THIS ONLINE ONE back on before you run "npm build" and deploy to Vercel!
-const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
+//const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
 //const backend_url = "http://104.200.25.53/"; //IP address of backend server hosted online, probably don't use this one.
 
 function AppContent() {
@@ -136,7 +136,7 @@ function AppContent() {
                         className="border border-gray-500"
                         style={{
                           height: '100%',
-                          width: "80vw",
+                          width: "75vw",
                           margin: 0,
                           padding: 0,
                           overflow: "hidden",
@@ -150,8 +150,9 @@ function AppContent() {
                         className="border border-gray-500 ml-5 rounded-lg"
                         style={{
                           height: "100%",
-                          width: "15vw",
+                          width: "21vw",
                           margin: 0,
+                          marginRight: 10,
                           zIndex: 3,
                           overflow: "hidden",
                         }}

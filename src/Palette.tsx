@@ -1,6 +1,8 @@
 import React from "react";
 import { usePaletteContext } from "./context/PaletteContext";
 import PaletteNode from "./nodes/PaletteNode";
+import { useEffect } from "react";
+
 
 const charLimit = 25;
 
@@ -18,7 +20,7 @@ const Palette: React.FC = () => {
   };
 
   // Ensure there's always an active tab when new nodes are added
-  React.useEffect(() => {
+  useEffect(() => {
     if (clippedNodes.length > 0) {
       setActiveTab(clippedNodes[clippedNodes.length - 1].type); // Set tab to the latest clipped node type
     }

@@ -18,6 +18,10 @@ export type ImageNodeData = ArtifactorNodeData & {
   prompt?: string;
   activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
 };
+export type ImageWithLookupNodeData = ArtifactorNodeData & {
+  prompt?: string;
+  //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
+};
 
 export type LookupNodeData = ArtifactorNodeData & {
   artworks: Artwork[];
@@ -42,6 +46,7 @@ export type ImageNode = AppNode<ImageNodeData>;
 export type LookupNode = AppNode<LookupNodeData>;
 export type SynthesizerNode = AppNode<SynthesizerNodeData>;
 export type TextWithKeywordsNode = AppNode<TextWithKeywordsNodeData>;
+export type ImageWithLookupNode = AppNode<ImageWithLookupNodeData>;
 
 /** Node Props for Custom Components */
 export type AppNodeProps = NodeProps<AppNode>;
@@ -81,6 +86,7 @@ export interface Artwork {
   keywords: Keyword[];
   description: string;
   image: string;
+  imagewithlookup: string;
 }
 
 // export interface Artist {

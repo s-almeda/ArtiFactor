@@ -1,6 +1,7 @@
 import { useState, type FC, type DragEvent } from "react";
 import { useDnD } from "../context/DnDContext";
 import type { NodeData } from "../context/PaletteContext";
+import { Download } from "lucide-react";
 
 interface PaletteNodeProps {
   data: NodeData;
@@ -54,7 +55,7 @@ const PaletteNode: FC<PaletteNodeProps> = ({
       onDragStart={onDragStart}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ width: "21vw" }}
+      style={{ width: "100%" }}
     >
       {type === "text" ? (
         <div>
@@ -101,7 +102,7 @@ const PaletteNode: FC<PaletteNodeProps> = ({
               }}
               className="bg-gray-800 text-white px-2 py-1 rounded-md text-sm mt-2"
             >
-              Save Image
+              <Download size={16} />
             </button>
             <button
               type="button"
