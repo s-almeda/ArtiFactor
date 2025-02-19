@@ -325,6 +325,10 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
         if (!selected) {
             setShowDescription(false);
             setShowFolder(false);
+            setShowControls(false);
+          }
+          else {
+            setShowControls(true);
           }
     }, [selected, imageUrl, data.content]);
 

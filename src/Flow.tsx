@@ -27,13 +27,8 @@ import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 import Toolbar from "./Toolbar";
 // import { data } from "react-router-dom";
+//FYI: we now set the backend in App.tsx!
 
-// import TitleBar from "./TitleBar";
-
-
-
-
-//we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
   //const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
@@ -181,29 +176,7 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
 
-  // const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
-  //   content = content ?? "https://i.imgur.com/pZAdAJR.jpeg";
-  //   prompt = prompt ?? "default alligator image";
-  //   console.log("adding an image to the canvas: ", content, prompt);
-  //   position = position ?? { 
-  //     x: Math.random() * 250,
-  //     y: Math.random() * 250,
-  //   };
-    
-  //   const newNode: AppNode = {
-  //     id: `image-${nodes.length + 1}`,
-  //     type: "image",
-  //     position: position,
-  //     data: {
-  //       content: content,
-  //       prompt: prompt,
-  //       activateLookUp: () => handleImageLookUp(position, content),
-  //     } as ImageNodeData,
-  //     dragHandle: '.drag-handle__invisible',
-  //   };
 
-  //   setNodes((prevNodes) => [...prevNodes, newNode]);
-  // };
 
   const addSynthesizer = (position ?:{ x:number, y:number}) => {
     const newSynthesizerNode: AppNode = {
@@ -229,78 +202,6 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
   };
 
-  // /*-- adds a lookup window ---*/
-  // const handleImageLookUp = useCallback(async (position: {x: number; y: number;}, imageUrl: string) => {
-  //   //takes an image and its position as input, looks up the image in the backend, adds the results as a LookupNode to the canvas
-  //   console.log(`Looking up image with url: ${imageUrl}`);
-  //   console.log(`!!!received position: ${position.x, position.y}`);
-    
-  //   // Add a blank text node to indicate loading
-  //   const loadingNodeId = `loading-${Date.now()}`;
-  //   const loadingNode: AppNode = {
-  //     id: loadingNodeId,
-  //     type: "text",
-  //     position: { x: position.x - 20, y: position.y - 20 },
-  //     data: { content: "...that reminds me of something...", loading: true, combinable: false } as TextNodeData,
-  //   };
-  //   setNodes((nodes) => [...nodes, loadingNode]);
-
-  //   try {
-  //     const response = await axios.post(`${backend}/api/get-similar-images`, {
-  //       image: imageUrl
-  //     }, {
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //     });
-  //     console.log(`Image lookup response: ${response.data}`);
-  //     if (response.status === 200) {
-  //       const responseData = JSON.parse(response.data);
-  //       const artworks: Artwork[] = responseData.map((item: any) => ({
-  //         title: item.title || "Unknown",
-  //         date: item.date || "Unknown",
-  //         artist: item.artist || "Unknown",
-  //         keywords: [
-  //       {
-  //         id: `genre-${Date.now()}`, // todo, this should be replaced with the actual gene ids from Artsy!
-  //         type: "genre",
-  //         value: item.genre || "Unknown",
-  //       },
-  //       {
-  //         id: `style-${Date.now()}`,
-  //         type: "style",
-  //         value: item.style || "Unknown",
-  //       },
-  //         ],
-  //         description: item.description || "Unknown",
-  //         image: item.image || "Unknown",
-  //       }));
-  //       //Replace the loading node with the new lookup node
-  //       const newLookupNode: LookupNode = {
-  //         id: `lookup-${Date.now()}`,
-  //         type: "lookup",
-  //         position,
-  //         data: {
-  //           content: "Similar Images",
-  //           artworks,
-  //         },
-  //         dragHandle: '.drag-handle__custom',
-  //       };
-
-  //       setNodes((nodes) =>
-  //         nodes.map((node) => {
-  //           if (node.id === loadingNodeId) {
-  //             newLookupNode.position = node.position;
-  //             return newLookupNode;
-  //           }
-  //           return node;
-  //         })
-  //       );  
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to lookup image:", error);
-  //   }
-  // }, [setNodes]);
 
 
 
@@ -574,6 +475,7 @@ return(
         <ReactFlow
           nodes={nodes}
           nodeTypes={nodeTypes}
+          minZoom={0.009}
           onNodesChange={handleOnNodesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}

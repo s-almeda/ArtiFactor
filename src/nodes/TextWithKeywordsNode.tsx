@@ -585,8 +585,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
               </div>
             ) : (
               <>
+              {/* EDIT BUTTON */}
                 <button 
                   onClick={handleEditClick}
+                  style={{ display: showControls ? 'block' : 'none' }}
                   className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
                 >
                   <Edit2 size={16} />
