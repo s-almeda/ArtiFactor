@@ -625,7 +625,7 @@ const Flow = () => {
 
 
         {/* Da Buttons */}
-        <button onClick={() => addTextNode()}>T</button>
+        <button onClick={() => addTextWithKeywordsNode()}>T</button>
         <button onClick={() => addImageNode()}>🌄</button>
         <button onClick={() => addSynthesizer()}>✨</button>
       </div>
