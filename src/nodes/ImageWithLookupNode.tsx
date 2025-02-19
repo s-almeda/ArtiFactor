@@ -1,4 +1,4 @@
-import { Position, NodeResizeControl, NodeToolbar } from "@xyflow/react";
+import { Position, NodeToolbar } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageWithLookupNode, Artwork } from "./types";
@@ -10,14 +10,14 @@ import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
 
-const controlStyle: React.CSSProperties = {
-    background: 'white',
-    width: '8px',
-    height: '8px',
-    position: 'absolute',
-    bottom: 0,
-    right: 0
-};
+// const controlStyle: React.CSSProperties = {
+//     background: 'white',
+//     width: '8px',
+//     height: '8px',
+//     position: 'absolute',
+//     bottom: 0,
+//     right: 0
+// };
 
 // const DraggableText = ({ content }: { content: string }) => {
 //     const [_, setDraggableType, __, setDraggableData] = useDnD();
@@ -96,53 +96,73 @@ const FolderPanel: React.FC<{ similarArtworks: Artwork[]; width: number; height:
                 className="absolute z-0 "
             >
                 
-                <div
+                <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: showFolder ? 1 : 0 }}
+                transition={{ duration: showFolder ? 0.5 : 0.1, type: "spring", bounce: 0.3 }}
                     className={`nowheel absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md z-3`}
                     style={{ height: `${height}px`, width: `${width}px` }}
                 >
-                    
-                    <div className="sticky top-0 z-10 bg-amber-100">
-                        <NavigationButtons handlePrev={handlePrev} handleNext={handleNext} currentIndex={currentIndex} totalItems={similarArtworks.length} />
-                    </div>
-                    
-                    {currentArtwork ? (
-                        <div className="p-3 pr-5 ml-0 h-[85%] overflow-y-scroll">
-                            <h2 className="text-xs font-medium text-gray-900 italic font-bold">
-                                {currentArtwork.title} ({currentArtwork.date})
-                            </h2>
-                            <img
-                                draggable
-                                onDragStart={(event) => onDragStart(event, "image", currentArtwork.image)}
-                                className="nodrag rounded-md p-1 hover:bg-yellow-300"
-                                src={currentArtwork.image}
-                                alt={`${currentArtwork.title} by ${currentArtwork.artist}`}
-                            />
-                            <p className="text-xs mt-2">{currentArtwork.artist}</p>
-                            {/* {currentArtwork.keywords.map((keyword) => (
-                                <p key={keyword.id} className="text-xs">{`${keyword.type}: ${keyword.value}`}</p>
-                            ))} */}
-                            <p className="text-xs mt-2">{currentArtwork.description}</p>
+                    {/* Display a loader until the initial check for keywords is done */}
+                    {currentArtwork.title === "" ? (
+                        <div style={{ display: 'flex', width:'100%', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <div className="loader"></div>
                         </div>
                     ) : (
-                        <div className="p-3 ml-0 h-full overflow-y-auto">
-                            <h2 className="text-xs font-medium text-gray-900 italic font-bold">
-                                No content
-                            </h2>
-                        </div>
+                        <>
+                            <div className="sticky top-0 z-10 bg-amber-100">
+                                <NavigationButtons handlePrev={handlePrev} handleNext={handleNext} currentIndex={currentIndex} totalItems={similarArtworks.length} />
+                            </div>
+                            
+                            {currentArtwork ? (
+                                <div className="p-3 pr-5 ml-0 h-[85%] overflow-y-scroll">
+                                    <h2 
+                                    draggable
+                                    onDragStart={(event) => onDragStart(event, "text", currentArtwork.title)}
+                                    className="nodrag rounded-md p-1 hover:bg-yellow-300 text-xs font-medium text-gray-900 italic font-bold">
+                                        {currentArtwork.title} ({currentArtwork.date})
+                                    </h2>
+                                    <img
+                                        draggable
+                                        onDragStart={(event) => onDragStart(event, "image", currentArtwork.image)}
+                                        className="nodrag rounded-md p-1 hover:bg-yellow-300"
+                                        src={currentArtwork.image}
+                                        alt={`${currentArtwork.title} by ${currentArtwork.artist}`}
+                                    />
+                                    <p 
+                                    draggable
+                                    onDragStart={(event) => onDragStart(event, "text", currentArtwork.artist)}
+                                    className="nodrag hover:bg-yellow-300 text-xs mt-2">{currentArtwork.artist}</p>
+                                    {/* {currentArtwork.keywords.map((keyword) => (
+                                        <p key={keyword.id} className="text-xs">{`${keyword.type}: ${keyword.value}`}</p>
+                                    ))} */}
+                                    <p 
+                                    draggable
+                                    onDragStart={(event) => onDragStart(event, "text", currentArtwork.description)}
+                                    className="nodrag hover:bg-yellow-300 text-xs mt-2">{currentArtwork.description}</p>
+                                </div>
+                            ) : (
+                                <div className="p-3 ml-0 h-full overflow-y-auto">
+                                    <h2 className="text-xs font-medium text-gray-900 italic font-bold">
+                                        No content
+                                    </h2>
+                                </div>
+                            )}
+                        </>
                     )}
-                </div>
+                </motion.div>
             </motion.div>
         </>
     );
 };
-
+//TODO: if AIGenerated, use ai gen styles, and switch between saying "Prompt" or "Alt text" in the description panel
 const DescriptionPanel: React.FC<{ 
     content?: string 
     containerHeight: number;
     containerWidth: number;
     showDescription: boolean; 
     toggleDescription: () => void; 
-}> = ({content, showDescription = false, containerHeight = 100, toggleDescription }) => {
+}> = ({content, showDescription = false, containerHeight = 100, containerWidth=100, toggleDescription }) => {
     
     const [_, setDraggableType, __, setDraggableData] = useDnD()
     
@@ -167,7 +187,8 @@ const DescriptionPanel: React.FC<{
     
         <div className="overflow-hidden" 
         style={{ 
-            height: `calc(${containerHeight - 24}px)` 
+            height: `calc(${containerHeight - 24}px)`,
+            width: `${containerWidth}px` 
             }}> 
                 <motion.div
                     initial={{}}
@@ -184,15 +205,11 @@ const DescriptionPanel: React.FC<{
                     className="nowheel p-3 overflow-scroll bg-white border rounded-md shadow-md p-0 h-full"
                 >
                     <div className="flex flex-col justify-between">
-
-                        <div className="text-sm font-bold text-gray-800 mb-2 cursor-pointer" style={{ padding: '8px 12px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            Prompt:
-                        </div>
-
+                    prompt:
                         <div 
                         draggable
                         onDragStart = {(event) => onDragStart(event, content)}
-                        className="nodrag hover:bg-gray-300 rounded-md p-0 flex flex-col gap-3 overflow-y-auto text-xs flex-grow">
+                        className="nodrag hover:bg-gray-300 rounded-md p-1 flex flex-col gap-3 overflow-y-auto text-xs flex-grow">
                             {content}
                         </div>
                     </div>
@@ -218,8 +235,8 @@ const DescriptionPanel: React.FC<{
 export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLookupNode>) {
     const { addClippedNode, getNextPaletteIndex } = usePaletteContext(); 
     const [imageUrl, setImageUrl] = useState("");
-    const [width, setWidth] = useState(150);
-    const [height, setHeight] = useState(150);
+    const [width, _] = useState(150);
+    const [height, __] = useState(150);
     
     const [showDescription, setShowDescription] = useState(false);
     const [showFolder, setShowFolder] = useState(false);
@@ -248,20 +265,16 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
     //--- similar artworks data --- //
 
     const defaultArtworks: Artwork[] = [        {
-        title: "Impression, Sunrise",
-        date: 1872,
-        artist: "Claude Monet",
-        keywords: [
-            { id: "1", type: "genre", value: "Landscape", description: "A genre of art that depicts natural scenery.", databaseValue: "landscape", relatedKeywordStrings: [], relatedKeywordIds: [] },
-            { id: "2", type: "style", value: "Impressionism", description: "An art movement characterized by small, thin brush strokes and an emphasis on light and its changing qualities.", databaseValue: "impressionism", relatedKeywordStrings: [], relatedKeywordIds: [] }
-        ],
+        title: "",
+        date: 404,
+        artist: "",
+        keywords: [ ],
         description: "This painting is a depiction of the port of Le Havre at sunrise, with small rowboats in the foreground and ships and cranes in the background. The orange sun is shown as a distinct circle, reflecting on the water below. This piece gave the Impressionist movement its name when critics seized upon the title of this painting to give the entire movement a derisive moniker.",
         image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019"
     }];
     
 
-
-    const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(defaultArtworks);
+    const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.artworks || defaultArtworks);
     const { backend } = useAppContext();
 
     const fetchSimilarArtworks = async () => {
@@ -295,6 +308,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
                 image: item.image || "Unknown",
             }));
             console.log('Similar artworks:', artworks);
+            data.artworks=artworks;
             setSimilarArtworks(artworks);
             setInitialCheck(false);
         } catch (error) {
@@ -307,6 +321,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
 
     useEffect(() => {   
         setImageUrl(data.content || 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019');
+
         if (!selected) {
             setShowDescription(false);
             setShowFolder(false);
@@ -316,7 +331,11 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
     
     useEffect(() => {
         console.log("initial check", initialCheck);
-        if (initialCheck && imageUrl!=='') {
+        if (data.artworks && initialCheck){
+            setSimilarArtworks(data.artworks);
+            setInitialCheck(false);
+        }
+        else if (initialCheck && imageUrl!=='') {
             fetchSimilarArtworks();
         }
     }, [initialCheck, imageUrl]);

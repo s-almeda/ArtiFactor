@@ -20,6 +20,7 @@ export type ImageNodeData = ArtifactorNodeData & {
 };
 export type ImageWithLookupNodeData = ArtifactorNodeData & {
   prompt?: string;
+  artworks?: Artwork[];
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
 };
 
@@ -86,7 +87,6 @@ export interface Artwork {
   keywords: Keyword[];
   description: string;
   image: string;
-  imagewithlookup: string;
 }
 
 // export interface Artist {

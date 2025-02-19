@@ -481,6 +481,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       setShowFolder(false);
       setSelectedKeyword(null);
       setIsEditing(false);
+      setShowControls(false);
+    }
+    else{
+      setShowControls(true);
     }
     if (isEditing){
       setSelectedKeyword(null);
@@ -526,7 +530,8 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           initial={{ left: '-6px', transform: `scaleY(0.5)` }}
           animate={{ 
             left: showFolder ? `-${width}px` : '-6px',
-            transform: `scaleY(1)`
+            transform: `scaleY(1)`,
+            opacity: showControls ? 1 : 0
           }}
           transition={{ duration: 0.2 }}
           className="absolute"
@@ -606,7 +611,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
          {/* Description panel that appears below. motion.div animates it moving up and down.  */}
         <motion.div
           initial={{ top: 0 }}
-          animate={{ top: showDescription ? height : -(height)+40}}
+          animate={{ 
+            top: showDescription ? height : -(height)+40,
+            opacity: showControls ? 1 : 0
+          }}
           transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
           className="absolute mt-0"
         >
