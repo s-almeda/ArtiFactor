@@ -39,7 +39,7 @@ app.get("/overview", (req, res) => {
 
 app.post("/api/check-for-keywords", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  const { text } = req.body;
+  const { text, threshold = 0.3 } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: "Missing 'text' in request body" });
@@ -48,7 +48,7 @@ app.post("/api/check-for-keywords", async (req, res) => {
   try {
     const response = await axios.post(
       `${flask_server}/keyword_check`,
-      { text },
+      { text, threshold },
       { headers: { "Content-Type": "application/json" } }
     );
     res.setHeader('Access-Control-Allow-Origin', '*');

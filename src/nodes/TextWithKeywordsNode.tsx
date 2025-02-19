@@ -264,40 +264,40 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
           className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md z-3`}
           style={{ height: `${height * 2}px`, width: `${width}px` }}
         >
-            {/* LEFT AND RIGHT BUTTONS */}
-            <div className="p-3 ml-0 h-full overflow-y-auto">
-            <h2 className="text-xs font-medium text-gray-900 italic font-bold">This could be related...</h2>
+            {similarTexts.length > 0 ? (
+              <>
+                {/* LEFT AND RIGHT BUTTONS */}
+                <div className="p-3 ml-0 h-full overflow-y-auto">
+                  <h2 className="text-xs font-medium text-gray-900 italic font-bold">This could be related...</h2>
 
-              <NavigationButtons currentIndex={currentIndex} totalItems={similarTexts.length} handlePrev={handlePrev} handleNext={handleNext} />
-              
-            {contentState === null ? (
-              <div className="nodrag nowheel text-xs text-gray-600 flex flex-col items-center">
-                <p>Look-up similar concepts</p>
-                <button className="mt-2 px-3 py-1 bg-gray-200 rounded-md text-gray-700 hover:bg-gray-300">Placeholder Button</button>
-              </div>
-            ) : (
-              currentText && (
-                <div className="nodrag nowheel text-gray-600 overflow-y-auto">
-                  <p draggable onDragStart={(event) => onDragStart(event, currentText.value)}
-                   className="text-md font-bold">{currentText.value}</p>
-                  <p draggable onDragStart={(event) => onDragStart(event, currentText.type)}
-                  className="italic text-xs">{currentText.type}</p>
-                  <p 
-                    draggable 
-                    onDragStart={(event) => onDragStart(event, currentText.description)}
-                    className="text-sm/5 mt-2 p-0.5 rounded-sm hover:bg-amber-200"
-                  >
-                    {currentText.description}
-                  </p>
+                  <NavigationButtons currentIndex={currentIndex} totalItems={similarTexts.length} handlePrev={handlePrev} handleNext={handleNext} />
 
-                  {/* RELATED KEYWORDS */}
-                  {currentText.relatedKeywordStrings && currentText.relatedKeywordStrings.length > 0 && (
-                  <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} />
+                  {currentText && (
+                    <div className="nodrag nowheel text-gray-600 overflow-y-auto">
+                      <p draggable onDragStart={(event) => onDragStart(event, currentText.value)} className="text-md font-bold">{currentText.value}</p>
+                      <p draggable onDragStart={(event) => onDragStart(event, currentText.type)} className="italic text-xs">{currentText.type}</p>
+                      <p 
+                        draggable 
+                        onDragStart={(event) => onDragStart(event, currentText.description)}
+                        className="text-sm/5 mt-2 p-0.5 rounded-sm hover:bg-amber-200"
+                      >
+                        {currentText.description}
+                      </p>
+
+                      {/* RELATED KEYWORDS */}
+                      {currentText.relatedKeywordStrings && currentText.relatedKeywordStrings.length > 0 && (
+                        <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} />
+                      )}
+                    </div>
                   )}
                 </div>
-              )
+              </>
+            ) : (
+              <div className="p-3 ml-0 h-full overflow-y-auto">
+                <h2 className="text-xs font-medium text-gray-900 italic font-bold">...We haven't found anything relevant to this prompt in our database...</h2>
+              </div>
             )}
-          </div>
+            
         </div>
       </motion.div>
     </>
@@ -334,8 +334,13 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     return words.map((word) => word.value).join(' ');
   }
 
-  const checkForKeywords = async (words: Word[]): Promise<(Word | Keyword)[]> => {
+  const checkForKeywords = async (queryWords: Word[]): Promise<(Word | Keyword)[]> => {
     console.log('Checking for keywords in:', words);
+
+    if (queryWords.length === 0) {
+      setInitialCheck(false);
+      return [];
+    }
 
     try {
       const response = await fetch(`${backend}/api/check-for-keywords`, {
@@ -343,7 +348,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: words.map(word => word.value).join(' ') }),
+        body: JSON.stringify({ text: queryWords.map(word => word.value).join(' ') }),
       });
 
       if (!response.ok) {
@@ -351,10 +356,9 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       }
 
       const data = await response.json();
-      console.log('response from server found:', data.words);
       const result = data.words.map((item: any) => {
         if (item.id) {
-            return {
+          return {
             id: item.id,
             value: item.value,
             databaseValue: item.database_value,
@@ -362,15 +366,13 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             relatedKeywordIds: item.relatedKeywordIds,
             relatedKeywordStrings: item.relatedKeywordStrings,
             type: item.type,
-            } as Keyword;
+          } as Keyword;
         } else {
           return { value: item.value } as Word;
         }
       });
       setInitialCheck(false);
       return result;
-
-
     } catch (error) {
       console.error('Error checking for keywords:', error);
       console.log('Fallback words array:', words);
@@ -394,7 +396,13 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       event.preventDefault();
       const updatedWords = stringToWords(content);
       setWords(updatedWords); // set it to the updated words quickly, then add the highlights for keywords
+      
+      //reset all of these guys on a change
       setIsEditing(false);
+      setShowDescription(false);
+      setShowFolder(false);
+      setSelectedKeyword(null);
+      //check for keywords in the new content
       const checkedWords = await checkForKeywords(updatedWords);
       setWords(checkedWords);
       data.words = checkedWords; // Update the data object with the new words

@@ -25,9 +25,12 @@ import { calcNearbyPosition } from './utils/calcNearbyPosition';
 //import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
+import Toolbar from "./Toolbar";
 // import { data } from "react-router-dom";
 
 // import TitleBar from "./TitleBar";
+
+
 
 
 //we now set the backend in App.tsx and grab it here!
@@ -563,80 +566,8 @@ const Flow = () => {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
 
-  // ------------------------ DRAGGABLE TOOLBAR ------------------------
-  const [toolbarPosition, setToolbarPosition] = useState({ x: 20, y: 100 });
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
-  const handleDragStart = (event: MouseEvent<HTMLDivElement>) => {
-    setDragging(true);
-    setDragStart({ x: event.clientX - toolbarPosition.x, y: event.clientY - toolbarPosition.y });
-  };
-
-  const handleDragMove = (event: MouseEvent<HTMLDivElement>) => {
-    if (dragging) {
-      setToolbarPosition({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
-    }
-  };
-
-  const handleDragEnd = () => {
-    setDragging(false);
-  };
-  
-
-  return (
-    <>
-      {/* Draggable Toolbar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: `${toolbarPosition.y}px`,
-          left: `${toolbarPosition.x}px`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          background: 'rgba(0,0,0,0.8)',
-          padding: '10px',
-          borderRadius: '10px',
-          zIndex: 10,
-          cursor: dragging ? 'grabbing' : 'grab',
-          userSelect: 'none'
-        }}
-        onMouseMove={handleDragMove}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-      >
-        {/* Draggable Handle */}
-        <div
-          onMouseDown={handleDragStart}
-          style={{
-            cursor: 'grab',
-            padding: '5px',
-            textAlign: 'center',
-            background: '#444',
-            color: 'white',
-            borderRadius: '5px',
-            fontSize: '16px',
-            fontWeight: 'bold'
-          }}
-        >
-          {/* Hamburger Dragger (Now I'm Hungry) */}
-          ☰
-        </div>
-
-
-        {/* Da Buttons */}
-        <button onClick={() => addTextWithKeywordsNode()}>T</button>
-        <button onClick={() => addImageNode()}>🌄</button>
-        <button onClick={() => addSynthesizer()}>✨</button>
-      </div>
-{/* 
-      <div style={{ position: 'absolute', top: '70px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
-        <button onClick={() => addTextNode()}>Text</button>
-        <button onClick={() => addImageNode()}>Image</button>
-        <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
-        <button onClick={() => addTextWithKeywordsNode()}> text with keywords</button>
-      </div>  */}
+return(
+      <>
 
 
 
@@ -661,6 +592,8 @@ const Flow = () => {
           <Controls />
         </ReactFlow>
       </div>  
+
+      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageNode} addSynthesizer={addSynthesizer} />
 
 
 
