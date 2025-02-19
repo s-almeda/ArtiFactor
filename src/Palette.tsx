@@ -1,128 +1,67 @@
-import React from "react"; // {useState}
-import { useDnD } from "./context/DnDContext";
-import { usePaletteContext, NodeData } from "./context/PaletteContext";
+import React from "react";
+import { usePaletteContext } from "./context/PaletteContext";
+import PaletteNode from "./nodes/PaletteNode";
 
 const charLimit = 25;
 
-
-interface PaletteProps {
-  // onAddNode: (type: string, content: string) => void;
-}
-
-interface PaletteNodeProps {
-  data: NodeData;
-  charLimit: number;
-  type: string;
-  //onAddNode: (type: string, content: string) => void;
-}
-
-
-const PaletteNode: React.FC<PaletteNodeProps> = ({
-  data,
-  charLimit,
-  type,
-}) => {
-  const [_, setDraggableType, __, setDraggableData] = useDnD();
-
-  const onDragStart = (
-    event: { dataTransfer: { effectAllowed: string } },
-  ) => {
-    event.dataTransfer.effectAllowed = "move";
-    setDraggableType(type);
-    setDraggableData(data);
+const Palette: React.FC = () => {
+  const {
+    activeTab,
+    setActiveTab,
+    clippedNodes = [],
+    setClippedNodes, // Add setClippedNodes from context
+  } = usePaletteContext() as {
+    activeTab: "text" | "image";
+    setActiveTab: (tab: "text" | "image") => void;
+    clippedNodes: any[];
+    setClippedNodes: (nodes: any[]) => void; // Ensure this function is in context
   };
 
-  return (
-    <div
-      className="border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm"
-      draggable
-      onDragStart={(event) => onDragStart(event)}
-      tabIndex={0}
-      style={{ width: "21vw" }}
-    >
-      {type === "text" ? (
-        data.content.length > charLimit ? (
-          `${data.content.substring(0, charLimit)}...`
-        ) : (
-          data.content
-        )
-      ) : type === "image" ? (
-        <div style={{ position: "relative", maxHeight: "60px", overflow: "hidden" }}>
-          <img
-            src={data.content}
-            alt={data.prompt}
-            className="rounded-md object-cover"
-            style={{ width: "auto", height: "100%", transform: "translateY(-30%)", position: "relative" }}
-          />
-            <div
-              className="absolute bottom-0 left-0 w-full h-full bg-white bg-opacity-50 text-gray-800 text-md uppercase text-center p-1 opacity-0 transition-opacity duration-300 hover:opacity-100 font-bold italic leading-tight"
-            >
-            {data.prompt.length > 60 ? `${data.prompt.substring(0, 60)}...` : data.prompt}
-          </div>
-        </div>
-      ) : (
-        ""
-      )}
-    </div>
-  );
-};
+  // Ensure there's always an active tab when new nodes are added
+  React.useEffect(() => {
+    if (clippedNodes.length > 0) {
+      setActiveTab(clippedNodes[clippedNodes.length - 1].type); // Set tab to the latest clipped node type
+    }
+  }, [clippedNodes, setActiveTab]);
 
-const Palette: React.FC<PaletteProps> = ({  }) => {//onAddNode
-  const { activeTab, setActiveTab } = usePaletteContext();
-  const { clippedNodes = [] } = usePaletteContext();
+  const removeNode = (index: number) => {
+    setClippedNodes(clippedNodes.filter((_, i) => i !== index)); // Update state
+  };
 
-  const clippedTextNodes = clippedNodes.filter(node => node.type === "text");
-
-  const clippedImageNodes = clippedNodes.filter(node => node.type === "image");
-
+  const filteredNodes = clippedNodes.filter((node) => node.type === activeTab);
 
   return (
     <div className="p-4 w-[23vw]">
       {/* Toggle Tabs */}
       <div className="flex space-x-2 mb-4">
-        <button
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            activeTab === "text"
-              ? "bg-gray-800 text-white"
-              : "bg-gray-200 text-gray-600"
-          }`}
-          onClick={() => setActiveTab("text")}
-          type="button"
-        >
-          Text
-        </button>
-        <button
-          type="button"
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            activeTab === "images"
-              ? "bg-gray-800 text-white"
-              : "bg-gray-200 text-gray-600"
-          }`}
-          onClick={() => setActiveTab("images")}
-        >
-          Images
-        </button>
+        {["text", "image"].map((tab) => (
+          <button
+            key={tab}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === tab
+                ? "bg-gray-800 text-white"
+                : "bg-gray-200 text-gray-600"
+            }`}
+            onClick={() => setActiveTab(tab as "image" | "text")}
+            type="button"
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
       <div className="space-y-3">
-        {activeTab === "text"
-          ? clippedTextNodes.map((data, index) => (
-              <PaletteNode
-          key={index}
-          data={data}
-          charLimit={charLimit}
-          type="text"
-              />
-            ))
-          : clippedImageNodes.map((data, index) => (
-              <PaletteNode
-          key={index}
-          data={data}
-          charLimit={charLimit}
-          type="image"
-              />
-            ))}
+        {filteredNodes.map((data, index) => (
+          <div key={index} className="relative">
+            <PaletteNode
+              data={data}
+              charLimit={charLimit}
+              type={activeTab as "text" | "image"}
+              removeNode={() => removeNode(index)} // Pass correct function
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
