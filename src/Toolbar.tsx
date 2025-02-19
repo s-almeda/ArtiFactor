@@ -64,7 +64,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode, addImageNode
             <button onClick={() => addTextWithKeywordsNode()}>T</button>
             <button onClick={() => addImageNode()}>🌄</button>
             <button onClick={() => addSynthesizer()}>✨</button>
-            <button onClick={() => addImageNode()}>new image node</button>
+            
         </div>
     );
 };

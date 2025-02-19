@@ -1,6 +1,7 @@
 import type { NodeTypes } from "@xyflow/react";
 import { TextNode } from "./TextNode";
 import { ImageNode } from "./ImageNode";
+import { ImageWithLookupNode } from "./ImageWithLookupNode";
 import { TextWithKeywordsNode } from "./TextWithKeywordsNode";
 // import FunctionNode from "./FunctionNode";
 import SynthesizerNode from "./SynthesizerNode";
@@ -36,6 +37,7 @@ export const nodeTypes: NodeTypes = {
   default: TextNode,
   text: TextNode,
   image: ImageNode,
+  imagewithlookup: ImageWithLookupNode,
   // function: FunctionNode,
   lookup: LookupNode,
   synthesizer: SynthesizerNode,

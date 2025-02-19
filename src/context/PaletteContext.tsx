@@ -33,16 +33,17 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
   const [activeTab, setActiveTab] = useState<"images" | "text">("images");
 
   const addClippedNode = (node: NodeData) => {
-    if (node.type === "image") {
-      setActiveTab("images");
-    } else {
-      setActiveTab("text");
-    }
     // if the node with the same content is already in the list, don't add it again
     if (clippedNodes.some((n) => n.content === node.content)) {
       return;
     }
     setClippedNodes((prevNodes) => [...prevNodes, node]);
+
+    if (node.type == 'image') {
+      setActiveTab("images");
+    } else {
+      setActiveTab("text");
+    }
   };
 
   const getNextPaletteIndex = () => {

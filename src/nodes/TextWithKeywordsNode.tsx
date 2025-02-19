@@ -4,7 +4,7 @@ import {NodeToolbar, Position} from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import React, { useRef, useState, useEffect } from 'react';
 import { useDnD } from '../context/DnDContext';
-import { Bookmark, Search, Edit2 } from 'lucide-react';
+import { Bookmark, Search, Edit2, Eye, EyeClosed } from 'lucide-react';
 import {motion} from 'framer-motion';
 import { usePaletteContext } from '../context/PaletteContext';
 import NavigationButtons from '../utils/commonComponents';
@@ -110,10 +110,11 @@ export const KeywordDescription: React.FC<{
         animate={{ 
           scaleY: showDescription ? 1 : 0.5, 
           rotateX: showDescription ? 0 : 90 
+          
         }}
         transition={{ 
           duration: showDescription ? 0.5 : 0.1, 
-          opacity: showDescription ? 1 : 0,
+
           type: "spring", 
           bounce: 0.2 
         }}
@@ -423,6 +424,12 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     setShowFolder(!showFolder);
   };
 
+  const [showControls, setShowControls] = useState(true);
+  const hideControls = () => {
+      setShowControls(!showControls);
+  };
+
+
   // ---------- EFFECTS ---------- //
 
   useEffect(() => {
@@ -437,14 +444,16 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   }, [data.words, selectedKeyword]);
 
   useEffect(() => {
-    if(initialCheck){
+    if (data.words && data.words.some((word: Word | Keyword) => 'id' in word)) {
+      setInitialCheck(false);
+    } else if (initialCheck) {
       const onCreate = async () => {
         console.log('A new TextWithKeywordsNode has been created');
         const updatedWords = await checkForKeywords(words);
         setWords(updatedWords);
         data.words = updatedWords;
-      };  
-    onCreate();
+      };
+      onCreate();
     }
   }, []);
 
@@ -472,6 +481,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       setShowFolder(false);
       setSelectedKeyword(null);
       setIsEditing(false);
+      setShowControls(false);
+    }
+    else{
+      setShowControls(true);
     }
     if (isEditing){
       setSelectedKeyword(null);
@@ -488,10 +501,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
   return (
     <motion.div
-    initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75}}
-    animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1}}
-    transition={{ duration: 0.15, type: "spring", bounce: 0.1 }}
-    className={``} 
+      initial={{ opacity: 0.2, x:0, y: 10, scale: 1.1, rotateY: Math.random()*30-15, rotateX: -75}}
+      animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotateY:0, rotateX: 0, scaleX:1}}
+      transition={{ duration: 0.15, type: "spring", bounce: 0.1 }}
+      className={``} 
     > {/*TODO: implement combinability `${data.combinable ? 'bg-yellow-50' : ''} */}
     <div className="relative" style={{ width: `${width}px` }}>
 
@@ -517,7 +530,8 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           initial={{ left: '-6px', transform: `scaleY(0.5)` }}
           animate={{ 
             left: showFolder ? `-${width}px` : '-6px',
-            transform: `scaleY(1)`
+            transform: `scaleY(1)`,
+            opacity: showControls ? 1 : 0
           }}
           transition={{ duration: 0.2 }}
           className="absolute"
@@ -528,21 +542,33 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         {/* ---- NODE TOOLBAR ---- */}
 
         <NodeToolbar isVisible={selected} position={Position.Top}>
-          <button
-          className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
-          type="button"
-          onClick={() => addClippedNode(
-            {
-            id: getNextPaletteIndex(),
-            type: 'text',
-            content: wordsToString(words),
-            prompt: "none"
-            })}
-          aria-label="Save to Palette"
-          style={{ marginRight: '0px' }}
+          <div className="flex items-center justify-center space-x-2">
+                      
+            <button
+            className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+            type="button"
+            onClick={() => addClippedNode(
+              {
+              id: getNextPaletteIndex(),
+              type: 'text',
+              content: wordsToString(words),
+              prompt: "none"
+              })}
+            aria-label="Save to Palette"
+            style={{ marginRight: '0px' }}
+            >
+            📎
+            </button>
+            <button
+              className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+              type="button"
+              onClick={() => hideControls()}
+              aria-label="Hide Controls"
+              style={{height:'100%' }}
           >
-          📎
-          </button>
+              {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
+            </button>
+          </div>
         </NodeToolbar>
 
 
@@ -559,8 +585,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
               </div>
             ) : (
               <>
+              {/* EDIT BUTTON */}
                 <button 
                   onClick={handleEditClick}
+                  style={{ display: showControls ? 'block' : 'none' }}
                   className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
                 >
                   <Edit2 size={16} />
@@ -585,7 +613,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
          {/* Description panel that appears below. motion.div animates it moving up and down.  */}
         <motion.div
           initial={{ top: 0 }}
-          animate={{ top: showDescription ? height : -(height)+40}}
+          animate={{ 
+            top: showDescription ? height : -(height)+40,
+            opacity: showControls ? 1 : 0
+          }}
           transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
           className="absolute mt-0"
         >

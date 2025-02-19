@@ -17,7 +17,7 @@ import {
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData, TextWithKeywordsNodeData} from "./nodes/types";
+import type { AppNode, TextNodeData, SynthesizerNodeData, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
@@ -27,13 +27,8 @@ import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 import Toolbar from "./Toolbar";
 // import { data } from "react-router-dom";
+//FYI: we now set the backend in App.tsx!
 
-// import TitleBar from "./TitleBar";
-
-
-
-
-//we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
   //const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
@@ -158,8 +153,8 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newTextNode]);
   };
 
-  const addImageNode = (content?: string, position?: { x: number; y: number }, prompt?: string) => {
-    content = content ?? "https://noggin-run-outputs.rgdata.net/b88eb8b8-b2b9-47b2-9796-47fcd15b7289.webp";
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string) => {
+    content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default alligator image";
     console.log("adding an image to the canvas: ", content, prompt);
     position = position ?? { 
@@ -169,18 +164,19 @@ const Flow = () => {
     
     const newNode: AppNode = {
       id: `image-${nodes.length + 1}`,
-      type: "image",
+      type: "imagewithlookup",
       position: position,
       data: {
         content: content,
         prompt: prompt,
-        activateLookUp: () => handleImageLookUp(position, content),
-      } as ImageNodeData,
+      } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
     };
 
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
+
+
 
   const addSynthesizer = (position ?:{ x:number, y:number}) => {
     const newSynthesizerNode: AppNode = {
@@ -206,78 +202,6 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
   };
 
-  /*-- adds a lookup window ---*/
-  const handleImageLookUp = useCallback(async (position: {x: number; y: number;}, imageUrl: string) => {
-    //takes an image and its position as input, looks up the image in the backend, adds the results as a LookupNode to the canvas
-    console.log(`Looking up image with url: ${imageUrl}`);
-    console.log(`!!!received position: ${position.x, position.y}`);
-    
-    // Add a blank text node to indicate loading
-    const loadingNodeId = `loading-${Date.now()}`;
-    const loadingNode: AppNode = {
-      id: loadingNodeId,
-      type: "text",
-      position: { x: position.x - 20, y: position.y - 20 },
-      data: { content: "...that reminds me of something...", loading: true, combinable: false } as TextNodeData,
-    };
-    setNodes((nodes) => [...nodes, loadingNode]);
-
-    try {
-      const response = await axios.post(`${backend}/api/get-similar-images`, {
-        image: imageUrl
-      }, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      console.log(`Image lookup response: ${response.data}`);
-      if (response.status === 200) {
-        const responseData = JSON.parse(response.data);
-        const artworks: Artwork[] = responseData.map((item: any) => ({
-          title: item.title || "Unknown",
-          date: item.date || "Unknown",
-          artist: item.artist || "Unknown",
-          keywords: [
-        {
-          id: `genre-${Date.now()}`, // todo, this should be replaced with the actual gene ids from Artsy!
-          type: "genre",
-          value: item.genre || "Unknown",
-        },
-        {
-          id: `style-${Date.now()}`,
-          type: "style",
-          value: item.style || "Unknown",
-        },
-          ],
-          description: item.description || "Unknown",
-          image: item.image || "Unknown",
-        }));
-        //Replace the loading node with the new lookup node
-        const newLookupNode: LookupNode = {
-          id: `lookup-${Date.now()}`,
-          type: "lookup",
-          position,
-          data: {
-            content: "Similar Images",
-            artworks,
-          },
-          dragHandle: '.drag-handle__custom',
-        };
-
-        setNodes((nodes) =>
-          nodes.map((node) => {
-            if (node.id === loadingNodeId) {
-              newLookupNode.position = node.position;
-              return newLookupNode;
-            }
-            return node;
-          })
-        );  
-      }
-    } catch (error) {
-      console.error("Failed to lookup image:", error);
-    }
-  }, [setNodes]);
 
 
 
@@ -304,8 +228,11 @@ const Flow = () => {
         y: event.clientY - 60,
       });
 
-      if (draggableType === "image" && "content" in draggableData && "prompt" in draggableData) {
-        addImageNode(draggableData["content"] as string, position, draggableData["prompt"] as string);
+      if (draggableType === "image") {
+        const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";
+        const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
+        addImageWithLookupNode(content, position, prompt);
+
       } else if ("content" in draggableData) {
         addTextWithKeywordsNode(draggableData["content"] as string, position);
       }
@@ -396,13 +323,14 @@ const Flow = () => {
 
         /* --- If a node has been dragged on top of a synthesizer --- */
         if (node.type === "synthesizer" && intersections.includes(node.id)) {
-              const inputNodeContent =(
-              "content" in draggedNode.data
+              console.log(`Node ${draggedNode.id} dragged on top of synthesizer, with data: ${JSON.stringify(draggedNode.data)}`);
+              const inputNodeContent = ("words" in draggedNode.data
+                ? Array.isArray(draggedNode.data.words) ? draggedNode.data.words.map((word: { value: string }) => word.value).join(' ') : ""
+                : "content" in draggedNode.data
                 ? draggedNode.data.content
                 : "label" in draggedNode.data
                 ? draggedNode.data.label
-                : "No content") as string;
-              // Determine the mode based on inputNodeContent
+                : "No content") as string;  // Determine the mode based on inputNodeContent
               const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(inputNodeContent);
               const mode = isValidImage ? "generating-image" : "generating-text";
               // Generate a new node with the inputNodeContent
@@ -493,26 +421,14 @@ const Flow = () => {
           });
 
           if (response.status === 200) {
-            const newTextNode: AppNode = {
-              id: `text-${Date.now()}`,
-              type: "text",
-              position,
-              data: { 
-                content: response.data.text,
-                loading: false,
-                combinable: false,
-              } as TextNodeData,
-            };
-            setNodes((nodes) =>
-              nodes.map((node) =>
-                node.id === loadingNodeId ? newTextNode : node
-              )
-            );
+            addTextWithKeywordsNode(response.data.text, position);
+            deleteNodeById(loadingNodeId);
           } // response error
           else {
             console.error(`Text generation Error: ${response.status}`);
           }
         }
+
         else{ // the user has sent a text prompt for generation
           console.log(`Generating with prompt: ${prompt}`);
           const formData = new FormData();
@@ -524,34 +440,17 @@ const Flow = () => {
             });
         
             if (response.status === 200) {
-              //console.log(`Image url ${response.data.imageUrl} received from backend!`);
-              const newImageNode: AppNode = {
-                id: `image-${Date.now()}`,
-                type: "image",
-                position,
-                data: { 
-                  content: response.data.imageUrl,
-                  prompt: prompt,
-                  activateLookUp: () => handleImageLookUp(position, response.data.imageUrl),
-                } as ImageNodeData,
-                dragHandle: '.drag-handle__invisible',
-              };
 
-              setNodes((nodes) =>
-                nodes.map((node) => {
-                  if (node.id === loadingNodeId) {
-                    newImageNode.position = node.position;
-                    return newImageNode;
-                  }
-                  return node;
-                })
-              );  
+              addImageWithLookupNode(response.data.imageUrl, position, prompt);
+              deleteNodeById(loadingNodeId);
+
             } // response error
             else {
               console.error(`Image generation Error: ${response.status}`);
             }
           }
         } 
+
         catch (error) {
           if (error instanceof Error) {
             console.error("Failed to generate image:", error.message);
@@ -560,7 +459,7 @@ const Flow = () => {
           }
         }
     },
-    [setNodes]
+    []
   );
 
   const [showDebugInfo, setShowDebugInfo] = useState(false);
@@ -576,6 +475,7 @@ return(
         <ReactFlow
           nodes={nodes}
           nodeTypes={nodeTypes}
+          minZoom={0.009}
           onNodesChange={handleOnNodesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
@@ -593,7 +493,7 @@ return(
         </ReactFlow>
       </div>  
 
-      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageNode} addSynthesizer={addSynthesizer} />
+      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={addSynthesizer} />
 
 
 

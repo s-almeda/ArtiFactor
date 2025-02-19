@@ -136,7 +136,7 @@ function AppContent() {
                         className="border border-gray-500"
                         style={{
                           height: '100%',
-                          width: "80vw",
+                          width: "75vw",
                           margin: 0,
                           padding: 0,
                           overflow: "hidden",
@@ -150,8 +150,9 @@ function AppContent() {
                         className="border border-gray-500 ml-5 rounded-lg"
                         style={{
                           height: "100%",
-                          width: "15vw",
+                          width: "21vw",
                           margin: 0,
+                          marginRight: 10,
                           zIndex: 3,
                           overflow: "hidden",
                         }}
