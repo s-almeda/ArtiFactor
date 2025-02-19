@@ -5,7 +5,7 @@ import { useAppContext } from "./context/AppContext";
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { canvasID, canvasName, loadCanvas, saveNewCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext();
+  const { canvasID, canvasName, loadCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext(); // saveNewCanvas
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");
@@ -39,7 +39,7 @@ const Sidebar = ({ onClose }: {
       const newCanvasName = canvasName === "Untitled" ? prompt("Give this canvas a name:") || "Untitled" : canvasName;
 
       if (newCanvasName) {
-        await saveNewCanvas(data.nextCanvasId, newCanvasName);
+        //await saveNewCanvas(data.nextCanvasId, newCanvasName);
         refreshCanvases();
       } else {
         setError("Canvas save canceled. You've gotta name it something!");

@@ -12,13 +12,12 @@ import {
   useNodesState,
   useReactFlow,
   applyNodeChanges,
-  getNodesBounds
 } from "@xyflow/react";
 
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData} from "./nodes/types";
+import type { AppNode, Artwork, ImageNodeData, TextNodeData, LookupNode, SynthesizerNodeData, TextWithKeywordsNodeData} from "./nodes/types";
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
@@ -28,16 +27,30 @@ import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 // import { data } from "react-router-dom";
 
+// import TitleBar from "./TitleBar";
+
+
 //we now set the backend in App.tsx and grab it here!
 const Flow = () => {
   const { userID, backend } = useAppContext();
   const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport } = useReactFlow();
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
+
+  // for TitleBar
+  const [_, setLastSaved] = useState("");
+  useEffect(() => {
+    const updateLastSaved = () => {
+      const now = new Date();
+      setLastSaved(now.toLocaleString());
+    };
+    const saveInterval = setInterval(updateLastSaved, 30000); // Update every 30 seconds
+    return () => clearInterval(saveInterval);
+  }, []);
 
   //attempt (just once) to load the canvas from the browser storage
   useEffect(() => {
@@ -65,12 +78,17 @@ const Flow = () => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
     },
-    [setNodes, quickSaveToBrowser, canvasID]
+      [setNodes, quickSaveToBrowser, canvasID]
   );
-
-  
-  
-
+    const handleNodeClick = useCallback(
+    (event: MouseEvent, node: Node) => {
+      if (event.altKey) { 
+      console.log("you clicked me while pressing the 'option' key!");
+      console.log("Node Data:", node.data);
+      }
+    },
+    []
+    );
 
 
 
@@ -95,6 +113,26 @@ const Flow = () => {
   
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
+
+  const addTextWithKeywordsNode = (content: string = "your text here", position?: { x: number; y: number }) => {
+    const words = content.split(' ').map((word) => ({
+      value: word,
+    }));
+
+    const data: TextWithKeywordsNodeData = {
+      words,
+    };  const newTextWithKeywordsNode: AppNode = {
+      id: `text-${Date.now()}`,
+      type: "textWithKeywords",
+      position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
+        x: Math.random() * 250,
+        y: Math.random() * 250,
+      },
+      data: data,
+    };
+
+    setNodes((prevNodes) => [...prevNodes, newTextWithKeywordsNode]);
+  };
 
 
   const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
@@ -445,7 +483,7 @@ const Flow = () => {
 
       try {
         if (isValidImage){// the user has sent an image for text generation
-          console.log(`Describing this image: ${prompt}`);
+          //console.log(`Describing this image: ${prompt}`);
           const response = await axios.post(`${backend}/api/generate-text`, {
             imageUrl: prompt, // Send the imageUrl as part of the request body
           });
@@ -523,13 +561,82 @@ const Flow = () => {
 
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
+
+  // ------------------------ DRAGGABLE TOOLBAR ------------------------
+  const [toolbarPosition, setToolbarPosition] = useState({ x: 20, y: 100 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleDragStart = (event: MouseEvent<HTMLDivElement>) => {
+    setDragging(true);
+    setDragStart({ x: event.clientX - toolbarPosition.x, y: event.clientY - toolbarPosition.y });
+  };
+
+  const handleDragMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (dragging) {
+      setToolbarPosition({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragging(false);
+  };
+  
+
   return (
     <>
-      <div style={{ position: 'absolute', top: '10px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
+      {/* Draggable Toolbar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: `${toolbarPosition.y}px`,
+          left: `${toolbarPosition.x}px`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          background: 'rgba(0,0,0,0.8)',
+          padding: '10px',
+          borderRadius: '10px',
+          zIndex: 10,
+          cursor: dragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseMove={handleDragMove}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+      >
+        {/* Draggable Handle */}
+        <div
+          onMouseDown={handleDragStart}
+          style={{
+            cursor: 'grab',
+            padding: '5px',
+            textAlign: 'center',
+            background: '#444',
+            color: 'white',
+            borderRadius: '5px',
+            fontSize: '16px',
+            fontWeight: 'bold'
+          }}
+        >
+          {/* Hamburger Dragger (Now I'm Hungry) */}
+          ☰
+        </div>
+
+
+        {/* Da Buttons */}
+        <button onClick={() => addTextWithKeywordsNode()}>T</button>
+        <button onClick={() => addImageNode()}>🌄</button>
+        <button onClick={() => addSynthesizer()}>✨</button>
+      </div>
+
+      <div style={{ position: 'absolute', top: '70px', left: '45%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', gap: '10px', zIndex: 10 }}>
         <button onClick={() => addTextNode()}>Text</button>
         <button onClick={() => addImageNode()}>Image</button>
         <button onClick={() => addSynthesizer()}>New Image & Text Synthesizer</button>
+        <button onClick={() => addTextWithKeywordsNode()}> text with keywords</button>
       </div> 
+
       {/* todo: move these buttons to some kind of Toolbar Node that sticks to the side of the canvas, is always rendered on top, but can be moved! */}
 
 
@@ -542,6 +649,7 @@ const Flow = () => {
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           onNodeDragStart={onNodeDragStart}
+          onNodeClick={(event, node) => handleNodeClick(event, node)}
           onDrop={onDrop}
           onDragOver={onDragOver}
           zoomOnDoubleClick={false}
