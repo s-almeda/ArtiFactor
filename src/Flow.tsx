@@ -82,8 +82,14 @@ const Flow = () => {
     const handleNodeClick = useCallback(
     (event: MouseEvent, node: Node) => {
       if (event.altKey) { 
-      console.log("you clicked me while pressing the 'option' key!");
-      console.log("Node Data:", node.data);
+        if (node.data.content) {
+          generateNode(node.data.content as string, { x: node.position.x + 100, y: node.position.y + 100 });
+        }
+        else if (Array.isArray(node.data.words)) {
+          const content =  node.data.words.map((word: { value: string }) => word.value).join(' ');
+          generateNode(content, { x: node.position.x + 100, y: node.position.y + 100 });
+        }
+      console.log("you option clicked this node:", node.data);
       }
     },
     []
@@ -123,6 +129,7 @@ const Flow = () => {
     };  const newTextWithKeywordsNode: AppNode = {
       id: `text-${Date.now()}`,
       type: "textWithKeywords",
+      zIndex: 1000,
       position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
         x: Math.random() * 250,
         y: Math.random() * 250,
@@ -166,6 +173,7 @@ const Flow = () => {
       id: `image-${nodes.length + 1}`,
       type: "imagewithlookup",
       position: position,
+      zIndex: 1000,
       data: {
         content: content,
         prompt: prompt,
@@ -407,8 +415,10 @@ const Flow = () => {
         id: loadingNodeId,
         type: "text",
         position,
+        zIndex: 1000,
         data: { content: "loading ", loading: true, combinable: false } as TextNodeData,
       };
+      console.log("LOADING NODE:"+ loadingNode.zIndex);
       setNodes((nodes) => [...nodes, loadingNode]);
 
       // let's generate a node... 

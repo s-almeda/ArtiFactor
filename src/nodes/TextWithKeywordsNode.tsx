@@ -34,7 +34,7 @@ export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: 
       style={{ position: 'relative', display: 'inline-block' }}>
       <span
         className={`cursor-pointer 
-                    rounded-sm mx-0.5 p-0 z-10
+                    rounded-sm mx-0.5 p-0
                     transition-all duration-200 
                     bg-amber-100 hover:bg-amber-200`}
         onClick={handleClick}
@@ -104,7 +104,7 @@ export const KeywordDescription: React.FC<{
     >{/* div to contain everything including the button */}
 
     {/* DIV TO CONTAIN THE DESCRIPTION ONLY. animate getting shrunk to fit behind the main node, as this section is bigger than the height.*/}
-    <div className="overflow-hidden" style={{ height: `calc(${containerHeight-24}px`}}> 
+    <div id="descriptionpanel-body" className="overflow-hidden" style={{ height: `calc(${containerHeight-24}px`, zIndex: 2}}> 
       <motion.div 
         initial={{}}
         animate={{ 
@@ -118,8 +118,9 @@ export const KeywordDescription: React.FC<{
           type: "spring", 
           bounce: 0.2 
         }}
-        className="z-20 nowheel overflow-scroll nodrag bg-white border rounded-md shadow-md p-0 h-full"
+        className="nowheel overflow-scroll nodrag bg-white border rounded-md shadow-md p-0 h-full"
       >
+        {/* ----- TITLE of keyword ----- */}
         <div className="flex flex-col justify-between">
           {keyword.databaseValue && (
             <div 
@@ -164,6 +165,7 @@ export const KeywordDescription: React.FC<{
             cursor-pointer hover:bg-yellow-300 transition-colors duration-200 
             absolute bottom-0 right-2
             ${showDescription ? 'bg-amber-200' : ''}`}
+      style={{zIndex: 1}}
       onClick={toggleDescription}
     >
       <Bookmark size={20} className="text-gray-600" /> {/* BOOKMARK ICON */}
@@ -262,7 +264,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
         className="absolute"
       >
         <div
-          className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md z-3`}
+          className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md`}
           style={{ height: `${height * 2}px`, width: `${width}px` }}
         >
             {similarTexts.length > 0 ? (
@@ -574,7 +576,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
         {/* ---- MAIN BODY OF NODE CONTENT -----*/}
         
-        <div className={`${nodeStyles} z-10`} style={{ height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
+        <div className={`${nodeStyles}`} style={{ zIndex: 5, height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
             
             {initialCheck ? (
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>

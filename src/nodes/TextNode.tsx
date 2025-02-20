@@ -44,7 +44,7 @@ export function TextNode({ data, selected }: NodeProps<TextNode>) {
         initial={{ opacity: 0, x:0, y: 3, scale: 0.6}}
         animate={ { opacity: 1, x: 0, y: 0, scale: 1,  scaleX:1}}
         transition={{ duration: 0.4, type: "spring", bounce: 0.1 }}
-        className ="p-3 border border-gray-700 rounded bg-white"
+        className ="p-3 border border-gray-700 rounded bg-white z-10" //Z INDEX
         >
         
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
