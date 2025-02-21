@@ -10,37 +10,6 @@ import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
 
-// const controlStyle: React.CSSProperties = {
-//     background: 'white',
-//     width: '8px',
-//     height: '8px',
-//     position: 'absolute',
-//     bottom: 0,
-//     right: 0
-// };
-
-// const DraggableText = ({ content }: { content: string }) => {
-//     const [_, setDraggableType, __, setDraggableData] = useDnD();
-
-//     const onDragStart = (
-//         event: React.DragEvent<HTMLDivElement>,
-//         content: string
-//     ) => {
-//         event.dataTransfer.effectAllowed = "move";
-//         setDraggableType("text");
-//         setDraggableData({ content: content });
-//     };
-
-//     return (
-//         <div
-//             draggable
-//             onDragStart={(event) => onDragStart(event, content)}
-//             className="text-left mb-2"
-//         >
-//             <h3 className="mt-2 text-xs/3 italic text-gray-800">"{content}"</h3>
-//         </div>
-//     );
-// };
 
 const FolderPanel: React.FC<{ similarArtworks: Artwork[]; width: number; height: number; showFolder: boolean; toggleFolder: () => void; imageUrl?: string }> = ({ similarArtworks, width, height, showFolder, toggleFolder }) => {
     const [currentIndex, setCurrentIndex] = useState(0);

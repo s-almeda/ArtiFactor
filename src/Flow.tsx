@@ -17,13 +17,13 @@ import {
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, TextNodeData, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
+import type { AppNode, LoadingNode, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
 import {wordsToString } from './utils/utilityFunctions';
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
 import { calcNearbyPosition } from './utils/utilityFunctions';
-//import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
+
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 import Toolbar from "./Toolbar";
@@ -147,24 +147,7 @@ const Flow = () => {
   };
 
 
-  const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
-    const newTextNode: AppNode = {
-      id: `text-${Date.now()}`,
-      type: "text",
-      position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
-      x: Math.random() * 250,
-      y: Math.random() * 250,
-      },
-      data: {
-      //label: `Text Node ${nodes.length + 1}`,
-      content: content,
-      loading: false,
-      combinable: false
-      } as TextNodeData,
-    };
 
-    setNodes((prevNodes) => [...prevNodes, newTextNode]);
-  };
 
   const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
@@ -189,6 +172,25 @@ const Flow = () => {
 
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
+
+    // const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
+  //   const newTextNode: AppNode = {
+  //     id: `text-${Date.now()}`,
+  //     type: "text",
+  //     position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
+  //     x: Math.random() * 250,
+  //     y: Math.random() * 250,
+  //     },
+  //     data: {
+  //     //label: `Text Node ${nodes.length + 1}`,
+  //     content: content,
+  //     loading: false,
+  //     combinable: false
+  //     } as TextNodeData,
+  //   };
+
+  //   setNodes((prevNodes) => [...prevNodes, newTextNode]);
+  // };
 
   // const addSynthesizer = (position ?:{ x:number, y:number}) => {
   //   const newSynthesizerNode: AppNode = {
@@ -314,26 +316,22 @@ const Flow = () => {
     setNodes((currentNodes) =>
       currentNodes.map((node) => {
         /**** 2 text Nodes have been dragged together! ****/
-        if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
-          const draggedTextNode = draggedNode as Node<TextNodeData>;
-          const textNode = node as Node<TextNodeData>;
+        // if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
+        //   const draggedTextNode = draggedNode as Node<TextNodeData>;
+        //   const textNode = node as Node<TextNodeData>;
 
-          // Combine text and create a new text node
-          addTextNode(textNode.data.content + ", " + draggedTextNode.data.content, { 
-                x: textNode.position.x + (Math.random() * 10 - 5), 
-                y: textNode.position.y - 10,
-                });
+        //   // Combine text and create a new text node
+        //   addTextNode(textNode.data.content + ", " + draggedTextNode.data.content, { 
+        //         x: textNode.position.x + (Math.random() * 10 - 5), 
+        //         y: textNode.position.y - 10,
+        //         });
 
-          deleteNodeById(draggedNode.id);
-          deleteNodeById(node.id);
+        //   deleteNodeById(draggedNode.id);
+        //   deleteNodeById(node.id);
           
-          return { ...node, data: { ...node.data, combinable: true } };
-        } 
+        //   return { ...node, data: { ...node.data, combinable: true } };
+        // } 
         
-        if (node.type === "text") {
-          return { ...node, data: { ...node.data, combinable: false } };
-        }
-
         /* --- If a node has been dragged on top of a synthesizer --- */
         if (node.type === "synthesizer" && intersections.includes(node.id)) {
               console.log(`Node ${draggedNode.id} dragged on top of synthesizer, with data: ${JSON.stringify(draggedNode.data)}`);
@@ -360,7 +358,7 @@ const Flow = () => {
       })
     );
   },
-  [setNodes, getIntersectingNodes, addTextNode]
+  [setNodes, getIntersectingNodes]
 );
 
 
@@ -416,12 +414,12 @@ const Flow = () => {
       const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(prompt);
 
       const loadingNodeId = `loading-${Date.now()}`;
-      const loadingNode: AppNode = {
+      const loadingNode: LoadingNode = {
         id: loadingNodeId,
         type: "text",
         position,
         zIndex: 1000,
-        data: { content: "loading ", loading: true, combinable: false } as TextNodeData,
+        data: { content: "loading "},
       };
       console.log("LOADING NODE:"+ loadingNode.zIndex);
       setNodes((nodes) => [...nodes, loadingNode]);
@@ -513,7 +511,7 @@ return(
 
 
 
-      {/* Debug Info */}
+      Debug Info
           <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md">
           <button
             onClick={() => setShowDebugInfo((prev) => !prev)}

@@ -1,7 +1,8 @@
 import type { Node, NodeProps } from "@xyflow/react";
+//all nodes will have these things by default from react: https://reactflow.dev/api-reference/types/node#fields
 
 /** ✅ Shared properties for all custom nodes */
-export type ArtifactorNodeData = {
+export type ArtifactorNodeData = { // all of our nodes will have these things! 
   content?: string; // Common content field for all nodes
   className?: string;
   xOffset?: number;
@@ -9,30 +10,13 @@ export type ArtifactorNodeData = {
 }
 
 /**  Specific Node Data Types */
-export type TextNodeData = ArtifactorNodeData & {
-  loading?: boolean;
-  combinable?: boolean;
-};
 
-export type ImageNodeData = ArtifactorNodeData & {
-  prompt?: string;
-  activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
-};
+
 export type ImageWithLookupNodeData = ArtifactorNodeData & {
   prompt?: string;
   artworks?: Artwork[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
-};
-
-export type LookupNodeData = ArtifactorNodeData & {
-  artworks: Artwork[];
-};
-
-export type SynthesizerNodeData = ArtifactorNodeData & {
-  mode: "ready" | "generating-image" | "dragging" | "generating-text";
-  inputNodeContent?: string;
-  //updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
 };
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {
@@ -41,17 +25,41 @@ export type TextWithKeywordsNodeData = ArtifactorNodeData & {
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
 };
 
+/* --------------- DEPRECATED --------------- */
+
+
+// export type TextNodeData = ArtifactorNodeData & {
+//   loading?: boolean;
+//   combinable?: boolean;
+// };
+
+// export type LookupNodeData = ArtifactorNodeData & {
+//   artworks: Artwork[];
+// };
+
+// export type SynthesizerNodeData = ArtifactorNodeData & {
+//   mode: "ready" | "generating-image" | "dragging" | "generating-text";
+//   inputNodeContent?: string;
+//   //updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
+// };
+// export type ImageNodeData = ArtifactorNodeData & {
+//   prompt?: string;
+//   activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
+// };
+
 
 /** Generalized AppNode Type */
 export type AppNode<T extends ArtifactorNodeData = ArtifactorNodeData> = Node<T>;
 
 /** Specialized Nodes */
-export type TextNode = AppNode<TextNodeData>;
-export type ImageNode = AppNode<ImageNodeData>;
-export type LookupNode = AppNode<LookupNodeData>;
-export type SynthesizerNode = AppNode<SynthesizerNodeData>;
+export type LoadingNode = AppNode<ArtifactorNodeData>;
 export type TextWithKeywordsNode = AppNode<TextWithKeywordsNodeData>;
 export type ImageWithLookupNode = AppNode<ImageWithLookupNodeData>;
+
+// export type TextNode = AppNode<TextNodeData>;
+// export type ImageNode = AppNode<ImageNodeData>;
+// export type LookupNode = AppNode<LookupNodeData>;
+// export type SynthesizerNode = AppNode<SynthesizerNodeData>;
 
 /** Node Props for Custom Components */
 export type AppNodeProps = NodeProps<AppNode>;
