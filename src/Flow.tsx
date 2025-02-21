@@ -129,6 +129,7 @@ const Flow = () => {
       words,
       provenance,
       content: wordsToString(words),
+      intersections: [],
     };  
     
     const newTextWithKeywordsNode: AppNode = {
@@ -228,121 +229,66 @@ const Flow = () => {
   //keep track o fhte node dragging 
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
-      const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
       setDraggableType(draggedNode.type as string);
       setDraggableData(draggedNode.data);
-      setNodes((currentNodes: AppNode[]) =>
-        currentNodes.map((node: AppNode) => {
-          if (node.id === draggedNode.id) {
-            return {
-              ...node,
-              position: draggedNode.position,
-              combinable: intersections.includes(node.id),
-            };
-          }
-          if (node.type === "text" && draggedNode.type === "text") {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                combinable: intersections.includes(node.id),
-              },
-            };
-          }
-          if (node.type === "synthesizer") {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                mode: intersections.includes(node.id) ? "dragging" : "ready",
-              },
-            };
-          }
-          return node;
-        })
-      );
+      updateIntersections(draggedNode, nodes);
     },
-    [setNodes, getIntersectingNodes]
-  );
-
+      [setNodes, getIntersectingNodes]
+    );
+    
 
   const onNodeDragStop = useCallback(
-  (_: MouseEvent, draggedNode: Node) => {
-    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => {
-        
-        /* --- If a node has been dragged on top of a synthesizer --- */
-        if (node.type === "synthesizer" && intersections.includes(node.id)) {
-              console.log(`Node ${draggedNode.id} dragged on top of synthesizer, with data: ${JSON.stringify(draggedNode.data)}`);
-              const inputNodeContent = ("words" in draggedNode.data
-                ? Array.isArray(draggedNode.data.words) ? draggedNode.data.words.map((word: { value: string }) => word.value).join(' ') : ""
-                : "content" in draggedNode.data
-                ? draggedNode.data.content
-                : "label" in draggedNode.data
-                ? draggedNode.data.label
-                : "No content") as string;  // Determine the mode based on inputNodeContent
-              const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(inputNodeContent);
-              const mode = isValidImage ? "generating-image" : "generating-text";
-              // Generate a new node with the inputNodeContent
-              generateNode(inputNodeContent, calcNearbyPosition(getNodesBounds([node, draggedNode])));  // Set synthesizer node to the appropriate mode
-              // Move the draggedNode out of the way, back to where it was before the drag 
-              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode])));
-              return { 
-              ...node, 
-              data: { ...node.data, mode, inputNodeContent }, 
-              className: "" // Reset highlight
-              };  
-            }
-        return { ...node, className: "" };
-      })
-    );
-  },
-  [setNodes, getIntersectingNodes]
-);
+    (_: MouseEvent, draggedNode: Node) => {
+      setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
+    },
+    [setNodes]
+  );
 
 
 
   // ------------------- HELPER FUNCTIONS ------------------- //
+
+  const updateIntersections = (draggedNode: Node, currentNodes: AppNode[]) => {
+    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
+    return currentNodes.map((node: AppNode) => {
+      if (node.id === draggedNode.id) {
+        const updatedIntersections = [
+          {
+            id: node.id,
+            position: node.position,
+            content: node.data.content,
+          },
+          ...intersections.map((id) => {
+            const intersectingNode = currentNodes.find((n) => n.id === id);
+            if (intersectingNode && intersectingNode.type === "text") {
+              //console.log(`${node.data.content} is overlapping with: ${intersectingNode.data.content}`);
+              return {
+                id: intersectingNode.id,
+                position: intersectingNode.position,
+                content: intersectingNode.data.content,
+              };
+            }
+            return null;
+          }).filter(Boolean),
+        ];
+        //console.log("updated intersections for node", node.data.content, ": ", updatedIntersections);
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            intersections: updatedIntersections,
+          },
+        };
+      }
+      return node;
+    });
+  };
+  
+
   const deleteNodeById = (nodeId: string) => {  
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
     quickSaveToBrowser(toObject(), canvasID); //everytime a node is changed, save it to the browser storage
   };
-
-  const updatePosition = (nodeId: string, newPosition: { x: number; y: number }) => {
-    /* takes a node and a new position as input, moves the node there */
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => {
-        if (node.id === nodeId) {
-          if (node.position.x !== newPosition.x || node.position.y !== newPosition.y) {
-            return {
-              ...node,
-              position: newPosition,
-              className: `${node.className} node-transition`, // Add transition class
-            };
-          }
-        }
-        return node;
-      })
-    );
-    // Remove the transition class after the animation completes
-    setTimeout(() => {
-      setNodes((currentNodes) =>
-        currentNodes.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              className: node.className ? node.className.replace(" node-transition", "") : "",
-            };
-          }
-          return node;
-        })
-      );
-    }, 500); // Match the duration of the CSS transition
-  };
-
-
 
 
 

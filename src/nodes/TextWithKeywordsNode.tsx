@@ -5,10 +5,12 @@ import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import { stringToWords, wordsToString } from '../utils/utilityFunctions';
 import React, { useRef, useState, useEffect } from 'react';
 import { useDnD } from '../context/DnDContext';
-import { Bookmark, Search, Edit2, Paperclip } from 'lucide-react';// Eye, EyeClosed
+import { Bookmark, Search, Edit2, Paperclip, BookCopy } from 'lucide-react';// Eye, EyeClosed
 import {motion} from 'framer-motion';
 import { usePaletteContext } from '../context/PaletteContext';
 import NavigationButtons from '../utils/commonComponents';
+
+import {useNodeContext} from '../context/NodeContext';
 
 export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
   return (
@@ -122,7 +124,7 @@ export const KeywordDescription: React.FC<{
           bounce: 0.2 
         }}
         // className={`nowheel overflow-scroll nodrag border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f2e7ce]'}`}
-        className={`nodrag nowheel overflow-scroll border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f4efe3] border-[#998056]'}`}
+        className={`nodrag nowheel overflow-scroll border rounded-b-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f4efe3] border-[#d9cdb2]'}`}
         
       >
         {/* ----- TITLE of keyword ----- */}
@@ -130,8 +132,8 @@ export const KeywordDescription: React.FC<{
           {keyword.databaseValue && (
             <div 
               draggable
-              onDragStart={(event) => onDragStart(event, "text", keyword.description)}
-              className={`nodrag text-sm font-bold text-gray-800 mb-2 cursor-pointer ${isAIGenerated ? 'hover:bg-blue-300' : 'hover:bg-[#D1BC97]'}`}
+              onDragStart={(event) => onDragStart(event, "text", keyword.databaseValue)}
+              className={`nodrag text-sm font-bold text-gray-800 mb-2 cursor-pointer ${isAIGenerated ? ' bg-blue-100 hover:bg-blue-300' : 'hover:bg-[#D1BC97]'}`}
               style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -235,7 +237,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
         className="absolute"
       >
         <div
-        className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : (showFolder ? 'bg-[#f2e7ce]' : 'bg-[#dbcdb4]')} border border-[#998056]rounded-md shadow-md`}
+        className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : (showFolder ? 'bg-[#f2e7ce]' : 'bg-[#dbcdb4]')} rounded-md shadow-md`}
         style={{ height: `${height * 2}px`, width: `${width}px` }}
         >
             {similarTexts.length > 0 ? (
@@ -297,6 +299,8 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   const [similarTexts, setSimilarTexts] = useState<Keyword[]>(data.similarTexts || []);
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
 
+  const {mergeNodes} = useNodeContext();
+
 
   const [width, _] = useState(200);
   const [height, __] = useState(150);
@@ -310,13 +314,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   const [initialCheck, setInitialCheck] = useState(true);
   const [isAIGenerated, setIsAIGenerated] = useState(data.provenance === 'ai');
 
-  // --- HELPER functions for the text with keywords node --- //
-  // const stringToWords = (str: string): Word[] => {
-  //   return str.split(' ').map((word) => ({ value: word } as Word));
-  // };
-  // const wordsToString = (words: Word[]): string => {
-  //   return words.map((word) => word.value).join(' ');
-  // }
+
+
+
+
   const fetchSimilarTexts = async (query: string) => {
     try {
       const response = await fetch(`${backend}/api/get-similar-texts`, {
@@ -468,26 +469,27 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   useEffect(() => {
     if (data.words && data.words.some((word: Word | Keyword) => 'id' in word)) {
       setInitialCheck(false);
-    } else if (initialCheck) {
+    } 
+    else if (initialCheck) {
       const onCreate = async () => {
         console.log('A new TextWithKeywordsNode has been created');
         const updatedWords = await checkForKeywords(words);
         setWords(updatedWords);
         data.words = updatedWords;
         data.content = wordsToString(words);
-        if(data.similarTexts && data.similarTexts.length > 0){
-          setSimilarTexts(data.similarTexts);
-        }
-        else{
-          const result = await fetchSimilarTexts(wordsToString(words));
-          setSimilarTexts(result);
-          data.similarTexts = result;
-        }
+          if(data.similarTexts && data.similarTexts.length > 0){
+            setSimilarTexts(data.similarTexts);
+          }
+          else{
+            const result = await fetchSimilarTexts(wordsToString(words));
+            setSimilarTexts(result);
+            data.similarTexts = result;
+          }
 
         setInitialCheck(false);
-
       }
       onCreate();
+
     }
   }, []);
 
@@ -614,15 +616,17 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             >
             < Paperclip size={16}/>
             </button>
-            {/* <button
-              className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
-              type="button"
-              onClick={() => hideControls()}
-              aria-label="Hide Controls"
-              style={{height:'100%' }}
-          >
-              {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
-            </button> */}
+            {data.intersections && data.intersections.length > 1 && (
+              <button
+                className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+                type="button"
+                onClick={() => mergeNodes(data.intersections)}
+                aria-label="Merge"
+                style={{ marginRight: '0px' }}
+              >
+                <BookCopy size={16} />
+              </button>
+            )}
           </div>
         </NodeToolbar>
 
@@ -632,12 +636,12 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         <div className={`${nodeStyles}`} style={{ zIndex: 5, height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
             
             {initialCheck ? (
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
-                {/* {content.split('\n').map((line, index) => (
-                  <div className="text-gray-500 text-xs" key={index}> {line}</div>
-                ))} */}
-                <div className="loader"></div> {/*display a loader until the initial check for keywords is done*/}
-              </div>
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
+                  <div className="text-xs nowheel" style={{ position: 'relative', opacity: 0.7, color: 'gray', overflow: 'auto', height: '100%', width: '100%' }}>
+                    {content}
+                  </div>
+                  <div className="loader" style={{opacity: 0.7, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}></div>
+                </div>
             ) : (
               <>
               {/* EDIT BUTTON */}

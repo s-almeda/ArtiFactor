@@ -1,28 +1,47 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Node } from '@xyflow/react';
+import { TextWithKeywordsNodeData } from '../nodes/types';
+import { stringToWords } from '../utils/utilityFunctions';
 
 interface NodeContextProps {
-  nodes: Node[];
-  setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
-  mergeNodes: (node1: Node, node2: Node) => void;
+  nodes: Node<any>[]; // Keep nodes generic
+  setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
+  mergeNodes: (nodesToMerge: { id: string; content: string; position: { x: number; y: number } }[]) => void;
 }
-``
+
 const NodeContext = createContext<NodeContextProps | undefined>(undefined);
 
 export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodes, setNodes] = useState<Node<any>[]>([]); // Keep nodes state generic
 
-  const mergeNodes = useCallback((node1: Node, node2: Node) => {
+  const mergeNodes = useCallback((nodesToMerge: { id: string; content: string; position: { x: number; y: number } }[]) => {
+    if (nodesToMerge.length === 0) return;
+
     // Combine the content of the nodes
-    const combinedContent = `${node1.data.content} ${node2.data.content}`;
-    const newNode: Node = {
-      ...node1,
-      data: { ...node1.data, content: combinedContent },
+    const combinedContent = nodesToMerge.map(node => node.content).join(' ');
+
+    // Calculate the average position
+    const averagePosition = nodesToMerge.reduce(
+      (acc, node) => {
+        acc.x += node.position.x;
+        acc.y += node.position.y;
+        return acc;
+      },
+      { x: 0, y: 0 }
+    );
+    averagePosition.x /= nodesToMerge.length;
+    averagePosition.y /= nodesToMerge.length;
+
+    const newNode: Node<TextWithKeywordsNodeData> = {
+      id: `text-${Date.now()}`,
+      type: 'text',
+      position: averagePosition,
+      data: { content: combinedContent, words: stringToWords(combinedContent), provenance: "user", intersections: [] },
     };
 
     // Update the nodes state
     setNodes((prevNodes) =>
-      prevNodes.filter((node) => node.id !== node1.id && node.id !== node2.id).concat(newNode)
+      prevNodes.filter((node) => !nodesToMerge.some(mergeNode => mergeNode.id === node.id)).concat(newNode)
     );
   }, []);
 

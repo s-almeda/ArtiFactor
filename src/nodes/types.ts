@@ -20,8 +20,9 @@ export type ImageWithLookupNodeData = ArtifactorNodeData & {
 };
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {
-  words: Array<Word | Keyword>;
-  wordsAsString: string;
+  words: Array<Word | Keyword>; //to get the words as a string, use content
+  intersections: Array<{ id: string; position: { x: number; y: number }; content: string; }>; //info on nodes that are overlapping with this node
+  similarTexts?: Keyword[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
 };
 
