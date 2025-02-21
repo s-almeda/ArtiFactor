@@ -17,8 +17,8 @@ import {
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, TextNodeData, SynthesizerNodeData, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
-import { stringToWords, wordsToString } from './utils/utilityFunctions';
+import type { AppNode, TextNodeData, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
+import {wordsToString } from './utils/utilityFunctions';
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
@@ -36,18 +36,19 @@ const Flow = () => {
   const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
-  const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
+  const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
   const [synthesisMode, setSynthesisMode] = useState(false);
 
-  const [nodeCount, setNodeCount] = useState(nodes.length || 0);
+  //const [nodeCount, setNodeCount] = useState(nodes.length || 0);
 
 
   // for TitleBar
   const [_, setLastSaved] = useState("");
   useEffect(() => {
+    console.log(synthesisMode);
     const updateLastSaved = () => {
       const now = new Date();
       setLastSaved(now.toLocaleString());
@@ -258,12 +259,12 @@ const Flow = () => {
 
 
   //when someone starts dragging, send the starting position to the DnD Context
-  const onNodeDragStart = useCallback(
-    (_: MouseEvent, node: Node) => {
-      setDragStartPosition({ x: node.position.x, y: node.position.y });
-    },
-    []
-  );
+  // const onNodeDragStart = useCallback(
+  //   (_: MouseEvent, node: Node) => {
+  //     setDragStartPosition({ x: node.position.x, y: node.position.y });
+  //   },
+  //   []
+  // );
 
   //keep track o fhte node dragging 
   const onNodeDrag = useCallback(
@@ -493,7 +494,7 @@ return(
           onNodesChange={handleOnNodesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
-          onNodeDragStart={onNodeDragStart}
+          //onNodeDragStart={onNodeDragStart}
           onNodeClick={(event, node) => handleNodeClick(event, node)}
           onDrop={onDrop}
           onDragOver={onDragOver}
