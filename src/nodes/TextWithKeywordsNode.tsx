@@ -45,8 +45,7 @@ export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: 
     </motion.div>
   );
 };
-
-export const RelatedKeywords: React.FC<{ relatedKeywords: string[] }> = ({ relatedKeywords }) => {
+export const RelatedKeywords: React.FC<{ relatedKeywords: string[], isAIGenerated: boolean }> = ({ relatedKeywords, isAIGenerated }) => {
   const [_, setDraggableType, __, setDraggableData] = useDnD();
 
   const onDragStart = (
@@ -64,7 +63,7 @@ export const RelatedKeywords: React.FC<{ relatedKeywords: string[] }> = ({ relat
       {relatedKeywords.map((relatedKeyword, index) => (
         <div
           key={index}
-          className="text-xs text-stone-50 p-0.5 bg-stone-500 hover:bg-stone-400 rounded-sm cursor-grab"
+          className={`text-xs p-0.5 rounded-sm cursor-grab ${isAIGenerated ? 'text-blue-50 bg-blue-500 hover:bg-blue-400' : 'text-stone-50 bg-stone-500 hover:bg-stone-400'}`}
           draggable
           onDragStart={(event) => onDragStart(event, relatedKeyword)}
         >
@@ -81,7 +80,8 @@ export const KeywordDescription: React.FC<{
   containerWidth?: number;
   showDescription: boolean; 
   toggleDescription: () => void;
-}> = ({ keyword, containerHeight = 100, showDescription = false, toggleDescription }) => { //containerWidth = 100,
+  isAIGenerated: boolean;
+}> = ({ keyword, containerHeight = 100, showDescription = false, toggleDescription, isAIGenerated=false }) => { //containerWidth = 100,
 
   const [_, setDraggableType, __, setDraggableData] = useDnD();
 
@@ -119,7 +119,7 @@ export const KeywordDescription: React.FC<{
           type: "spring", 
           bounce: 0.2 
         }}
-        className="nowheel overflow-scroll nodrag bg-white border rounded-md shadow-md p-0 h-full"
+        className={`nowheel overflow-scroll nodrag border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f2e7ce]'}`}
       >
         {/* ----- TITLE of keyword ----- */}
         <div className="flex flex-col justify-between">
@@ -131,8 +131,8 @@ export const KeywordDescription: React.FC<{
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '8px 12px',
-              backgroundColor: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0'
+              backgroundColor: isAIGenerated ? '#f5f5dc' : '#dbcdb4',
+              borderBottom: '1px solidrgba(0, 0, 0, 0.34)'
               }}
             >
               {keyword.databaseValue}
@@ -150,7 +150,7 @@ export const KeywordDescription: React.FC<{
 
           {/* RELATED KEYWORDS */}
           {keyword.relatedKeywordStrings && keyword.relatedKeywordStrings.length > 0 && (
-            <RelatedKeywords relatedKeywords={keyword.relatedKeywordStrings} />
+            <RelatedKeywords relatedKeywords={keyword.relatedKeywordStrings} isAIGenerated={isAIGenerated} />
           )}
         </div>
       </motion.div>
@@ -160,12 +160,12 @@ export const KeywordDescription: React.FC<{
     {/* Bookmark button */}
     <div
       className={`
-            w-12 h-10 p-1
-            bg-amber-200
-            flex items-center justify-center rounded-br-md rounded-bl-md
-            cursor-pointer hover:bg-yellow-300 transition-colors duration-200 
-            absolute bottom-0 right-2
-            ${showDescription ? 'bg-amber-200' : ''}`}
+        w-12 h-10 p-1
+        ${isAIGenerated ? 'bg-blue-200 hover:bg-blue-300' : 'bg-[#dbcdb4] hover:bg-yellow-300'}
+        flex items-center justify-center rounded-br-md rounded-bl-md
+        cursor-pointer transition-colors duration-200 
+        absolute bottom-0 right-2
+        ${showDescription ? (isAIGenerated ? 'bg-blue-200' : 'bg-[#dbcdb4]') : ''}`}
       style={{zIndex: 1}}
       onClick={toggleDescription}
     >
@@ -175,11 +175,10 @@ export const KeywordDescription: React.FC<{
   );
 };
 // -- FOLDER PANEL COMPONENT (the panel that opens on the left side) --- //
-const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean; toggleFolder: () => void; content?: string }> = ({ width, height, showFolder, toggleFolder, content }) => {
-  const [similarTexts, setSimilarTexts] = useState<Keyword[]>([]);
+const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean; toggleFolder: () => void; similarTexts: Keyword[]; isAIGenerated: boolean; }> = ({ width, height, showFolder, toggleFolder, similarTexts, isAIGenerated=false }) => {
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [contentState, setContentState] = useState<string | null>(content || '');
-  const { backend } = useAppContext();
+  // const [contentState, setContentState] = useState<string | null>(content || '');
   const [_, setDraggableType, __, setDraggableData] = useDnD();
 
   const onDragStart = (
@@ -193,45 +192,6 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
     setDraggableData({ content: content, prompt: prompt, provenance: "history" }); //everything in the folder wil  be human made
   };
 
-
-  useEffect(() => {
-    const fetchSimilarTexts = async () => {
-      try {
-        const response = await fetch(`${backend}/api/get-similar-texts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ "query": contentState }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch similar texts');
-        }
-
-        const data = await response.json();
-        if (data.length === 0) {
-          setContentState(null);
-        } else {
-          const keywords = data.map((item: any) => ({
-            id: item.id,
-            value: item.database_value,
-            description: item.description || item.full_description,
-            relatedKeywordStrings: item.relatedKeywordStrings,
-            type: item.type,
-          }));
-          setSimilarTexts(keywords);
-        }
-      } catch (error) {
-        console.error('Error fetching similar texts:', error);
-        setContentState(null);
-      }
-    };
-
-    if (contentState) {
-      fetchSimilarTexts();
-    }
-  }, [contentState]);
 
   const handlePrev = () => {
     setCurrentIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : similarTexts.length - 1));
@@ -249,10 +209,10 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
       <div
         className={`absolute left-0 top-2 transform -translate-x-7 -translate-y-2 
                     w-12 h-20 p-1
-                    bg-amber-200
+                    ${isAIGenerated ? 'bg-blue-200 hover:bg-blue-300' : 'bg-[#dbcdb4] hover:bg-yellow-300'}
                     flex items-center justify-left rounded-l-md
-                    cursor-pointer hover:bg-yellow-300 transition-colors duration-200 
-                    ${showFolder ? 'bg-amber-200' : ''}`}
+                    cursor-pointer transition-colors duration-200 
+                    ${showFolder ? (isAIGenerated ? 'bg-blue-200' : 'bg-[#dbcdb4]') : ''}`}
         onClick={toggleFolder}
       >
         <Search size={20} className="text-gray-600" /> {/* FOLDER ICON */}
@@ -267,8 +227,8 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
         className="absolute"
       >
         <div
-          className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] bg-amber-100 border border-gray-300 rounded-md shadow-md`}
-          style={{ height: `${height * 2}px`, width: `${width}px` }}
+        className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : (showFolder ? 'bg-[#f2e7ce]' : 'bg-[#dbcdb4]')} border border-gray-300 rounded-md shadow-md`}
+        style={{ height: `${height * 2}px`, width: `${width}px` }}
         >
             {similarTexts.length > 0 ? (
               <>
@@ -285,23 +245,24 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
                       <p 
                         draggable 
                         onDragStart={(event) => onDragStart(event, "text", currentText.description, "human")}
-                        className="text-sm/5 mt-2 p-0.5 rounded-sm hover:bg-amber-200"
+                        className={`text-sm/5 mt-2 p-0.5 rounded-sm ${isAIGenerated ? 'hover:bg-blue-200' : 'hover:bg-[#dbcdb4]'}`}
                       >
                         {currentText.description}
                       </p>
 
                       {/* RELATED KEYWORDS */}
                       {currentText.relatedKeywordStrings && currentText.relatedKeywordStrings.length > 0 && (
-                        <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} />
+                        <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} isAIGenerated={isAIGenerated} />
                       )}
                     </div>
                   )}
                 </div>
               </>
             ) : (
-              <div className="p-3 ml-0 h-full overflow-y-auto">
-                <h2 className="text-xs font-medium text-gray-900 italic font-bold">...We haven't found anything relevant to this prompt in our database...</h2>
-              </div>
+                <div className="p-3 ml-0 h-full overflow-y-auto flex flex-col items-center justify-center">
+                <h2 className="text-xs font-medium text-gray-900 italic font-bold text-center mb-5">...We haven't found anything relevant to this prompt in our database yet...</h2>
+                <div className="loader"></div>
+                </div>
             )}
             
         </div>
@@ -311,26 +272,31 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 };
 
 
-
-
 //------------------- TEXT WITH KEYWORDS NODE ------------------//
 
 export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywordsNode>) {
+  // -- handling state on text area edit  ---//
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(data.content || '');
   const [isEditing, setIsEditing] = useState(false);
+
+  // --  the array of words and keywords -- // 
   const [words, setWords] = useState<(Word | Keyword)[]>(data.words || []);
+  const [similarTexts, setSimilarTexts] = useState<Keyword[]>(data.similarTexts || []);
+  const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
+
+
   const [width, _] = useState(200);
   const [height, __] = useState(150);
+
   const [showDescription, setShowDescription] = useState(false);
   const [showFolder, setShowFolder] = useState(false);
-  const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null);
+
   const { backend } = useAppContext();
   const { addClippedNode, getNextPaletteIndex } = usePaletteContext();
 
   const [initialCheck, setInitialCheck] = useState(true);
-
-  const isAIGenerated = false; //TODO implement: data.isAIGenerated || false;
+  const [isAIGenerated, setIsAIGenerated] = useState(data.provenance === 'ai');
 
   // --- HELPER functions for the text with keywords node --- //
   // const stringToWords = (str: string): Word[] => {
@@ -339,12 +305,42 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   // const wordsToString = (words: Word[]): string => {
   //   return words.map((word) => word.value).join(' ');
   // }
+  const fetchSimilarTexts = async (query: string) => {
+    try {
+      const response = await fetch(`${backend}/api/get-similar-texts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ "query": query }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch similar texts');
+      }
+
+      const data = await response.json();
+      if (data.length === 0) {
+        return [];
+      } else {
+        const keywords = data.map((item: any) => ({
+          id: item.id,
+          value: item.database_value,
+          description: item.description || item.full_description,
+          relatedKeywordStrings: item.relatedKeywordStrings,
+          type: item.type,
+        }));
+        return keywords;
+      }
+    } catch (error) {
+      console.error('Error fetching similar texts:', error);
+    }
+  };
 
   const checkForKeywords = async (queryWords: Word[]): Promise<(Word | Keyword)[]> => {
     console.log('Checking for keywords in:', words);
 
     if (queryWords.length === 0) {
-      setInitialCheck(false);
       return [];
     }
 
@@ -377,7 +373,6 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           return { value: item.value } as Word;
         }
       });
-      setInitialCheck(false);
       return result;
     } catch (error) {
       console.error('Error checking for keywords:', error);
@@ -412,6 +407,11 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       const checkedWords = await checkForKeywords(updatedWords);
       setWords(checkedWords);
       data.words = checkedWords; // Update the data object with the new words
+
+      //check for similar texts in the new content
+      const result = await fetchSimilarTexts(wordsToString(checkedWords));
+      setSimilarTexts(result);
+      data.similarTexts = result;
     }
   };
 
@@ -439,11 +439,16 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
   useEffect(() => {
     setWords(data.words || []);
+    data.content = wordsToString(words);
+
     if (selectedKeyword === null) {
       const firstKeyword = words.find(word => 'id' in word) as Keyword;
       if (firstKeyword) {
         setSelectedKeyword(firstKeyword);
       }
+    }
+    if (similarTexts.length > 0) {
+      setSimilarTexts(data.similarTexts || []);
     }
     //console.log('current data in this node:', data);
   }, [data.words, selectedKeyword]);
@@ -457,10 +462,32 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
         const updatedWords = await checkForKeywords(words);
         setWords(updatedWords);
         data.words = updatedWords;
-      };
+        data.content = wordsToString(words);
+        if(data.similarTexts && data.similarTexts.length > 0){
+          setSimilarTexts(data.similarTexts);
+        }
+        else{
+          const result = await fetchSimilarTexts(wordsToString(words));
+          setSimilarTexts(result);
+          data.similarTexts = result;
+        }
+
+        setInitialCheck(false);
+
+      }
       onCreate();
     }
   }, []);
+
+  // useEffect(() => { //WHEN CONTENT CHANGES, FIND THE SIMILAR TEXTS
+  //   if (words.length > 0 && initialCheck) {
+  //     fetchSimilarTexts(wordsToString(words)).then((result) => {
+  //       setSimilarTexts(result);
+  //       data.similarTexts = result;
+  //     });
+  //   }
+
+  // },[data.words]);
 
   // --- ADJUST SIZE OF TEXT AREA ON EDIT --- //
   useEffect(() => {
@@ -503,6 +530,10 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
     ? `${nodeBaseClasses} border-blue-200 bg-blue-50 rounded-lg shadow-sm`
     : `${nodeBaseClasses} border-amber-300 bg-amber-50 shadow-sm`;
 
+  useEffect(() => {
+    setIsAIGenerated(data.provenance === 'ai');
+  },[data.provenance]);
+
 
   return (
     <motion.div
@@ -541,7 +572,14 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           transition={{ duration: 0.2 }}
           className="absolute"
         >
-          <FolderPanel width={width} height={height} showFolder={showFolder} toggleFolder={toggleFolder} content={wordsToString(words)} />
+          <FolderPanel
+            width={width} 
+            height={height} 
+            showFolder={showFolder} 
+            toggleFolder={toggleFolder} 
+            similarTexts={similarTexts} 
+            isAIGenerated={isAIGenerated}
+          />
         </motion.div>
 
         {/* ---- NODE TOOLBAR ---- */}
@@ -583,9 +621,9 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             
             {initialCheck ? (
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
-                {content.split('\n').map((line, index) => (
-                  <div className="text-gray-500" key={index}>{line}</div>
-                ))}
+                {/* {content.split('\n').map((line, index) => (
+                  <div className="text-gray-500 text-xs" key={index}> {line}</div>
+                ))} */}
                 <div className="loader"></div> {/*display a loader until the initial check for keywords is done*/}
               </div>
             ) : (
@@ -631,6 +669,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             containerWidth={width}
             showDescription={showDescription}
             toggleDescription={toggleDescription} 
+            isAIGenerated={isAIGenerated}
           />
         </motion.div>
 

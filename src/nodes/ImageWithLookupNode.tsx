@@ -306,7 +306,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
 
     
     useEffect(() => {
-        console.log("initial check", initialCheck);
+        // console.log("initial check", initialCheck);
         if (data.artworks && initialCheck){
             setSimilarArtworks(data.artworks);
             setInitialCheck(false);
