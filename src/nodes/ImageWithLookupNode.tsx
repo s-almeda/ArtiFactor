@@ -174,7 +174,7 @@ const DescriptionPanel: React.FC<{
                         type: "spring", 
                         bounce: 0.2 
                     }}
-                    className={`nowheel p-3 overflow-scroll border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f4efe3] border-[#998056]'}`}
+                    className={`nowheel p-3 overflow-scroll border rounded-b-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f4efe3] border-[#998056]'}`}
                 >
                     <div className="flex flex-col justify-between">
                     {isAIGenerated ? 'Prompt:' : ''}

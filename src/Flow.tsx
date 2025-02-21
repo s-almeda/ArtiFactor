@@ -151,7 +151,7 @@ const Flow = () => {
 
   const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
-    prompt = prompt ?? "default alligator image";
+    prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
     console.log("adding an image to the canvas: ", content, prompt);
     position = position ?? { 
@@ -283,7 +283,7 @@ const Flow = () => {
       return node;
     });
   };
-  
+
 
   const deleteNodeById = (nodeId: string) => {  
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
