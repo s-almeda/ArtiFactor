@@ -109,7 +109,7 @@ export const KeywordDescription: React.FC<{
     >{/* div to contain everything including the button */}
 
     {/* DIV TO CONTAIN THE DESCRIPTION ONLY. animate getting shrunk to fit behind the main node, as this section is bigger than the height.*/}
-    <div id="descriptionpanel-body" className="overflow-hidden" style={{ height: `calc(${containerHeight-24}px`, zIndex: 2}}> 
+    <div id="descriptionpanel-body" className="overflow-hidden" style={{ height: `calc(${containerHeight-24}px`, zIndex: -1}}> 
       <motion.div 
         initial={{}}
         animate={{ 
@@ -168,7 +168,7 @@ export const KeywordDescription: React.FC<{
     {/* Bookmark button */}
     <div
       className={`
-        w-12 h-10 p-1
+        w-12 h-10 p-1 
         ${isAIGenerated ? 'bg-blue-200 hover:bg-blue-300' : 'bg-[#dbcdb4] hover:bg-yellow-300'}
         flex items-center justify-center rounded-br-md rounded-bl-md
         cursor-pointer transition-colors duration-200 
@@ -633,7 +633,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
         {/* ---- MAIN BODY OF NODE CONTENT -----*/}
         
-        <div className={`${nodeStyles}`} style={{ zIndex: 5, height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
+        <div className={`${nodeStyles}`} style={{ zIndex: 10, height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
             
             {initialCheck ? (
                 <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
