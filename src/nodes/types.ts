@@ -21,6 +21,7 @@ export type ImageNodeData = ArtifactorNodeData & {
 export type ImageWithLookupNodeData = ArtifactorNodeData & {
   prompt?: string;
   artworks?: Artwork[];
+  provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
 };
 
@@ -36,7 +37,10 @@ export type SynthesizerNodeData = ArtifactorNodeData & {
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {
   words: Array<Word | Keyword>;
+  wordsAsString: string;
+  provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
 };
+
 
 /** Generalized AppNode Type */
 export type AppNode<T extends ArtifactorNodeData = ArtifactorNodeData> = Node<T>;

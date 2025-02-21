@@ -5,7 +5,7 @@ import type { ImageWithLookupNode, Artwork } from "./types";
 import { usePaletteContext } from "../context/PaletteContext";
 import { useDnD } from "../context/DnDContext";
 import { motion } from "framer-motion";
-import { Search, Bookmark, Eye, EyeClosed} from 'lucide-react';
+import { Search, Bookmark, Paperclip} from 'lucide-react'; // Eye, EyeClosed
 import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
@@ -115,31 +115,34 @@ const FolderPanel: React.FC<{ similarArtworks: Artwork[]; width: number; height:
                             </div>
                             
                             {currentArtwork ? (
-                                <div className="p-3 pr-5 ml-0 h-[85%] overflow-y-scroll">
+                                <div className="p-3 pr-5 ml-0 h-[85%] overflow-y-scroll flex flex-col items-center">
                                     <h2 
                                     draggable
                                     onDragStart={(event) => onDragStart(event, "text", currentArtwork.title)}
-                                    className="nodrag rounded-md p-1 hover:bg-yellow-300 text-xs font-medium text-gray-900 italic font-bold">
+                                    className="artwork-title nodrag rounded-md p-1 hover:bg-yellow-300 text-md font-medium text-gray-900 italic font-bold text-center">
                                         {currentArtwork.title} ({currentArtwork.date})
                                     </h2>
+
                                     <img
                                         draggable
                                         onDragStart={(event) => onDragStart(event, "image", currentArtwork.image)}
-                                        className="nodrag rounded-md p-1 hover:bg-yellow-300"
+                                        className="artwork-image nodrag rounded-md p-1 hover:bg-yellow-300"
                                         src={currentArtwork.image}
                                         alt={`${currentArtwork.title} by ${currentArtwork.artist}`}
+                                        style={{ maxHeight: '80%', width: '80%', objectFit: 'cover' }}
                                     />
+
                                     <p 
                                     draggable
                                     onDragStart={(event) => onDragStart(event, "text", currentArtwork.artist)}
-                                    className="nodrag hover:bg-yellow-300 text-xs mt-2">{currentArtwork.artist}</p>
+                                    className="nodrag hover:bg-yellow-300 text-xs mt-2 text-center">{currentArtwork.artist}</p>
                                     {/* {currentArtwork.keywords.map((keyword) => (
                                         <p key={keyword.id} className="text-xs">{`${keyword.type}: ${keyword.value}`}</p>
                                     ))} */}
                                     <p 
                                     draggable
                                     onDragStart={(event) => onDragStart(event, "text", currentArtwork.description)}
-                                    className="nodrag hover:bg-yellow-300 text-xs mt-2">{currentArtwork.description}</p>
+                                    className="nodrag hover:bg-yellow-300 text-xs mt-2 text-center">{currentArtwork.description}</p>
                                 </div>
                             ) : (
                                 <div className="p-3 ml-0 h-full overflow-y-auto">
@@ -257,10 +260,10 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
         setShowFolder(!showFolder);
     };
 
-    const [showControls, setShowControls] = useState(true);
-    const hideControls = () => {
-        setShowControls(!showControls);
-    };
+    const [showControls, setShowControls] = useState(true); 
+    // const hideControls = () => {  //just set show controls using selected/not selected
+    //     setShowControls(!showControls);
+    // };
 
     //--- similar artworks data --- //
 
@@ -364,7 +367,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
             <motion.div
             initial={{ left: '-6px', transform: `scaleY(0.5)` }}
             animate={{ 
-                left: showFolder ? `-${width*1.5 - 10}px` : '-6px',
+                left: showFolder ? `-${width*2 - 10}px` : '-6px',
                 transform: `scaleY(1)`,
                 opacity: showControls ? 1 : 0
             }}
@@ -372,7 +375,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
             className="absolute"
             >
             
-            <FolderPanel similarArtworks={similarArtworks} width={width*1.5} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} />
+            <FolderPanel similarArtworks={similarArtworks} width={width*2} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} />
             </motion.div>
             {/* end folder panel */}
 
@@ -380,7 +383,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
             <NodeToolbar isVisible={selected} position={Position.Top}>
                 <div className="flex items-center justify-center space-x-2">
                 <button
-                    className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+                    className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
                     type="button"
                     onClick={() => addClippedNode(
                     {
@@ -393,9 +396,9 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
                     aria-label="Save to Palette"
                     style={{  }}
                 >
-                    📎
+                 < Paperclip size={16}/>
                 </button>
-                <button
+                {/* <button
                     className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
                     type="button"
                     onClick={() => hideControls()}
@@ -403,7 +406,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
                     style={{height:'30px' }}
                 >
                     {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
-                </button>
+                </button> */}
                 </div>
             </NodeToolbar>
             <div

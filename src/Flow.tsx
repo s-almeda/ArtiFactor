@@ -18,10 +18,11 @@ import {
 
 import "@xyflow/react/dist/style.css";
 import type { AppNode, TextNodeData, SynthesizerNodeData, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
+import { stringToWords, wordsToString } from './utils/utilityFunctions';
 import { initialNodes, nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
-import { calcNearbyPosition } from './utils/calcNearbyPosition';
+import { calcNearbyPosition } from './utils/utilityFunctions';
 //import { addTextNode, addImageNode, addSynthesizer } from './utils/nodeAdders';
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
@@ -38,6 +39,10 @@ const Flow = () => {
   const [draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition] = useDnD();
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
+
+  const [synthesisMode, setSynthesisMode] = useState(false);
+
+  const [nodeCount, setNodeCount] = useState(nodes.length || 0);
 
 
   // for TitleBar
@@ -83,17 +88,15 @@ const Flow = () => {
     (event: MouseEvent, node: Node) => {
       if (event.altKey) { 
         if (node.data.content) {
-          generateNode(node.data.content as string, { x: node.position.x + 100, y: node.position.y + 100 });
-        }
-        else if (Array.isArray(node.data.words)) {
-          const content =  node.data.words.map((word: { value: string }) => word.value).join(' ');
-          generateNode(content, { x: node.position.x + 100, y: node.position.y + 100 });
-        }
-      console.log("you option clicked this node:", node.data);
+          generateNode(node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
+        } else if (Array.isArray(node.data.words)) {
+          const content = wordsToString(node.data.words);
+          generateNode(content, calcNearbyPosition(getNodesBounds([node])));
+        }  console.log("you option clicked this node:", node.data);
       }
     },
-    []
-    );
+  []
+);
 
 
 
@@ -119,13 +122,15 @@ const Flow = () => {
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
-  const addTextWithKeywordsNode = (content: string = "your text here", position?: { x: number; y: number }) => {
+  const addTextWithKeywordsNode = (content: string = "your text here", provenance: "user" | "history" | "ai" = "user", position?: { x: number; y: number }) => {
     const words = content.split(' ').map((word) => ({
       value: word,
     }));
 
     const data: TextWithKeywordsNodeData = {
       words,
+      provenance,
+      wordsAsString: wordsToString(words),
     };  const newTextWithKeywordsNode: AppNode = {
       id: `text-${Date.now()}`,
       type: "textWithKeywords",
@@ -170,7 +175,7 @@ const Flow = () => {
     };
     
     const newNode: AppNode = {
-      id: `image-${nodes.length + 1}`,
+      id: `image-${Date.now()}`,
       type: "imagewithlookup",
       position: position,
       zIndex: 1000,
@@ -184,31 +189,29 @@ const Flow = () => {
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
 
-
-
-  const addSynthesizer = (position ?:{ x:number, y:number}) => {
-    const newSynthesizerNode: AppNode = {
-      id: `synthesizer-${nodes.length + 1}`,
-      type: "synthesizer",
-      position: position ?? {
-      x: Math.random() * 250,
-      y: Math.random() * 250,
-      },
-      data: {
-      content: "",
-      mode: "ready",
-      yOffset: 0,
-      xOffset: 0,
-      updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
-        console.log(`new node passed with content: ${content} and mode: ${mode}`);
-        return true;
-      }
-      } as SynthesizerNodeData,
-    };
+  // const addSynthesizer = (position ?:{ x:number, y:number}) => {
+  //   const newSynthesizerNode: AppNode = {
+  //     id: `synthesizer-${nodes.length + 1}`,
+  //     type: "synthesizer",
+  //     position: position ?? {
+  //     x: Math.random() * 250,
+  //     y: Math.random() * 250,
+  //     },
+  //     data: {
+  //     content: "",
+  //     mode: "ready",
+  //     yOffset: 0,
+  //     xOffset: 0,
+  //     updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
+  //       console.log(`new node passed with content: ${content} and mode: ${mode}`);
+  //       return true;
+  //     }
+  //     } as SynthesizerNodeData,
+  //   };
     
 
-    setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
-  };
+  //   setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
+  // };
 
 
 
@@ -242,7 +245,8 @@ const Flow = () => {
         addImageWithLookupNode(content, position, prompt);
 
       } else if ("content" in draggableData) {
-        addTextWithKeywordsNode(draggableData["content"] as string, position);
+       const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
+        addTextWithKeywordsNode(draggableData["content"] as string, provenance, position);
       }
       
     },
@@ -344,7 +348,7 @@ const Flow = () => {
               // Generate a new node with the inputNodeContent
               generateNode(inputNodeContent, calcNearbyPosition(getNodesBounds([node, draggedNode])));  // Set synthesizer node to the appropriate mode
               // Move the draggedNode out of the way, back to where it was before the drag 
-              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode]), dragStartPosition));
+              updatePosition(draggedNode.id, calcNearbyPosition(getNodesBounds([draggedNode])));
               return { 
               ...node, 
               data: { ...node.data, mode, inputNodeContent }, 
@@ -424,14 +428,14 @@ const Flow = () => {
       // let's generate a node... 
 
       try {
-        if (isValidImage){// the user has sent an image for text generation
+        if (isValidImage){// the user has sent an image for tfext generation
           //console.log(`Describing this image: ${prompt}`);
           const response = await axios.post(`${backend}/api/generate-text`, {
             imageUrl: prompt, // Send the imageUrl as part of the request body
           });
 
           if (response.status === 200) {
-            addTextWithKeywordsNode(response.data.text, position);
+            addTextWithKeywordsNode(response.data.text, "ai", position);
             deleteNodeById(loadingNodeId);
           } // response error
           else {
@@ -503,7 +507,7 @@ return(
         </ReactFlow>
       </div>  
 
-      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={addSynthesizer} />
+      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
 
 
 

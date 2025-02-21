@@ -2,9 +2,10 @@ import { useAppContext } from '../context/AppContext';
 import type { NodeProps} from "@xyflow/react";
 import {NodeToolbar, Position} from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
+import { stringToWords, wordsToString } from '../utils/utilityFunctions';
 import React, { useRef, useState, useEffect } from 'react';
 import { useDnD } from '../context/DnDContext';
-import { Bookmark, Search, Edit2, Eye, EyeClosed } from 'lucide-react';
+import { Bookmark, Search, Edit2, Paperclip } from 'lucide-react';// Eye, EyeClosed
 import {motion} from 'framer-motion';
 import { usePaletteContext } from '../context/PaletteContext';
 import NavigationButtons from '../utils/commonComponents';
@@ -54,7 +55,7 @@ export const RelatedKeywords: React.FC<{ relatedKeywords: string[] }> = ({ relat
   ) => {
     event.dataTransfer.effectAllowed = "move";
     setDraggableType("text");
-    setDraggableData({ content: content });
+    setDraggableData({ content: content, provenance: "history" });
   };
 
   return (
@@ -183,11 +184,13 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
-    content: string
+    type: string,
+    content: string,
+    prompt?: string
   ) => {
     event.dataTransfer.effectAllowed = "move";
-    setDraggableType("text");
-    setDraggableData({ content: content });
+    setDraggableType(type);
+    setDraggableData({ content: content, prompt: prompt, provenance: "history" }); //everything in the folder wil  be human made
   };
 
 
@@ -277,11 +280,11 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
                   {currentText && (
                     <div className="nodrag nowheel text-gray-600 overflow-y-auto">
-                      <p draggable onDragStart={(event) => onDragStart(event, currentText.value)} className="text-md font-bold">{currentText.value}</p>
-                      <p draggable onDragStart={(event) => onDragStart(event, currentText.type)} className="italic text-xs">{currentText.type}</p>
+                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.value)} className="text-md font-bold">{currentText.value}</p>
+                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.type)} className="italic text-xs">{currentText.type}</p>
                       <p 
                         draggable 
-                        onDragStart={(event) => onDragStart(event, currentText.description)}
+                        onDragStart={(event) => onDragStart(event, "text", currentText.description, "human")}
                         className="text-sm/5 mt-2 p-0.5 rounded-sm hover:bg-amber-200"
                       >
                         {currentText.description}
@@ -330,12 +333,12 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   const isAIGenerated = false; //TODO implement: data.isAIGenerated || false;
 
   // --- HELPER functions for the text with keywords node --- //
-  const stringToWords = (str: string): Word[] => {
-    return str.split(' ').map((word) => ({ value: word } as Word));
-  };
-  const wordsToString = (words: Word[]): string => {
-    return words.map((word) => word.value).join(' ');
-  }
+  // const stringToWords = (str: string): Word[] => {
+  //   return str.split(' ').map((word) => ({ value: word } as Word));
+  // };
+  // const wordsToString = (words: Word[]): string => {
+  //   return words.map((word) => word.value).join(' ');
+  // }
 
   const checkForKeywords = async (queryWords: Word[]): Promise<(Word | Keyword)[]> => {
     console.log('Checking for keywords in:', words);
@@ -427,9 +430,9 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   };
 
   const [showControls, setShowControls] = useState(true);
-  const hideControls = () => {
-      setShowControls(!showControls);
-  };
+  // const hideControls = () => {
+  //     setShowControls(!showControls);
+  // };
 
 
   // ---------- EFFECTS ---------- //
@@ -547,7 +550,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           <div className="flex items-center justify-center space-x-2">
                       
             <button
-            className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+            className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
             type="button"
             onClick={() => addClippedNode(
               {
@@ -559,9 +562,9 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             aria-label="Save to Palette"
             style={{ marginRight: '0px' }}
             >
-            📎
+            < Paperclip size={16}/>
             </button>
-            <button
+            {/* <button
               className="border-5 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
               type="button"
               onClick={() => hideControls()}
@@ -569,7 +572,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
               style={{height:'100%' }}
           >
               {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
-            </button>
+            </button> */}
           </div>
         </NodeToolbar>
 
