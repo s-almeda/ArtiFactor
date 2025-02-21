@@ -59,7 +59,7 @@ export const RelatedKeywords: React.FC<{ relatedKeywords: string[], isAIGenerate
 
   return (
     <div className="nodrag p-2 flex flex-wrap gap-0.5">
-      <strong className="text-gray-900 text-sm">see also:</strong>
+      <strong className="text-gray-900 text-sm italic mr-1">see also: </strong>
       {relatedKeywords.map((relatedKeyword, index) => (
         <div
           key={index}
@@ -87,11 +87,13 @@ export const KeywordDescription: React.FC<{
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
-    content: string
+    type: string,
+    content: string,
+    prompt?: string
   ) => {
     event.dataTransfer.effectAllowed = "move";
-    setDraggableType("text");
-    setDraggableData({ content: content });
+    setDraggableType(type);
+    setDraggableData({ content: content, prompt: prompt, provenance: "history" });
   };
 
   if (!keyword) return null;
@@ -119,13 +121,17 @@ export const KeywordDescription: React.FC<{
           type: "spring", 
           bounce: 0.2 
         }}
-        className={`nowheel overflow-scroll nodrag border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f2e7ce]'}`}
+        // className={`nowheel overflow-scroll nodrag border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f2e7ce]'}`}
+        className={`nodrag nowheel overflow-scroll border rounded-md shadow-md p-0 h-full ${isAIGenerated ? 'bg-blue-50' : 'bg-[#f4efe3] border-[#998056]'}`}
+        
       >
         {/* ----- TITLE of keyword ----- */}
         <div className="flex flex-col justify-between">
           {keyword.databaseValue && (
             <div 
-              className="text-sm font-bold text-gray-800 mb-2 cursor-pointer" 
+              draggable
+              onDragStart={(event) => onDragStart(event, "text", keyword.description)}
+              className={`nodrag text-sm font-bold text-gray-800 mb-2 cursor-pointer ${isAIGenerated ? 'hover:bg-blue-300' : 'hover:bg-[#D1BC97]'}`}
               style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -141,8 +147,8 @@ export const KeywordDescription: React.FC<{
           {keyword.description && (
             <div
               draggable
-              onDragStart={(event) => onDragStart(event, keyword.description)}
-              className="p-3 flex flex-col gap-3 overflow-y-auto text-xs flex-grow"
+              onDragStart={(event) => onDragStart(event, "text", keyword.description)}
+              className={`p-1 m-2 flex flex-col gap-3 overflow-y-auto text-xs flex-grow ${isAIGenerated ? 'hover:bg-blue-300' : 'hover:bg-[#dbcdb4]'}`}
             >
               {keyword.description}
             </div>
@@ -174,6 +180,8 @@ export const KeywordDescription: React.FC<{
   </div>
   );
 };
+
+
 // -- FOLDER PANEL COMPONENT (the panel that opens on the left side) --- //
 const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean; toggleFolder: () => void; similarTexts: Keyword[]; isAIGenerated: boolean; }> = ({ width, height, showFolder, toggleFolder, similarTexts, isAIGenerated=false }) => {
 
@@ -209,7 +217,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
       <div
         className={`absolute left-0 top-2 transform -translate-x-7 -translate-y-2 
                     w-12 h-20 p-1
-                    ${isAIGenerated ? 'bg-blue-200 hover:bg-blue-300' : 'bg-[#dbcdb4] hover:bg-yellow-300'}
+                    ${isAIGenerated ? 'bg-blue-200 hover:bg-blue-300' : 'bg-[#dbcdb4] hover:bg-[#b39e79]'}
                     flex items-center justify-left rounded-l-md
                     cursor-pointer transition-colors duration-200 
                     ${showFolder ? (isAIGenerated ? 'bg-blue-200' : 'bg-[#dbcdb4]') : ''}`}
@@ -227,7 +235,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
         className="absolute"
       >
         <div
-        className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : (showFolder ? 'bg-[#f2e7ce]' : 'bg-[#dbcdb4]')} border border-gray-300 rounded-md shadow-md`}
+        className={`absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : (showFolder ? 'bg-[#f2e7ce]' : 'bg-[#dbcdb4]')} border border-[#998056]rounded-md shadow-md`}
         style={{ height: `${height * 2}px`, width: `${width}px` }}
         >
             {similarTexts.length > 0 ? (
@@ -238,27 +246,31 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
                   <NavigationButtons currentIndex={currentIndex} totalItems={similarTexts.length} handlePrev={handlePrev} handleNext={handleNext} />
 
-                  {currentText && (
+                    {currentText && (
                     <div className="nodrag nowheel text-gray-600 overflow-y-auto">
-                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.value)} className="text-md font-bold">{currentText.value}</p>
-                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.type)} className="italic text-xs">{currentText.type}</p>
+
+                      {/* TITLE */}
+                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.value)} className={`text-md font-bold ${isAIGenerated ? 'hover:bg-blue-200' : 'hover:bg-[#dbcdb4]'}`}>{currentText.value}</p>
+                      <p draggable onDragStart={(event) => onDragStart(event, "text", currentText.type)} className={`italic text-xs ${isAIGenerated ? 'hover:bg-blue-200' : 'hover:bg-[#dbcdb4]'}`}>{currentText.type}</p>
+                     
+                     {/* DESCRIPTION */}
                       <p 
-                        draggable 
-                        onDragStart={(event) => onDragStart(event, "text", currentText.description, "human")}
-                        className={`text-sm/5 mt-2 p-0.5 rounded-sm ${isAIGenerated ? 'hover:bg-blue-200' : 'hover:bg-[#dbcdb4]'}`}
+                      draggable 
+                      onDragStart={(event) => onDragStart(event, "text", currentText.description, "human")}
+                      className={`text-sm/5 mt-2 p-0.5 rounded-sm ${isAIGenerated ? 'hover:bg-blue-200' : 'hover:bg-[#dbcdb4]'}`}
                       >
-                        {currentText.description}
+                      {currentText.description}
                       </p>
 
                       {/* RELATED KEYWORDS */}
                       {currentText.relatedKeywordStrings && currentText.relatedKeywordStrings.length > 0 && (
-                        <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} isAIGenerated={isAIGenerated} />
+                      <RelatedKeywords relatedKeywords={currentText.relatedKeywordStrings} isAIGenerated={isAIGenerated} />
                       )}
                     </div>
-                  )}
-                </div>
-              </>
-            ) : (
+                    )}
+                  </div>
+                  </>
+                ) : (
                 <div className="p-3 ml-0 h-full overflow-y-auto flex flex-col items-center justify-center">
                 <h2 className="text-xs font-medium text-gray-900 italic font-bold text-center mb-5">...We haven't found anything relevant to this prompt in our database yet...</h2>
                 <div className="loader"></div>

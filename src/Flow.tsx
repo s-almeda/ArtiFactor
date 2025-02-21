@@ -129,7 +129,9 @@ const Flow = () => {
       words,
       provenance,
       content: wordsToString(words),
-    };  const newTextWithKeywordsNode: AppNode = {
+    };  
+    
+    const newTextWithKeywordsNode: AppNode = {
       id: `text-${Date.now()}`,
       type: "text",
       zIndex: 1000,
@@ -146,9 +148,10 @@ const Flow = () => {
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string) => {
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default alligator image";
+    provenance = provenance ?? "user";
     console.log("adding an image to the canvas: ", content, prompt);
     position = position ?? { 
       x: Math.random() * 250,
@@ -163,6 +166,7 @@ const Flow = () => {
       data: {
         content: content,
         prompt: prompt,
+        provenance: provenance,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
     };
@@ -197,7 +201,8 @@ const Flow = () => {
       if (draggableType === "image") {
         const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";
         const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
-        addImageWithLookupNode(content, position, prompt);
+        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
+        addImageWithLookupNode(content, position, prompt, provenance);
 
       } else if ("content" in draggableData) {
        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
@@ -390,7 +395,7 @@ const Flow = () => {
         
             if (response.status === 200) {
 
-              addImageWithLookupNode(response.data.imageUrl, position, prompt);
+              addImageWithLookupNode(response.data.imageUrl, position, prompt, "ai");
               deleteNodeById(loadingNodeId);
 
             } // response error
