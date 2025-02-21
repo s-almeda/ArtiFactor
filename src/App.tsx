@@ -12,6 +12,7 @@ import { CanvasProvider } from "./context/CanvasContext";
 import { AppProvider } from "./context/AppContext"; //useAppContext
 
 import TitleBar from "./TitleBar";
+import { NodeProvider } from "./context/NodeContext";
 
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
@@ -100,6 +101,7 @@ function AppContent() {
   };
 
   return (
+    <NodeProvider>
     <CanvasProvider>
       <PaletteProvider>
         <div className="relative h-screen w-screen overflow-hidden">
@@ -168,6 +170,7 @@ function AppContent() {
         </div>
       </PaletteProvider>
     </CanvasProvider>
+    </NodeProvider>
   );
 }
 

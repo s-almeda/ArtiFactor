@@ -9,7 +9,7 @@ import {
   //MiniMap,
   //ReactFlowJsonObject,
   Node,
-  useNodesState,
+  // useNodesState,
   useReactFlow,
   applyNodeChanges,
 } from "@xyflow/react";
@@ -19,11 +19,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { AppNode, LoadingNode, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
 import {wordsToString } from './utils/utilityFunctions';
-import { initialNodes, nodeTypes } from "./nodes";
+import { nodeTypes } from "./nodes";
 import useClipboard from "./hooks/useClipboard";
 import { useDnD } from './context/DnDContext';
 import { calcNearbyPosition } from './utils/utilityFunctions';
-
+import { useNodeContext } from "./context/NodeContext";
 import { useAppContext } from './context/AppContext';
 import { useCanvasContext } from './context/CanvasContext';
 import Toolbar from "./Toolbar";
@@ -32,9 +32,8 @@ import Toolbar from "./Toolbar";
 
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  //const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const [ nodes, setNodes] = useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { nodes, setNodes } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
 
@@ -42,13 +41,12 @@ const Flow = () => {
 
   const [synthesisMode, setSynthesisMode] = useState(false);
 
-  //const [nodeCount, setNodeCount] = useState(nodes.length || 0);
 
 
   // for TitleBar
   const [_, setLastSaved] = useState("");
   useEffect(() => {
-    console.log(synthesisMode);
+
     const updateLastSaved = () => {
       const now = new Date();
       setLastSaved(now.toLocaleString());
@@ -100,7 +98,6 @@ const Flow = () => {
 );
 
 
-
   /* ---------------------------------------------------- */
   // TODO - move this to a KeyboardShortcut Provider Context situation so we cna also track Undos/Redos
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
@@ -131,10 +128,12 @@ const Flow = () => {
     const data: TextWithKeywordsNodeData = {
       words,
       provenance,
-      wordsAsString: wordsToString(words),
-    };  const newTextWithKeywordsNode: AppNode = {
+      content: wordsToString(words),
+    };  
+    
+    const newTextWithKeywordsNode: AppNode = {
       id: `text-${Date.now()}`,
-      type: "textWithKeywords",
+      type: "text",
       zIndex: 1000,
       position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
         x: Math.random() * 250,
@@ -149,9 +148,10 @@ const Flow = () => {
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string) => {
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default alligator image";
+    provenance = provenance ?? "user";
     console.log("adding an image to the canvas: ", content, prompt);
     position = position ?? { 
       x: Math.random() * 250,
@@ -160,63 +160,19 @@ const Flow = () => {
     
     const newNode: AppNode = {
       id: `image-${Date.now()}`,
-      type: "imagewithlookup",
+      type: "image",
       position: position,
       zIndex: 1000,
       data: {
         content: content,
         prompt: prompt,
+        provenance: provenance,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
     };
 
     setNodes((prevNodes) => [...prevNodes, newNode]);
   };
-
-    // const addTextNode = (content: string = "your text here", position?: { x: number; y: number }) => {
-  //   const newTextNode: AppNode = {
-  //     id: `text-${Date.now()}`,
-  //     type: "text",
-  //     position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
-  //     x: Math.random() * 250,
-  //     y: Math.random() * 250,
-  //     },
-  //     data: {
-  //     //label: `Text Node ${nodes.length + 1}`,
-  //     content: content,
-  //     loading: false,
-  //     combinable: false
-  //     } as TextNodeData,
-  //   };
-
-  //   setNodes((prevNodes) => [...prevNodes, newTextNode]);
-  // };
-
-  // const addSynthesizer = (position ?:{ x:number, y:number}) => {
-  //   const newSynthesizerNode: AppNode = {
-  //     id: `synthesizer-${nodes.length + 1}`,
-  //     type: "synthesizer",
-  //     position: position ?? {
-  //     x: Math.random() * 250,
-  //     y: Math.random() * 250,
-  //     },
-  //     data: {
-  //     content: "",
-  //     mode: "ready",
-  //     yOffset: 0,
-  //     xOffset: 0,
-  //     updateNode: (content: string, mode: "dragging" | "ready" | "generating" | "check") => {
-  //       console.log(`new node passed with content: ${content} and mode: ${mode}`);
-  //       return true;
-  //     }
-  //     } as SynthesizerNodeData,
-  //   };
-    
-
-  //   setNodes((prevNodes) => [...prevNodes, newSynthesizerNode]);
-  // };
-
-
 
 
   /*------------ functions to handle changes to the Flow canvas ---------------*/
@@ -245,7 +201,8 @@ const Flow = () => {
       if (draggableType === "image") {
         const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";
         const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
-        addImageWithLookupNode(content, position, prompt);
+        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
+        addImageWithLookupNode(content, position, prompt, provenance);
 
       } else if ("content" in draggableData) {
        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
@@ -315,22 +272,6 @@ const Flow = () => {
 
     setNodes((currentNodes) =>
       currentNodes.map((node) => {
-        /**** 2 text Nodes have been dragged together! ****/
-        // if (node.type === "text" && draggedNode.type === "text" && intersections.includes(node.id)) {
-        //   const draggedTextNode = draggedNode as Node<TextNodeData>;
-        //   const textNode = node as Node<TextNodeData>;
-
-        //   // Combine text and create a new text node
-        //   addTextNode(textNode.data.content + ", " + draggedTextNode.data.content, { 
-        //         x: textNode.position.x + (Math.random() * 10 - 5), 
-        //         y: textNode.position.y - 10,
-        //         });
-
-        //   deleteNodeById(draggedNode.id);
-        //   deleteNodeById(node.id);
-          
-        //   return { ...node, data: { ...node.data, combinable: true } };
-        // } 
         
         /* --- If a node has been dragged on top of a synthesizer --- */
         if (node.type === "synthesizer" && intersections.includes(node.id)) {
@@ -416,7 +357,7 @@ const Flow = () => {
       const loadingNodeId = `loading-${Date.now()}`;
       const loadingNode: LoadingNode = {
         id: loadingNodeId,
-        type: "text",
+        type: "default",
         position,
         zIndex: 1000,
         data: { content: "loading "},
@@ -454,7 +395,7 @@ const Flow = () => {
         
             if (response.status === 200) {
 
-              addImageWithLookupNode(response.data.imageUrl, position, prompt);
+              addImageWithLookupNode(response.data.imageUrl, position, prompt, "ai");
               deleteNodeById(loadingNodeId);
 
             } // response error
@@ -521,6 +462,7 @@ return(
           </button>
           {showDebugInfo && (
            <div> //debug info for debugging user state
+            {synthesisMode}
           <p><strong>User ID:</strong> {userID}</p>
           <p><strong>Canvas Name:</strong> {canvasName}</p>
           <p><strong>Canvas ID:</strong> {canvasID}</p>
