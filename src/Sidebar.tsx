@@ -6,7 +6,7 @@ import { useNodeContext } from "./context/NodeContext";
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { canvasID, pullCanvas, saveCanvas, deleteCanvas } = useCanvasContext(); // canvasName
+  const { canvasID, saveCanvas, deleteCanvas } = useCanvasContext(); // canvasName
   const { backend, handleUserLogin, userID, admins } = useAppContext();
   const { nodesToObject } = useNodeContext();
 
@@ -54,7 +54,8 @@ const Sidebar = ({ onClose }: {
   const handleUserLogout = () => {
     const confirmLogout = window.confirm("Are you sure you want to log out? (You may lose unsaved changes)");
     if (confirmLogout) {
-      handleUserLogin("default", "");
+      window.location.href = "/";
+      handleUserLogin("", "");
     }
   };
   
@@ -162,10 +163,13 @@ const Sidebar = ({ onClose }: {
               canvasList.map((canvas) => (
               <li key={canvas.id} className="mt-1 flex items-center">
                 <button 
-                onClick={() => pullCanvas(canvas.id)} // 🔹 Clicking on a canvas button loads it! 
-                className="w-full text-left bg-gray-700 hover:bg-gray-600 p-2 rounded"
+                  onClick={() => {
+                  const canvasIDNumber = canvas.id.split('-')[1];
+                  window.location.href = `/?user=${userID}&canvas=${canvasIDNumber}`;
+                  }}
+                  className="w-full text-left bg-gray-700 hover:bg-gray-600 p-2 rounded"
                 >
-                {canvas.name}
+                  {canvas.name}
                 </button>
                 {editingCanvasList && (
                 <button 
@@ -191,7 +195,6 @@ const Sidebar = ({ onClose }: {
 
 
       
-      {/* Admin Controls  TODO: make this its own component */}
       {userID && admins.includes(userID) && (
         <div className="mt-4 p-4 bg-black rounded">
           <h2 className="text-lg font-bold mb-2">Admin Controls</h2>
