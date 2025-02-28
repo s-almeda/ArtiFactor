@@ -25,7 +25,7 @@ const PasswordEntry: React.FC<{ onSubmit: (password: string) => void }> = ({ onS
 };
 
 const Admin: React.FC = () => {
-    const { backend } = useAppContext();
+    const { backend, addUser } = useAppContext();
     const [isAuthenticated, setIsAuthenticated] = useState(true); //TODO, turn the password back on by setting this to false 
     const [data, setData] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
@@ -35,6 +35,9 @@ const Admin: React.FC = () => {
     const [canvasId, setCanvasId] = useState<string>('');
     const [timestamp, setTimestamp] = useState<string>('');
     const [rawData, setRawData] = useState<string>('');
+    const [enteredUserID, setEnteredUserID] = useState<string>('');
+    const [enteredPassword, setEnteredPassword] = useState<string>('');
+    const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
 
     const handlePasswordSubmit = (password: string) => {
         if (password === 'miku') {
@@ -136,43 +139,82 @@ const Admin: React.FC = () => {
     }, []);
 
     return (
-        <div className='flex mt-20'>
+        <div className='flex flex-col mt-20 overflow-scroll px-10' style={{ height: 'calc(100vh - 100px)' }}>
             {isAuthenticated ? (
-                <div className='w-full'>
-                    <div className='mb-4'>
-                        <label htmlFor='user-select'>Select User: </label>
-                        <select id='user-select' value={selectedUser} onChange={handleUserChange}>
-                            <option value=''>Select a user</option>
-                            {users.map(user => (
-                                <option key={user.id} value={user.id}>{user.id}</option>
-                            ))}
-                            <option value='browserdata'>Browser Data</option>
-                        </select>
-                    </div>
-                    {selectedUser && (
-                        <div className='mb-4'>
-                            <label htmlFor='canvas-select'>Select Canvas: </label>
-                            <select id='canvas-select' value={selectedCanvas} onChange={handleCanvasChange}>
-                                <option value=''>Select a canvas</option>
-                                {canvases.map(canvas => (
-                                    <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
+                <>
+                    <div className='flex flex-wrap bg-stone-200 p-4'>
+                        <div className='mr-4 mb-4'>
+                            <h3 onClick={() => setIsAddUserOpen(!isAddUserOpen)} className="cursor-pointer">
+                                {isAddUserOpen ? '▼' : '▶'} Add new user
+                            </h3>
+                            {isAddUserOpen && (
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter new user ID"
+                                        value={enteredUserID}
+                                        onChange={(e) => setEnteredUserID(e.target.value)}
+                                        className="w-full p-2 border rounded text-black mb-2"
+                                    />
+                                    <input
+                                        type="password"
+                                        placeholder="Enter new user password"
+                                        value={enteredPassword}
+                                        onChange={(e) => setEnteredPassword(e.target.value)}
+                                        className="w-full p-2 border rounded text-black mb-2"
+                                    />
+                                    <button 
+                                        onClick={() => addUser(enteredUserID, enteredPassword)} 
+                                        className="w-full bg-stone-500 text-white p-2 rounded"
+                                    >
+                                        Add User
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className='mr-4 mb-4 display-block w-full p-3 relative'>
+                        <button 
+                                        onClick={() => console.log(localStorage)} 
+                                        className="w-50% bg-brown-500 text-white p-2 rounded mt-2"
+                                    >
+                                        Print Local Storage to console
+                                    </button>
+                            <br></br>
+                            <label htmlFor='user-select'>Select User: </label>
+                            <select id='user-select' value={selectedUser} onChange={handleUserChange} className="w-full p-2 border rounded text-black mb-2">
+                                <option value=''>Select a user</option>
+                                {users.map(user => (
+                                    <option key={user.id} value={user.id}>{user.id}</option>
                                 ))}
+                                <option value='browserdata'>Browser Data</option>
                             </select>
                         </div>
-                    )}
+                        {selectedUser && (
+                            <div className='mr-4 mb-4'>
+                                <label htmlFor='canvas-select'>Select Canvas: </label>
+                                <select id='canvas-select' value={selectedCanvas} onChange={handleCanvasChange} className="w-full p-2 border rounded text-black mb-2">
+                                    <option value=''>Select a canvas</option>
+                                    {canvases.map(canvas => (
+                                        <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
                     {selectedCanvas && (
-                        <div>
+                        <div className='bg-brown-200 p-4'>
                             <div className='mb-4'>
                                 <p>Canvas ID: {canvasId}</p>
                                 <p>Timestamp: {timestamp}</p>
                                 <p className="font-bold">Raw canvas data dump from server: </p>
-                                <div className='overflow-auto bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
-                                <pre>{rawData}</pre>
-                            </div>
+                                <div className='overflow-scroll bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
+                                    <pre>{rawData}</pre>
+                                </div>
                                 <button onClick={handleDeleteCanvas} className='bg-red-500 text-white px-4 py-2'>Delete Canvas</button>
                             </div>
-                            <div className='overflow-auto' style={{ height: 'calc(100vh - 100px)' }}>
-                            <p className="font-bold">node data from server, as a table: </p>
+                            <div className='overflow-scroll' style={{ height: 'calc(100vh - 100px)' }}>
+                                <p className="font-bold">Node data from server, as a table: </p>
                                 <table className='min-w-full'>
                                     <thead>
                                         <tr>
@@ -192,15 +234,13 @@ const Admin: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
-
                         </div>
                     )}
-                </div>
+                </>
             ) : (
                 <PasswordEntry onSubmit={handlePasswordSubmit} />
             )}
         </div>
     );
 };
-
 export default Admin;

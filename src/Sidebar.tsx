@@ -7,11 +7,11 @@ const Sidebar = ({ onClose }: {
   onClose: () => void; 
 }) => {
   const { canvasID, pullCanvas, saveCanvas, deleteCanvas } = useCanvasContext(); // canvasName
-  const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
+  const { backend, handleUserLogin, userID, admins } = useAppContext();
   const { nodesToObject } = useNodeContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");
-  const [enteredPassword, setEnteredPassword] = useState("");
+  // const [enteredPassword, setEnteredPassword] = useState("");
 
   const [error, setError] = useState("");
   const [canvasList, setCanvasList] = useState<{ id: string; name: string }[]>([]); // Initialize as an empty array
@@ -196,33 +196,13 @@ const Sidebar = ({ onClose }: {
         <div className="mt-4 p-4 bg-black rounded">
           <h2 className="text-lg font-bold mb-2">Admin Controls</h2>
 
-          <h3>Add new user</h3>
-            <input
-            type="text"
-            placeholder="Enter new user ID"
-            value={enteredUserID}
-            onChange={(e) => setEnteredUserID(e.target.value)}
-            className="w-full p-2 border rounded text-black mb-2"
-            />
-            <input
-            type="password"
-            placeholder="Enter new user password"
-            value={enteredPassword}
-            onChange={(e) => setEnteredPassword(e.target.value)}
-            className="w-full p-2 border rounded text-black mb-2"
-            />
-            <button 
-            onClick={() => addUser(enteredUserID, enteredPassword)} 
-            className="w-full bg-green-500 text-white p-2 rounded"
-            >
-            Add User
-            </button>
-            <button 
-            onClick={() => console.log(localStorage)} 
+          <button 
+            onClick={() => window.location.href = "/admin"} 
             className="w-full bg-blue-500 text-white p-2 rounded mt-2"
-            >
-            Print Local Storage to console
-            </button>
+          >
+            Go to Admin Page
+          </button>
+
         </div>
       )}
     </div>
