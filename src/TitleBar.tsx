@@ -14,9 +14,21 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
   const [newName, setNewName] = useState(canvasName);
   const [displayDate, setDisplayDate] = useState("Never");
 
-  useEffect(() => {
+  const handleBlur = async () => {
+    setIsEditing(false);
+    if (newName.trim() !== "" && newName !== canvasName) {
+      setCanvasName(newName);
+    } else {
+      setNewName(canvasName);
+    }
+  };
+
+  useEffect(() => { //if the canvas name has changed in the context, update the display name and save the canvas
     setNewName(canvasName);
+    const canvasObject = nodesToObject();
+    saveCanvas(canvasObject);
   }, [canvasName]);
+
   useEffect(() => {
     setDisplayDate(
       lastSaved
@@ -27,18 +39,9 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
           })
         : "Never"
     );
-  }, [lastSaved]);
+  }, [lastSaved, canvasName]);
 
-  const handleBlur = () => {
-    setIsEditing(false);
-    if (newName.trim() !== "" && newName !== canvasName) {
-      setCanvasName(newName);
-      const canvasObject = nodesToObject();
-      saveCanvas(canvasObject);
-    } else {
-      setNewName(canvasName);
-    }
-  };
+
 
   return (
     <div className="w-full flex items-center justify-between bg-gray-900 text-white px-4 py-2 shadow-md">

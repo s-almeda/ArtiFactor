@@ -319,6 +319,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
 
   const fetchSimilarTexts = async (query: string) => {
+    console.log("fetching texts for:", query);
     try {
       const response = await fetch(`${backend}/api/get-similar-texts`, {
         method: 'POST',
@@ -467,24 +468,29 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   }, [data.words, selectedKeyword]);
 
   useEffect(() => {
-    if (data.words && data.words.some((word: Word | Keyword) => 'id' in word)) {
+    if ((data.words && data.words.some((word: Word | Keyword) => 'id' in word)) && (data.similarTexts && data.similarTexts.length > 0)) {
+      setSimilarTexts(data.similarTexts || []);
+      setWords(data.words || []);
       setInitialCheck(false);
     } 
     else if (initialCheck) {
       const onCreate = async () => {
-        console.log('A new TextWithKeywordsNode has been created');
-        const updatedWords = await checkForKeywords(words);
-        setWords(updatedWords);
-        data.words = updatedWords;
-        data.content = wordsToString(words);
-          if(data.similarTexts && data.similarTexts.length > 0){
-            setSimilarTexts(data.similarTexts);
-          }
-          else{
-            const result = await fetchSimilarTexts(wordsToString(words));
-            setSimilarTexts(result);
-            data.similarTexts = result;
-          }
+        if (data.words && data.words.some((word: Word | Keyword) => 'id' in word)) {
+          setWords(data.words);
+        } else {
+          const updatedWords = await checkForKeywords(words);
+          setWords(updatedWords);
+          data.words = updatedWords;
+          data.content = wordsToString(updatedWords);
+        }
+
+        if (data.similarTexts && data.similarTexts.length > 0) {
+          setSimilarTexts(data.similarTexts);
+        } else {
+          const result = await fetchSimilarTexts(wordsToString(words));
+          setSimilarTexts(result);
+          data.similarTexts = result;
+        }
 
         setInitialCheck(false);
       }

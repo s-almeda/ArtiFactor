@@ -6,7 +6,7 @@ import { useNodeContext } from "./context/NodeContext";
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { canvasID, canvasName, pullCanvas, saveCanvas, deleteCanvas } = useCanvasContext(); // saveNewCanvas
+  const { canvasID, pullCanvas, saveCanvas, deleteCanvas } = useCanvasContext(); // canvasName
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
   const { nodesToObject } = useNodeContext();
 

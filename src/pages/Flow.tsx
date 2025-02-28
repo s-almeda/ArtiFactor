@@ -10,7 +10,7 @@ import {
   //ReactFlowJsonObject,
   Node,
   // useNodesState,
-  useViewport,
+  useOnViewportChange,
   useReactFlow,
   applyNodeChanges,
 } from "@xyflow/react";
@@ -34,15 +34,14 @@ import Toolbar from "../Toolbar";
 
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { x, y, zoom } = useViewport();
-  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { nodes, setNodes, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
-  const [synthesisMode, setSynthesisMode] = useState(false);
+  const [___, setSynthesisMode] = useState(false);
 
 
   //const location = useLocation();
@@ -50,17 +49,6 @@ const Flow = () => {
   const userParam = searchParams.get('user');
   const canvasParam = searchParams.get('canvas');
 
-  // for TitleBar
-  const [_, setLastSaved] = useState("");
-  useEffect(() => {
-
-    const updateLastSaved = () => {
-      const now = new Date();
-      setLastSaved(now.toLocaleString());
-    };
-    const saveInterval = setInterval(updateLastSaved, 30000); // Update every 30 seconds
-    return () => clearInterval(saveInterval);
-  }, []);
 
   //attempt (just once) to load the canvas from the browser storage
     useEffect(() => {
@@ -70,10 +58,11 @@ const Flow = () => {
       pullCanvas(`${userParam}-${canvasParam}`).then((savedCanvas: any) => {
         if (savedCanvas) {
         console.log("Canvas found in the database!");
-        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number } };
+        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
         setNodes(nodes);
         setViewport(viewport);
-        } else {
+        setCanvasName(name);
+        setLastSaved(timestamp);  } else {
         console.log(`the requested canvas (${userParam}-${canvasParam}) was not found in the database. trying from browser storage...`);
         //if we don't have the canvas in the database, try to load it from the browser storage
         const browserCanvas = pullCanvasFromBrowser(`${userParam}-${canvasParam}`);
@@ -97,7 +86,7 @@ const Flow = () => {
           setCanvasId(`${userParam}-${canvasParam}`);
           saveCanvas(toObject());
         }
-        saveCurrentViewport({ x, y, zoom });
+        saveCurrentViewport(getViewport());
       });
       setattemptedQuickLoad(true);
       }
@@ -109,8 +98,9 @@ const Flow = () => {
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
+      saveCanvas(toObject()); //everytime a node is changed, save it to the database
     },
-      [setNodes, quickSaveToBrowser, canvasID]
+      [setNodes, quickSaveToBrowser, saveCanvas]
   );
     const handleNodeClick = useCallback(
     (event: MouseEvent, node: Node) => {
@@ -125,6 +115,10 @@ const Flow = () => {
     },
   []
 );
+
+useOnViewportChange({
+  onEnd: () => saveCurrentViewport(getViewport()),
+});
 
 
   /* ---------------------------------------------------- */

@@ -15,6 +15,7 @@ interface CanvasContextType {
   quickSaveToBrowser: (canvasData: ReactFlowJsonObject, targetCanvasID?: string) => void;
   pullCanvasFromBrowser: (canvasID: string) => ReactFlowJsonObject | null;
   lastSaved: string;
+  setLastSaved: (timestamp: string) => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
@@ -133,7 +134,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   }, [userID, backend]);
 
   return (
-    <CanvasContext.Provider value={{ canvasID, setCanvasId, canvasName, setCanvasName, saveCanvas, deleteCanvas, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, lastSaved }}>
+    <CanvasContext.Provider value={{ canvasID, setCanvasId, canvasName, setCanvasName, saveCanvas, deleteCanvas, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, lastSaved, setLastSaved }}>
       {children}
     </CanvasContext.Provider>
   );
