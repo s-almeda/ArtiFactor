@@ -28,5 +28,4 @@ dist-ssr
 
 /backend/database.db
 backend/database.db
-vercel.json
-dist/vercel.json
+
