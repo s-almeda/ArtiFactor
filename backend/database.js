@@ -6,22 +6,88 @@ const dbPromise = open({
   driver: sqlite3.Database,
 });
 
-// ✅ Define initial nodes & viewport
-const initialNodes = JSON.stringify([
-  {
-    id: "example",
-    type: "text",
-    position: { x: 100, y: 100 },
-    data: { content: "bunny on the moon", loading: false, combinable: false },
-  }
-]);
-
 const initialViewport = JSON.stringify({ x: 0, y: 0, zoom: 1 });
+const defaultNodeData = JSON.stringify([
+    {
+      id: "text-1740696475448",
+      type: "text",
+      zIndex: 1000,
+      position: { x: 328.6810295180019, y: 39.41097388996745 },
+      data: {
+        words: [{ value: "testing!" }],
+        provenance: "user",
+        content: "testing!",
+        intersections: [
+          {
+            id: "text-1740696475448",
+            position: { x: 328.6810295180019, y: 39.41097388996745 },
+            content: "testing!",
+          },
+        ],
+        similarTexts: [
+          {
+            id: "4e0b9fddb0c2a40001000044",
+            value: "Sparse",
+            description:
+              "Sparse, markedly simple or unadorned style, associated with artists Luca Loreti, Werner Haypeter, Leszek Skurski, Jonathan Binet.",
+            relatedKeywordStrings: [
+              "Luca Loreti",
+              " Werner Haypeter",
+              " Leszek Skurski",
+              " Jonathan Binet",
+            ],
+            type: "Visual Qualities",
+          },
+          // ... other similarTexts
+        ],
+      },
+      measured: { width: 200, height: 150 },
+      selected: false,
+      dragging: false,
+    },
+    {
+      id: "image-1740696601239",
+      type: "image",
+      position: { x: 579.3232479089534, y: 107.44847647770641 },
+      zIndex: 1000,
+      data: {
+        content: "https://uploads3.wikiart.org/images/moise-kisling/portrait-with-a-collar-1938.jpg",
+        prompt: '"Portrait with a collar"(1938) by Moise Kisling',
+        provenance: "user",
+        artworks: [
+          {
+            title: "Portrait with a collar",
+            date: "1938",
+            artist: "Moise Kisling",
+            keywords: [
+              { id: "genre-1740696606896", type: "genre", value: "portrait" },
+              { id: "style-1740696606896", type: "style", value: "Post-Impressionism" },
+            ],
+            description: "Moise Kisling / Portrait with a collar / Post-Impressionism / portrait / 1938",
+            image: "https://uploads3.wikiart.org/images/moise-kisling/portrait-with-a-collar-1938.jpg",
+          },
+          // ... other artworks
+        ],
+        intersections: [
+          {
+            id: "image-1740696601239",
+            position: { x: 579.3232479089534, y: 107.44847647770641 },
+            content: "https://uploads3.wikiart.org/images/moise-kisling/portrait-with-a-collar-1938.jpg",
+          },
+        ],
+      },
+      dragHandle: ".drag-handle__invisible",
+      measured: { width: 150, height: 150 },
+      selected: false,
+      dragging: false,
+    },
+  ],
+);
 
 (async () => {
   const db = await dbPromise;
 
-  // ✅ Users table
+  // Create Users table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -30,39 +96,38 @@ const initialViewport = JSON.stringify({ x: 0, y: 0, zoom: 1 });
     )
   `);
 
-  // ✅ Canvases table (now with viewport)
+  // Create Canvases table (now with viewport)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS canvases (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       nodes TEXT NOT NULL DEFAULT '[]',
-      viewport TEXT NOT NULL DEFAULT '${initialViewport}', -- Store viewport separately
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      viewport TEXT NOT NULL DEFAULT '${initialViewport}',
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
-  // ✅ Ensure a default user exists
-  const existingUser = await db.get(`SELECT id FROM users LIMIT 1`);
-  if (!existingUser) {
-    await db.run(`
-      INSERT INTO users (id, password, clippings)
-      VALUES ('default-user', '', '[]')
+  const admins = ['shm', 'ethan', 'elaine', 'sophia']; //insert admins if they aren't there already
+  const stmt = await db.prepare("INSERT INTO users (id) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = ?)");
+
+  for (const user of admins) {
+    await stmt.run(user, user);
+
+    // Delete existing canvas if it exists
+    await db.run("DELETE FROM canvases WHERE id = ?", `${user}-default`);
+
+    // Insert new canvas data
+    const canvasStmt = await db.prepare(`
+      INSERT INTO canvases (id, user_id, name, nodes, viewport, timestamp) 
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
-    console.log("✅ Default user 'default-user' created.");
+    await canvasStmt.run(`${user}-default`, user, 'default', defaultNodeData, initialViewport);
+    await canvasStmt.finalize();
   }
 
-  // ✅ Ensure the `new-canvas` exists for the default user
-  const existingCanvas = await db.get(`SELECT id FROM canvases WHERE id = 'new-canvas'`);
-  if (!existingCanvas) {
-    await db.run(`
-      INSERT INTO canvases (id, user_id, name, nodes, viewport)
-      VALUES ('new-canvas', 'default-user', 'Untitled Canvas', ?, ?)
-    `, [initialNodes, initialViewport]);
-    console.log("✅ Default 'new-canvas' created with initial nodes and viewport.");
-  }
-
+  await stmt.finalize();
   console.log("Database initialized!");
 })();
 

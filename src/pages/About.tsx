@@ -5,13 +5,13 @@ const About = () => {
 
   return (
     <div>
-      <div className="flex h-screen">
+      <div className="flex h-screen mt-20 bg-red">
         {/* Main Content */}
         <div className="flex-1 p-4 overflow-y-auto">
           <h1 className="text-4xl font-bold text-center mb-8">ArtiFactor</h1>
 
           {/* Section 1 */}
-          <div id="section1" className="mb-8">
+          <div id="section1" className="my-8">
             <h3 className="text-2xl font-semibold mb-2">Our Project</h3>
             <p>Pretend we filled this out.</p>
           </div>

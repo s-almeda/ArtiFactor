@@ -10,69 +10,87 @@ import {
   //ReactFlowJsonObject,
   Node,
   // useNodesState,
+  useOnViewportChange,
   useReactFlow,
   applyNodeChanges,
 } from "@xyflow/react";
+import {useSearchParams} from "react-router-dom";
 
 
 
 import "@xyflow/react/dist/style.css";
-import type { AppNode, LoadingNode, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "./nodes/types";
-import {wordsToString } from './utils/utilityFunctions';
-import { nodeTypes } from "./nodes";
-import useClipboard from "./hooks/useClipboard";
-import { useDnD } from './context/DnDContext';
-import { calcNearbyPosition } from './utils/utilityFunctions';
-import { useNodeContext } from "./context/NodeContext";
-import { useAppContext } from './context/AppContext';
-import { useCanvasContext } from './context/CanvasContext';
-import Toolbar from "./Toolbar";
+import type { AppNode, LoadingNode, ImageWithLookupNodeData, TextWithKeywordsNodeData} from "../nodes/types";
+import {wordsToString } from '../utils/utilityFunctions';
+import { nodeTypes } from "../nodes";
+import useClipboard from "../hooks/useClipboard";
+import { useDnD } from '../context/DnDContext';
+import { calcNearbyPosition } from '../utils/utilityFunctions';
+import { useNodeContext } from "../context/NodeContext";
+import { useAppContext } from '../context/AppContext';
+import { useCanvasContext } from '../context/CanvasContext';
+import Toolbar from "../Toolbar";
 // import { data } from "react-router-dom";
 //FYI: we now set the backend in App.tsx!
 
 const Flow = () => {
   const { userID, backend } = useAppContext();
-  const { canvasName, canvasID, loadCanvas, quickSaveToBrowser, loadCanvasFromBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getNodesBounds } = useReactFlow();
+  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { nodes, setNodes, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
-  const [synthesisMode, setSynthesisMode] = useState(false);
+  const [___, setSynthesisMode] = useState(false);
 
 
+  //const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const userParam = searchParams.get('user');
+  const canvasParam = searchParams.get('canvas');
 
-  // for TitleBar
-  const [_, setLastSaved] = useState("");
-  useEffect(() => {
-
-    const updateLastSaved = () => {
-      const now = new Date();
-      setLastSaved(now.toLocaleString());
-    };
-    const saveInterval = setInterval(updateLastSaved, 30000); // Update every 30 seconds
-    return () => clearInterval(saveInterval);
-  }, []);
 
   //attempt (just once) to load the canvas from the browser storage
-  useEffect(() => {
-    if (!attemptedQuickLoad) {
+    useEffect(() => {
+      if (!attemptedQuickLoad) {
       //console.log ("ATTEMPTING A CANVAS QUICK LOAD");
-      //TODO: check if they have saved user data / specific canvas they are working on.       
-      const savedCanvas = loadCanvasFromBrowser("new-canvas");
-      if (savedCanvas) {
-        console.log("Canvas loaded from browser storage!");
-        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas;
+      //FIRST-- attempt to load the url-requested canvas from the database.
+      pullCanvas(`${userParam}-${canvasParam}`).then((savedCanvas: any) => {
+        if (savedCanvas) {
+        console.log("Canvas found in the database!");
+        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
         setNodes(nodes);
         setViewport(viewport);
+        setCanvasName(name);
+        setLastSaved(timestamp);  } else {
+        console.log(`the requested canvas (${userParam}-${canvasParam}) was not found in the database. trying from browser storage...`);
+        //if we don't have the canvas in the database, try to load it from the browser storage
+        const browserCanvas = pullCanvasFromBrowser(`${userParam}-${canvasParam}`);
+        if (browserCanvas) {
+          console.log("Canvas loaded from browser storage!");
+          const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
+          setNodes(nodes);
+          setViewport(viewport);
+          
+        } else {
+          console.log(`the requested canvas (${userParam}-${canvasParam}) was not found in browser storage. creating a new one...`);
+          //if we don't have the canvas in the browser storage, create a new one
+          setNodes([]);
+          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
+          setViewport({ x: 0, y: 0, zoom: 1 });
+
+          quickSaveToBrowser(toObject(), canvasID); //save the new canvas to browser storage
+        }
+        }
+        if (userParam && canvasParam) {
+          setCanvasId(`${userParam}-${canvasParam}`);
+          saveCanvas(toObject());
+        }
+        saveCurrentViewport(getViewport());
+      });
+      setattemptedQuickLoad(true);
       }
-      else{
-        console.log("No saved canvas found in browser storage.");
-      }
-      setattemptedQuickLoad(true); 
-    }
-  }, [attemptedQuickLoad, canvasID, setNodes, setViewport]);
+    }, [attemptedQuickLoad, canvasID, setNodes, setViewport]);
 
 
   //our custom nodes change function called everytime a node changes, even a little
@@ -80,8 +98,9 @@ const Flow = () => {
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
+      saveCanvas(toObject()); //everytime a node is changed, save it to the database
     },
-      [setNodes, quickSaveToBrowser, canvasID]
+      [setNodes, quickSaveToBrowser, saveCanvas]
   );
     const handleNodeClick = useCallback(
     (event: MouseEvent, node: Node) => {
@@ -96,6 +115,10 @@ const Flow = () => {
     },
   []
 );
+
+useOnViewportChange({
+  onEnd: () => saveCurrentViewport(getViewport()),
+});
 
 
   /* ---------------------------------------------------- */
@@ -393,37 +416,25 @@ return(
         </ReactFlow>
       </div>  
 
-      < Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
+      <Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
 
-
-
-
-      Debug Info
-          <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md">
-          <button
-            onClick={() => setShowDebugInfo((prev) => !prev)}
-            className="bg-blue-500 text-white p-2 rounded mb-2"
-          >
+      <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md overflow-scroll max-h-64">
+        <button
+          onClick={() => setShowDebugInfo((prev) => !prev)}
+          className="bg-blue-500 text-white p-2 rounded mb-2"
+        >
           {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
-          </button>
-          {showDebugInfo && (
-           <div> //debug info for debugging user state
-            {synthesisMode}
-          <p><strong>User ID:</strong> {userID}</p>
-          <p><strong>Canvas Name:</strong> {canvasName}</p>
-          <p><strong>Canvas ID:</strong> {canvasID}</p>
-          <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
-          <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(loadCanvas, null, 2)}</p>
+        </button>
+        {showDebugInfo && (
+          <div className="overflow-scroll max-h-48" onClick={() => setShowDebugInfo(false)}>
+            <p><strong>User ID:</strong> {userID}</p>
+            <p><strong>Canvas Name:</strong> {canvasName}</p>
+            <p><strong>Canvas ID:</strong> {canvasID}</p>
+            <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
+            <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(pullCanvas, null, 2)}</p>
           </div>
-
-          // <div>
-          //   <p><strong>Draggable Type:</strong> {draggableType}</p>
-          //   <p><strong>Draggable Data:</strong> {JSON.stringify(draggableData, null, 2)}</p>
-          //   <p><strong>Drag Start Position:</strong> {JSON.stringify(dragStartPosition, null, 2)}</p>
-          // </div>
-          )
-          }
-        </div>
+        )}
+      </div>
 
 
       </>
@@ -442,13 +453,13 @@ export default Flow;
     //  */
     
     // /* ----- call the CanvasContext save to the backend database  ----*/
-    // const handleLoadCanvas = useCallback(async () => {
+    // const handlepullCanvas = useCallback(async () => {
     //   console.log("loading canvas data for: ", canvasID);
-    //   const canvasData = await loadCanvas(canvasID);
+    //   const canvasData = await pullCanvas(canvasID);
     //   console.log("Loaded Canvas Data:", canvasData); // Print to console for debugging
     //   if (canvasData !== undefined) {
     //     const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = canvasData;
     //     setNodes(nodes);
     //     setViewport(viewport);
     //   }
-    // }, [canvasID, loadCanvas, setNodes, setViewport]);
+    // }, [canvasID, pullCanvas, setNodes, setViewport]);

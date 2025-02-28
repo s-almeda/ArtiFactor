@@ -1,14 +1,16 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useState, useEffect } from "react";
-import Flow from "./Flow";
-import About from "./About";
+import { useState } from "react";
+import Flow from "./pages/Flow";
+import About from "./pages/About";
+import Admin from "./pages/Admin";
 import Sidebar from "./Sidebar";
 import Palette from "./Palette";
 
 import { DnDProvider } from "./context/DnDContext";
 import { PaletteProvider } from "./context/PaletteContext";
 import { CanvasProvider } from "./context/CanvasContext";
+
 import { AppProvider } from "./context/AppContext"; //useAppContext
 
 import TitleBar from "./TitleBar";
@@ -24,80 +26,12 @@ const backend_url = "https://snailbunny.site"; // URL of the backend server host
 //const backend_url = "http://104.200.25.53/"; //IP address of backend server hosted online, probably don't use this one.
 
 function AppContent() {
-  //const { backend, loadCanvasRequest, setLoadCanvasRequest, userID, handleUserLogin } = useAppContext();
+  //const { backend, pullCanvasRequest, setpullCanvasRequest, userID, handleUserLogin } = useAppContext();
 
   /*--- should the sidebar be showing? ----*/
   const [showSidebar, setShowSidebar] = useState(false);
   const toggleSidebar = () => {
     setShowSidebar((prev) => !prev);
-  };
-
-  const [lastSaved, _] = useState("Never"); //setLastSaved
-  const [canvasName, setCanvasName] = useState("Untitled");
-  const [canvasID, __] = useState("null");
-  // load canvas when the app starts
-  useEffect(() => {
-    const loadCanvas = async () => {
-      console.log("todo")
-      // try {
-      //   const response = await fetch(`${backend_url}/api/get-latest-canvas`);
-      //   const data = await response.json();
-        
-      //   if (data.success && data.canvas) {
-      //     setCanvasID(data.canvas.id); // ensure correct ID
-      //     setCanvasName(data.canvas.name);
-      //   } else {
-      //     console.warn("No existing canvas found. Creating a new one.");
-      //     await createNewCanvas();
-      //   }
-      // } catch (error) {
-      //   console.error("Error loading canvas:", error);
-      // }
-    };
-    loadCanvas();
-  }, []);
-    // create new canvas if none exists
-    // const createNewCanvas = async () => {
-    //   try {
-    //     const response = await fetch(`${backend_url}/api/create-canvas`, {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //     });
-  
-    //     const data = await response.json();
-    //     if (data.success) {
-    //       setCanvasID(data.canvas.id);
-    //       setCanvasName(data.canvas.name);
-    //     } else {
-    //       console.error("Error creating a new canvas:", data.message);
-    //     }
-    //   } catch (error) {
-    //     console.error("Error creating canvas:", error);
-    //   }
-    // };
-  // update last saved time
-  // const updateLastSaved = () => {
-  //   const now = new Date();
-  //   setLastSaved(now.toLocaleString());
-  // };
-  // update canvas name
-  const updateCanvasName = async (newName: string) => {
-    if (!newName.trim() || newName === canvasName) return; // ignore empty names
-    setCanvasName(newName);
-
-    try {
-      const response = await fetch(`${backend_url}/api/update-canvas-name`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvasID, newCanvasName: newName }), // ensure canvasID sent
-      });
-      if (!response.ok) {
-        throw new Error("Failed to update canvas name.");
-      }
-      console.log(`Canvas name updated to "${newName}" in the backend.`);
-    } catch (error) {
-      console.error("Error updating canvas name:", error);
-    }
   };
 
   return (
@@ -120,16 +54,18 @@ function AppContent() {
           >
             <TitleBar
               toggleSidebar={toggleSidebar}
-              canvasName={canvasName}
-              onCanvasNameChange={updateCanvasName}
-              lastSaved={lastSaved}
             />
           </div>
           {/* Main Content */}
           <ReactFlowProvider>
             <DnDProvider>
               <Routes>
-                <Route path="/about" element={<About />} />
+                <Route path="/about" element={
+                  <div className="flex bottom-0 bg-red" style={{height: "calc(100vh - 100px)", marginTop: "50px", padding: "10px", overflow: "scroll", background: "red" }}>
+                  <About /> 
+                  </div>
+                }/>
+                <Route path="/admin" element={<Admin />} />
                 <Route
                   path="/"
                   element={

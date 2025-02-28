@@ -1,29 +1,47 @@
 import { useEffect, useState } from "react";
 import { Pencil, Menu } from "lucide-react";
+import { useCanvasContext } from "./context/CanvasContext"; // Adjust the import path as needed
+import { useNodeContext } from "./context/NodeContext"; // Adjust the import path as needed
 
 interface TitleBarProps {
-  canvasName: string;
-  onCanvasNameChange: (newName: string) => void;
-  lastSaved: string;
   toggleSidebar: () => void;  // Pass toggleSidebar function from App.tsx
 }
 
-const TitleBar = ({ canvasName, onCanvasNameChange, lastSaved, toggleSidebar }: TitleBarProps) => {
+const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
+  const { canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
+  const { nodesToObject } = useNodeContext();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(canvasName);
+  const [displayDate, setDisplayDate] = useState("Never");
 
-  useEffect(() => {
-    setNewName(canvasName);
-  }, [canvasName]);
-
-  const handleBlur = () => {
+  const handleBlur = async () => {
     setIsEditing(false);
     if (newName.trim() !== "" && newName !== canvasName) {
-      onCanvasNameChange(newName);
+      setCanvasName(newName);
     } else {
       setNewName(canvasName);
     }
   };
+
+  useEffect(() => { //if the canvas name has changed in the context, update the display name and save the canvas
+    setNewName(canvasName);
+    const canvasObject = nodesToObject();
+    saveCanvas(canvasObject);
+  }, [canvasName]);
+
+  useEffect(() => {
+    setDisplayDate(
+      lastSaved
+        ? new Date(lastSaved).toLocaleString("en-US", {
+            timeZone: "PST",
+            dateStyle: "short",
+            timeStyle: "medium",
+          })
+        : "Never"
+    );
+  }, [lastSaved, canvasName]);
+
+
 
   return (
     <div className="w-full flex items-center justify-between bg-gray-900 text-white px-4 py-2 shadow-md">
@@ -55,9 +73,10 @@ const TitleBar = ({ canvasName, onCanvasNameChange, lastSaved, toggleSidebar }: 
           )}
           <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
         </div>
-
         {/* Last Saved Timestamp */}
-        <span className="text-sm text-gray-400">Last saved: {lastSaved}</span>
+        <span className="text-sm text-gray-400">
+          Last saved: {displayDate}
+        </span>
       </div>
     </div>
   );
