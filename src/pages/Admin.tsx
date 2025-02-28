@@ -38,6 +38,7 @@ const Admin: React.FC = () => {
     const [enteredUserID, setEnteredUserID] = useState<string>('');
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
+    const [actualCanvasId, setActualCanvasId] = useState<string>('');
 
     const handlePasswordSubmit = (password: string) => {
         if (password === 'miku') {
@@ -86,6 +87,8 @@ const Admin: React.FC = () => {
                 type: node.type,
                 content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
             })));
+            const canvasIdParts = canvasId.split('-');
+            setActualCanvasId(canvasIdParts.length > 1 ? canvasIdParts.slice(1).join('-') : canvasId);
         } else {
             const response = await fetch(`${backend}/api/get-canvas/${canvasId}`);
             const result = await response.json();
@@ -98,25 +101,30 @@ const Admin: React.FC = () => {
                     type: node.type,
                     content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
                 })));
+                const canvasIdParts = result.canvas.id.split('-');
+                setActualCanvasId(canvasIdParts.length > 1 ? canvasIdParts.slice(1).join('-') : result.canvas.id);
             }
         }
     };
 
     const handleDeleteCanvas = async () => {
         if (selectedUser && selectedCanvas) {
-            const response = await fetch(`${backend}/api/delete-canvas/${selectedUser}/${selectedCanvas}`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert('Canvas deleted successfully');
-                setSelectedCanvas('');
-                setCanvasId('');
-                setTimestamp('');
-                setData([]);
-                setRawData('');
-            } else {
-                alert('Failed to delete canvas');
+            const isConfirmed = window.confirm('Are you sure you want to delete this canvas?');
+            if (isConfirmed) {
+                const response = await fetch(`${backend}/api/delete-canvas/${selectedUser}/${selectedCanvas}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Canvas deleted successfully');
+                    setSelectedCanvas('');
+                    setCanvasId('');
+                    setTimestamp('');
+                    setData([]);
+                    setRawData('');
+                } else {
+                    alert('Failed to delete canvas');
+                }
             }
         }
     };
@@ -201,12 +209,25 @@ const Admin: React.FC = () => {
                                 </select>
                             </div>
                         )}
+
                     </div>
                     {selectedCanvas && (
                         <div className='bg-brown-200 p-4'>
                             <div className='mb-4'>
-                                <p>Canvas ID: {canvasId}</p>
+
+                                <button 
+                                    onClick={() => {
+                                        window.location.href = `/?user=${selectedUser}&canvas=${actualCanvasId}`;
+                                    }} 
+                                    className='bg-blue-500 text-white px-4 py-2 mb-4'
+                                >
+                                    Go to Canvas Page
+                                </button>
+
+                                <p>Canvas ID in database: {canvasId}</p>
+
                                 <p>Timestamp: {timestamp}</p>
+                                <p>Number of Nodes: {data.length}</p>
                                 <p className="font-bold">Raw canvas data dump from server: </p>
                                 <div className='overflow-scroll bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
                                     <pre>{rawData}</pre>
@@ -218,6 +239,7 @@ const Admin: React.FC = () => {
                                 <table className='min-w-full'>
                                     <thead>
                                         <tr>
+                                            <th className='px-4 py-2'></th>
                                             {data.length > 0 && Object.keys(data[0]).map((key) => (
                                                 <th key={key} className='px-4 py-2'>{key}</th>
                                             ))}
@@ -226,6 +248,7 @@ const Admin: React.FC = () => {
                                     <tbody>
                                         {data.map((row, index) => (
                                             <tr key={index}>
+                                                <td className='border px-4 py-2'>{index + 1}</td>
                                                 {Object.values(row).map((value, idx) => (
                                                     <td key={idx} className='border px-4 py-2'>{value as React.ReactNode}</td>
                                                 ))}
