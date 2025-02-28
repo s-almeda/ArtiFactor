@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useCanvasContext } from "./context/CanvasContext";
 import { useAppContext } from "./context/AppContext";
+import { useNodeContext } from "./context/NodeContext";
 
 const Sidebar = ({ onClose }: { 
   onClose: () => void; 
 }) => {
-  const { canvasID, canvasName, loadCanvas, saveCanvas, deleteCanvas, createCanvas } = useCanvasContext(); // saveNewCanvas
+  const { canvasID, canvasName, pullCanvas, saveCanvas, deleteCanvas } = useCanvasContext(); // saveNewCanvas
   const { backend, handleUserLogin, userID, addUser, admins } = useAppContext();
+  const { nodesToObject } = useNodeContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");
   const [enteredPassword, setEnteredPassword] = useState("");
@@ -22,31 +24,15 @@ const Sidebar = ({ onClose }: {
   }, [userID]);
 
   const handleSaveCanvas = async () => {
-    if (canvasID !== "new-canvas") {
-      saveCanvas();
+    if (!canvasID || !userID) {
+      console.error("No canvas to save.");
       return;
     }
+
     try {
-      const response = await fetch(`${backend}/api/next-canvas-id/${userID}`);
-      const data = await response.json();
-
-      if (!data.success) {
-        setError("Error fetching new canvas ID.");
-        return;
-      }
-      console.log("will use new canvas ID:", data.nextCanvasId);
-
-      const newCanvasName = canvasName === "Untitled" ? prompt("Give this canvas a name:") || "Untitled" : canvasName;
-
-      if (newCanvasName) {
-        //await saveNewCanvas(data.nextCanvasId, newCanvasName);
-        refreshCanvases();
-      } else {
-        setError("Canvas save canceled. You've gotta name it something!");
-      }
+      await saveCanvas(nodesToObject());
     } catch (error) {
-      console.error("Error fetching new canvas ID:", error);
-      setError("Something went wrong.");
+      console.error("Error saving canvas:", error);
     }
   };
 
@@ -72,16 +58,6 @@ const Sidebar = ({ onClose }: {
     }
   };
   
-  const handleCreateCanvas = async () => {
-    if (canvasID === "new-canvas") {
-      const confirmNewCanvas = window.confirm("Are you sure you want to start a new canvas? (You may lose unsaved changes)");
-      confirmNewCanvas && createCanvas()
-    } else {
-      const confirmSaveCanvas = window.confirm("Would you like to save your current canvas before starting a new one?");
-      (confirmSaveCanvas) ? handleSaveCanvas(): //TODO, make this a modal with 3 options, save and start new, start new, cancel
-      createCanvas()
-    }
-  }
 
   const refreshCanvases = async () => {
     if (!userID || userID === "default") return; // user isn't logged in
@@ -155,13 +131,13 @@ const Sidebar = ({ onClose }: {
         </button>
 
           <h2 className="text-lg font-bold mb-2">Hi, {userID}!</h2>
-
+{/* 
             <button 
               onClick={handleCreateCanvas} 
               className="w-full text-center text-left bg-gray-700 hover:bg-gray-600 p-2 rounded"
             >
               + Start New Canvas
-            </button>
+            </button> */}
 
             <div className="flex items-center justify-between mt-2">
 
@@ -186,7 +162,7 @@ const Sidebar = ({ onClose }: {
               canvasList.map((canvas) => (
               <li key={canvas.id} className="mt-1 flex items-center">
                 <button 
-                onClick={() => loadCanvas(canvas.id)} // 🔹 Clicking on a canvas button loads it! 
+                onClick={() => pullCanvas(canvas.id)} // 🔹 Clicking on a canvas button loads it! 
                 className="w-full text-left bg-gray-700 hover:bg-gray-600 p-2 rounded"
                 >
                 {canvas.name}

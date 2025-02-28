@@ -302,7 +302,7 @@ app.get("/api/list-users", async (req, res) => {
           canvases: canvases.map((canvas) => ({
             id: canvas.id,
             name: canvas.name,
-            created_at: canvas.created_at,
+            timestamp: canvas.timestamp,
           })),
         };
       })
@@ -343,9 +343,9 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 });
 
   app.post("/api/save-canvas", async (req, res) => {
-    const { userID, canvasID, canvasName, nodes, viewport } = req.body;
+    const { userID, canvasID, canvasName, nodes, viewport, timestamp } = req.body;
     console.log("Attempting to save canvas:", req.body);
-    if (!userID || !canvasID || !nodes || !viewport) {
+    if (!userID || !canvasID || !nodes || !viewport || !timestamp) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -356,15 +356,15 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
       if (existingCanvas) {
         console.log(`found canvas ${canvasID} for user ${userID}.`);
         await db.run(
-          `UPDATE canvases SET name = ?, nodes = ?, viewport = ? WHERE id = ?`,
-          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), canvasID]
+          `UPDATE canvases SET name = ?, nodes = ?, viewport = ?, timestamp = ? WHERE id = ?`,
+          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), timestamp, canvasID]
         );
         console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}.`);
       } else {
         // ✅ Insert new canvas
         await db.run(
-          `INSERT INTO canvases (id, user_id, name, nodes, viewport) VALUES (?, ?, ?, ?, ?)`,
-          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport)]
+          `INSERT INTO canvases (id, user_id, name, nodes, viewport, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport), timestamp]
         );
         console.log(`New canvas ${canvasID} created for user ${userID} with name ${canvasName}.`);
       }
@@ -380,10 +380,6 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
     const { userID, canvasID } = req.params;
     console.log(`Attempting to delete canvas ${canvasID} for user ${userID}`);
 
-    if (canvasID === "new-canvas") {
-      return res.status(400).json({ error: "Cannot delete the 'new-canvas'" });
-    }
-
     try {
       const db = await dbPromise;
       const result = await db.run(`DELETE FROM canvases WHERE id = ? AND user_id = ?`, [canvasID, userID]);
@@ -398,7 +394,6 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-
 
 
   app.get("/api/get-canvas/:canvasID", async (req, res) => {
@@ -418,7 +413,7 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
       canvas.viewport = JSON.parse(canvas.viewport);
 
       console.log(`✅ Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes.`);
-      res.json({ success: true, canvas });
+      res.json({ success: true, canvas, timestamp: canvas.timestamp });
     } catch (error) {
       console.error("Error loading canvas:", error);
       res.status(500).json({ error: "Internal server error" });

@@ -1,25 +1,40 @@
 import { useEffect, useState } from "react";
 import { Pencil, Menu } from "lucide-react";
+import { useCanvasContext } from "./context/CanvasContext"; // Adjust the import path as needed
+import { useNodeContext } from "./context/NodeContext"; // Adjust the import path as needed
 
 interface TitleBarProps {
-  canvasName: string;
-  onCanvasNameChange: (newName: string) => void;
-  lastSaved: string;
   toggleSidebar: () => void;  // Pass toggleSidebar function from App.tsx
 }
 
-const TitleBar = ({ canvasName, onCanvasNameChange, lastSaved, toggleSidebar }: TitleBarProps) => {
+const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
+  const { canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
+  const { nodesToObject } = useNodeContext();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(canvasName);
+  const [displayDate, setDisplayDate] = useState("Never");
 
   useEffect(() => {
     setNewName(canvasName);
   }, [canvasName]);
+  useEffect(() => {
+    setDisplayDate(
+      lastSaved
+        ? new Date(lastSaved).toLocaleString("en-US", {
+            timeZone: "PST",
+            dateStyle: "short",
+            timeStyle: "medium",
+          })
+        : "Never"
+    );
+  }, [lastSaved]);
 
   const handleBlur = () => {
     setIsEditing(false);
     if (newName.trim() !== "" && newName !== canvasName) {
-      onCanvasNameChange(newName);
+      setCanvasName(newName);
+      const canvasObject = nodesToObject();
+      saveCanvas(canvasObject);
     } else {
       setNewName(canvasName);
     }
@@ -55,9 +70,10 @@ const TitleBar = ({ canvasName, onCanvasNameChange, lastSaved, toggleSidebar }: 
           )}
           <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
         </div>
-
         {/* Last Saved Timestamp */}
-        <span className="text-sm text-gray-400">Last saved: {lastSaved}</span>
+        <span className="text-sm text-gray-400">
+          Last saved: {displayDate}
+        </span>
       </div>
     </div>
   );

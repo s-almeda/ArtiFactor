@@ -1,24 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 interface AppContextType {
     backend: string;
-    //loadCanvasRequest: boolean;
-    //setLoadCanvasRequest: React.Dispatch<React.SetStateAction<boolean>>;
-
     userID: string | null;
     handleUserLogin: (enteredUserID: string, password: string) => void;
     addUser: (userID: string, password: string) => void;
-
     admins: string[];
 }
-
-
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ backend: string; children: React.ReactNode }> = ({ backend, children }) => {
     const [userID, setUserID] = useState<string | null>("default");
     const [attemptedQuickLogin, setAttemptedQuickLogin] = useState(false);
+    const [searchParams] = useSearchParams();
+    const userParam = searchParams.get('user');
+    const canvasParam = searchParams.get('canvas');
 
     const admins = ["shm", "elaine", "ethan", "sophia"];
 
@@ -65,22 +63,24 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
     };
 
     useEffect(() => {
-        if (!attemptedQuickLogin) {
-            console.log("Attempting quick login...");
+        if (userParam && !attemptedQuickLogin) {
+            console.log("Attempting login from url...");
+            handleUserLogin(userParam);
+        } else if (!attemptedQuickLogin) {
+            console.log("Attempting quick login from browser...");
             const storedUserID = localStorage.getItem("last_userID");
             const storedPassword = localStorage.getItem("last_password");
             if (storedUserID && storedPassword !== null) {
                 handleUserLogin(storedUserID, storedPassword);
                 console.log(`Quick login with userID: ${storedUserID}`);
             } else {
-                //console.log(`Quick login failed: ${storedUserID ? "Password is missing" : "UserID is missing"}`);
                 console.log(`FAILED: Stored UserID: ${storedUserID}, Stored Password: ${storedPassword}`);
             }
-            setAttemptedQuickLogin(true);
         }
+        setAttemptedQuickLogin(true);
 
         console.log(`Connecting to ${backend.includes("local") ? "local" : backend} backend; with userID: ${userID}`);
-    }, [backend, userID]);
+    }, [backend, userID, userParam, canvasParam]);
 
     return (
         <AppContext.Provider value={{ backend, userID, handleUserLogin, addUser, admins }}>
