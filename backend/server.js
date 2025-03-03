@@ -331,11 +331,13 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    // Get the number of canvases for the user
-    const canvasCount = await db.get(`SELECT COUNT(*) as count FROM canvases WHERE user_id = ?`, [userID]);
-    // Generate the next canvas ID
-    console.log(`found ${canvasCount.count} canvases for user ${userID}.`);
-    const nextCanvasId = `${userID}-${canvasCount.count + 1}`;
+    // Get all canvas IDs for the user
+    const canvases = await db.all(`SELECT id FROM canvases WHERE user_id = ?`, [userID]);
+    // Find the next available canvas ID
+    const canvasIds = canvases
+      .map(canvas => parseInt(canvas.id.split('-')[1], 10))
+      .filter(id => !isNaN(id));
+    const nextCanvasId = `${userID}-${Math.max(0, ...canvasIds) + 1}`;
     console.log(`Next canvas ID for user ${userID} is ${nextCanvasId}`);
     res.json({ success: true, nextCanvasId });
   } catch (error) {
@@ -348,6 +350,7 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
     const { userID, canvasID, canvasName, nodes, viewport, timestamp } = req.body;
     console.log("Attempting to save canvas:", req.body);
     if (!userID || !canvasID || !nodes || !viewport || !timestamp) {
+      
       return res.status(400).json({ error: "Missing required fields" });
     }
 

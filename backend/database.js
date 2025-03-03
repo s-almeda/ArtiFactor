@@ -116,14 +116,14 @@ const defaultNodeData = JSON.stringify([
     await stmt.run(user, user);
 
     // Delete existing canvas if it exists
-    await db.run("DELETE FROM canvases WHERE id = ?", `${user}-default`);
+    await db.run("DELETE FROM canvases WHERE id = ?", `${user}-0`);
 
     // Insert new canvas data
     const canvasStmt = await db.prepare(`
       INSERT INTO canvases (id, user_id, name, nodes, viewport, timestamp) 
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
-    await canvasStmt.run(`${user}-default`, user, 'default', defaultNodeData, initialViewport);
+    await canvasStmt.run(`${user}-0`, user, `${user}'s default test canvas`, defaultNodeData, initialViewport);
     await canvasStmt.finalize();
   }
 
