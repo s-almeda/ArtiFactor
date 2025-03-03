@@ -77,7 +77,7 @@ const Flow = () => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
       if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
-        //console.log("flow is saving canvas");
+        console.log("flow is saving canvas to the database");
         saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
       }
     },

@@ -284,7 +284,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
                 description: item.description || "Unknown",
                 image: item.image || "Unknown",
             }));
-            console.log('Similar artworks:', artworks);
+            console.log('fetched similar artworks from backend:', artworks);
             data.artworks=artworks;
             setSimilarArtworks(artworks);
             setInitialCheck(false);
