@@ -4,7 +4,7 @@ import { ImageWithLookupNode } from "./ImageWithLookupNode";
 import { TextWithKeywordsNode } from "./TextWithKeywordsNode";
 import { LoadingNode } from "./LoadingNode";
 
-import { AppNode } from "./types"; //TextNodeData, SynthesizerNodeData
+import { AppNode, TextWithKeywordsNodeData } from "./types"; //TextNodeData, SynthesizerNodeData
 
 
 export const initialNodes: AppNode[] = [
@@ -30,6 +30,17 @@ export const initialNodes: AppNode[] = [
   //   } as SynthesizerNodeData,
   // },
 ];
+export const defaultTextWithKeywordsNodeData: TextWithKeywordsNodeData = {
+  words: [
+    "your", "text", "here.", "click", "the", "pencil", "icon", "in", "the", "top", "right", "to", "edit.",
+    "Use", "Option+Click", "to", "generate", "new", "nodes."
+  ].map(value => ({ value })),
+  intersections: [],
+  similarTexts: [],
+  provenance: "user",
+  hasNoKeywords: true,
+  hasNoSimilarTexts: true
+};
 
 export const nodeTypes: NodeTypes = {
   default: LoadingNode,

@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Pencil, Menu } from "lucide-react";
 import { useCanvasContext } from "./context/CanvasContext"; // Adjust the import path as needed
 import { useNodeContext } from "./context/NodeContext"; // Adjust the import path as needed
+import { useAppContext } from "./context/AppContext";
 
 interface TitleBarProps {
   toggleSidebar: () => void;  // Pass toggleSidebar function from App.tsx
 }
 
 const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
-  const { canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
+  const { canvasID, canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
+  const { loginStatus } = useAppContext();
   const { nodesToObject } = useNodeContext();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(canvasName);
@@ -21,12 +23,16 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
     } else {
       setNewName(canvasName);
     }
+    const canvasObject = nodesToObject();
+    console.log("title bar is saving the canvas.")
+    saveCanvas(canvasObject, canvasID, canvasName);
   };
 
   useEffect(() => { //if the canvas name has changed in the context, update the display name and save the canvas
+    if (loginStatus != "logged in"){
+      return
+    }
     setNewName(canvasName);
-    const canvasObject = nodesToObject();
-    saveCanvas(canvasObject);
   }, [canvasName]);
 
   useEffect(() => {
@@ -39,7 +45,7 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
           })
         : "Never"
     );
-  }, [lastSaved, canvasName]);
+  }, [lastSaved]);
 
 
 
@@ -53,32 +59,33 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
       {/* Center: App Title */}
       <h1 className="text-lg font-semibold text-blue-400">ArtiFactor</h1>
 
-      {/* Right: Canvas Name & Last Saved */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center">
-          {isEditing ? (
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleBlur}
-              onKeyDown={(e) => e.key === "Enter" && handleBlur()}
-              autoFocus
-              className="bg-gray-800 text-white px-2 py-1 border border-gray-700 rounded"
-            />
-          ) : (
-            <span className="text-white cursor-pointer" onClick={() => setIsEditing(true)}>
-              {canvasName}
-            </span>
-          )}
-          <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
+      {loginStatus === "logged in" && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center">
+        {isEditing ? (
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={(e) => e.key === "Enter" && handleBlur()}
+            autoFocus
+            className="bg-gray-800 text-white px-2 py-1 border border-gray-700 rounded"
+          />
+        ) : (
+          <span className="text-white cursor-pointer" onClick={() => setIsEditing(true)}>
+            {canvasName}
+          </span>
+        )}
+        <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
+          </div>
+          {/* Last Saved Timestamp */}
+          <span className="text-sm text-gray-400">
+        Last saved: {displayDate}
+          </span>
         </div>
-        {/* Last Saved Timestamp */}
-        <span className="text-sm text-gray-400">
-          Last saved: {displayDate}
-        </span>
+      )}
       </div>
-    </div>
   );
 };
 

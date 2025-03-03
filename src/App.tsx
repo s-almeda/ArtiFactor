@@ -35,6 +35,7 @@ function AppContent() {
   };
 
   return (
+    <AppProvider backend={backend_url}>
     <NodeProvider>
     <CanvasProvider>
       <PaletteProvider>
@@ -107,6 +108,7 @@ function AppContent() {
       </PaletteProvider>
     </CanvasProvider>
     </NodeProvider>
+    </AppProvider>
   );
 }
 
@@ -114,9 +116,7 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      <AppProvider backend={backend_url}>
         <AppContent />
-      </AppProvider>
     </Router>
   );
 }

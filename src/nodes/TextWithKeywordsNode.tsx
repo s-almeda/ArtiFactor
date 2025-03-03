@@ -319,7 +319,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
 
   const fetchSimilarTexts = async (query: string) => {
-    console.log("fetching texts for:", query);
+    //console.log("fetching texts for:", query);
     try {
       const response = await fetch(`${backend}/api/get-similar-texts`, {
         method: 'POST',
@@ -348,11 +348,17 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       }
     } catch (error) {
       console.error('Error fetching similar texts:', error);
+      return {
+        id: "0",
+        value: "none",
+        description: "it seems some kind of error occurred. check your connection!",
+        type: "none",
+      }
     }
   };
 
   const checkForKeywords = async (queryWords: Word[]): Promise<(Word | Keyword)[]> => {
-    console.log('Checking for keywords in:', words);
+    //console.log('Checking for keywords in:', words);
 
     if (queryWords.length === 0) {
       return [];
@@ -387,6 +393,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           return { value: item.value } as Word;
         }
       });
+
       return result;
     } catch (error) {
       console.error('Error checking for keywords:', error);
@@ -411,12 +418,15 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
       event.preventDefault();
       const updatedWords = stringToWords(content);
       setWords(updatedWords); // set it to the updated words quickly, then add the highlights for keywords
-      
+      data.words = updatedWords;
+      data.hasNoKeywords = false; // we don't know if it definitely has no keywords anymore...
+      data.hasNoSimilarTexts = false; //we don't know that it definitely shouldn't have similar texts anymore. 
       //reset all of these guys on a change
       setIsEditing(false);
       setShowDescription(false);
       setShowFolder(false);
       setSelectedKeyword(null);
+      console.log("words hve changed to:", updatedWords);
       //check for keywords in the new content
       const checkedWords = await checkForKeywords(updatedWords);
       setWords(checkedWords);
@@ -436,7 +446,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
 
   const toggleDescription= () => {
     setShowDescription(!showDescription);
-    console.log(selectedKeyword);
+    //console.log(selectedKeyword);
   };
 
   const toggleFolder = () => {
@@ -468,23 +478,26 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
   }, [data.words, selectedKeyword]);
 
   useEffect(() => {
-    if ((data.words && data.words.some((word: Word | Keyword) => 'id' in word)) && (data.similarTexts && data.similarTexts.length > 0)) {
+    // if we already have keywords and similar texts OR we have flags up to say NO keywords NO similar texts pls 
+    if (((data.words && data.words.some((word: Word | Keyword) => 'id' in word))|| data.hasNoKeywords) && ((data.similarTexts && data.similarTexts.length > 0) || data.hasNoSimilarTexts)) {
       setSimilarTexts(data.similarTexts || []);
       setWords(data.words || []);
       setInitialCheck(false);
     } 
     else if (initialCheck) {
       const onCreate = async () => {
-        if (data.words && data.words.some((word: Word | Keyword) => 'id' in word)) {
+        if ((data.words && data.words.some((word: Word | Keyword) => 'id' in word)) || data.hasNoKeywords) {
           setWords(data.words);
-        } else {
+        } 
+        else {
+          //console.log(data.words, " has no keywords. let's find some");
           const updatedWords = await checkForKeywords(words);
           setWords(updatedWords);
           data.words = updatedWords;
           data.content = wordsToString(updatedWords);
         }
 
-        if (data.similarTexts && data.similarTexts.length > 0) {
+        if ((data.similarTexts && data.similarTexts.length > 0) && !data.hasNoSimilarTexts) {
           setSimilarTexts(data.similarTexts);
         } else {
           const result = await fetchSimilarTexts(wordsToString(words));

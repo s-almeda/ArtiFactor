@@ -87,8 +87,8 @@ const Admin: React.FC = () => {
                 type: node.type,
                 content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
             })));
-            const canvasIdParts = canvasId.split('-');
-            setActualCanvasId(canvasIdParts.length > 1 ? canvasIdParts.slice(1).join('-') : canvasId);
+            //const canvasIdParts = canvasId.split('-');
+            setActualCanvasId(canvasId);
         } else {
             const response = await fetch(`${backend}/api/get-canvas/${canvasId}`);
             const result = await response.json();
@@ -217,6 +217,8 @@ const Admin: React.FC = () => {
 
                                 <button 
                                     onClick={() => {
+
+                                        console.log("sending user to: " + selectedUser + " and canvas to:" + actualCanvasId);
                                         window.location.href = `/?user=${selectedUser}&canvas=${actualCanvasId}`;
                                     }} 
                                     className='bg-blue-500 text-white px-4 py-2 mb-4'

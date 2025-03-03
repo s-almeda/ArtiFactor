@@ -1,18 +1,19 @@
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 import { useAppContext } from "./AppContext";
 import { type ReactFlowJsonObject } from "@xyflow/react";
-import { useSearchParams } from "react-router-dom";
+
 
 interface CanvasContextType {
   canvasID: string;
   setCanvasId: (canvasID: string) => void;
   canvasName: string;
   setCanvasName: (canvasName: string) => void;
-  saveCanvas: (canvasData: ReactFlowJsonObject) => void;
+  saveCanvas: (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => void;
   deleteCanvas: (canvasIDToDelete: string) => void;
+  createNewCanvas: (userID: string) => void;
   pullCanvas: (canvasID: string) => Promise<ReactFlowJsonObject | null>;
-  quickSaveToBrowser: (canvasData: ReactFlowJsonObject, targetCanvasID?: string) => void;
+  quickSaveToBrowser: (canvasData: ReactFlowJsonObject, targetCanvasID?: string, targetCanvasName?: string) => void;
   pullCanvasFromBrowser: (canvasID: string) => ReactFlowJsonObject | null;
   lastSaved: string;
   setLastSaved: (timestamp: string) => void;
@@ -21,33 +22,25 @@ interface CanvasContextType {
 const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
 
 export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
-  const { userID, backend } = useAppContext();
-  const [searchParams] = useSearchParams();
+  const { userID, backend, loginStatus } = useAppContext();
+  // const [searchParams] = useSearchParams();
+  // const { setNodes } = useNodeContext();
 
   const [canvasID, setCanvasId] = useState<string>(`new-canvas`);
   const [canvasName, setCanvasName] = useState<string>("Untitled");
   const [lastSaved, setLastSaved] = useState<string>("Never");
 
-  useEffect(() => {
-    const userParam = searchParams.get('user');
-    const canvasParam = searchParams.get('canvas');
+  
 
-    console.log('User from url:', userParam);
-    console.log('Canvas from url:', canvasParam);
-
-    if (userParam && canvasParam) {
-      setCanvasId(`${userParam}-${canvasParam}`);
-      console.log("set canvas id to: ", `${userParam}-${canvasParam}`);
-    } else {
-      setCanvasId('');
-    }
-  }, [searchParams]);
-
-  const quickSaveToBrowser = useCallback((canvasData: ReactFlowJsonObject, targetCanvasID?: string) => {
+  const quickSaveToBrowser = useCallback((canvasData: ReactFlowJsonObject, targetCanvasID?: string, targetCanvasName?: string) => {
     const idToSave = targetCanvasID || canvasID;
     try {
       const { nodes, viewport } = canvasData;
+      //console.log("saving canvas to browser:", idToSave);
       localStorage.setItem(`${idToSave}`, JSON.stringify({ nodes, viewport }));
+      if (targetCanvasName){
+        localStorage.setItem(`${idToSave}-name`, targetCanvasName);
+      }
     } catch (error) {
       console.error("Error saving canvas to browser:", error);
     }
@@ -70,7 +63,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const storedCanvas = localStorage.getItem(`${canvasID}`);
       if (storedCanvas) {
-        console.log("canvas context found canvasID:", canvasID);
+        console.log("canvas context found canvasID:", canvasID, JSON.parse(storedCanvas));
         return JSON.parse(storedCanvas);
       } else {
         console.warn("No canvas found for:", canvasID);
@@ -81,8 +74,11 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
     return null;
   };
 
-  const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject) => {
-    if (!userID || userID === "default") {
+  const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => {
+    //console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
+    canvasIDToSave = canvasIDToSave || canvasID;
+    canvasNameToSave = canvasNameToSave || canvasName;
+    if (!userID) {
       console.error("You have to log in before you can save your canvas.");
       return;
     }
@@ -91,25 +87,42 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("No canvas data provided. Cannot save.");
       return;
     }
-    console.log(`attempting to save this canvasID: ${canvasID} with this data:`, canvasData);
+    //console.log(`attempting to save this canvasID: ${canvasID} with this data:`, canvasData);
 
     try {
       const { nodes, viewport } = canvasData;
       const timestamp =(new Date().toISOString());
       await axios.post(`${backend}/api/save-canvas`, {
         userID,
-        canvasID,
-        canvasName,
+        canvasID : canvasIDToSave,
+        canvasName : canvasNameToSave,
         nodes,
         viewport,
         timestamp
       });
-      console.log(`Canvas ${canvasID} saved successfully for user ${userID}.`);
+      //console.log(`Canvas ${canvasIDToSave} (${canvasNameToSave}) saved successfully for user ${userID}.`);
       setLastSaved(timestamp);
     } catch (error) {
       console.error("Error saving canvas:", error);
     }
   }, [backend, userID, canvasID, canvasName]);
+
+  const createNewCanvas = useCallback(async (userID: string) => {
+    if (loginStatus != "logged in"){
+      console.error("You have to log in before you can create a new canvas.");
+      return;
+    }
+    const response = await fetch(`${backend}/api/next-canvas-id/${userID}`);
+    const data = await response.json();
+    if (!data.success) {
+      console.error("Error fetching next canvas ID.");
+      return;
+    }
+    console.log("received next canvas ID:", data.nextCanvasId, " calling save canvas on the new canvas");
+    saveCanvas({ nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }}, `${data.nextCanvasId}`, "Untitled");
+    console.log("redirecting to new canvas: " + data.nextCanvasId);
+    window.location.href = `/?user=${userID}&canvas=${data.nextCanvasId}`;
+  },[]);
 
   const deleteCanvas = useCallback(async (canvasIDToDelete: string) => {
     if (!userID || userID === "default") {
@@ -134,7 +147,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   }, [userID, backend]);
 
   return (
-    <CanvasContext.Provider value={{ canvasID, setCanvasId, canvasName, setCanvasName, saveCanvas, deleteCanvas, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, lastSaved, setLastSaved }}>
+    <CanvasContext.Provider value={{ canvasID, setCanvasId, canvasName, setCanvasName, saveCanvas, deleteCanvas, createNewCanvas, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, lastSaved, setLastSaved }}>
       {children}
     </CanvasContext.Provider>
   );

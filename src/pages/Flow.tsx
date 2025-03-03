@@ -15,6 +15,7 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import {useSearchParams} from "react-router-dom";
+import { defaultTextWithKeywordsNodeData } from "../nodes";
 
 
 
@@ -33,8 +34,8 @@ import Toolbar from "../Toolbar";
 //FYI: we now set the backend in App.tsx!
 
 const Flow = () => {
-  const { userID, backend } = useAppContext();
-  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { userID, backend, loginStatus } = useAppContext();
+  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { nodes, setNodes, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
   const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
@@ -49,56 +50,36 @@ const Flow = () => {
   const userParam = searchParams.get('user');
   const canvasParam = searchParams.get('canvas');
 
-
-  //attempt (just once) to load the canvas from the browser storage
-    useEffect(() => {
-      if (!attemptedQuickLoad) {
-      //console.log ("ATTEMPTING A CANVAS QUICK LOAD");
-      //FIRST-- attempt to load the url-requested canvas from the database.
-      pullCanvas(`${userParam}-${canvasParam}`).then((savedCanvas: any) => {
-        if (savedCanvas) {
-        console.log("Canvas found in the database!");
-        const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
-        setNodes(nodes);
-        setViewport(viewport);
-        setCanvasName(name);
-        setLastSaved(timestamp);  } else {
-        console.log(`the requested canvas (${userParam}-${canvasParam}) was not found in the database. trying from browser storage...`);
-        //if we don't have the canvas in the database, try to load it from the browser storage
-        const browserCanvas = pullCanvasFromBrowser(`${userParam}-${canvasParam}`);
-        if (browserCanvas) {
-          console.log("Canvas loaded from browser storage!");
-          const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
-          setNodes(nodes);
-          setViewport(viewport);
-          
-        } else {
-          console.log(`the requested canvas (${userParam}-${canvasParam}) was not found in browser storage. creating a new one...`);
-          //if we don't have the canvas in the browser storage, create a new one
-          setNodes([]);
-          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
-          setViewport({ x: 0, y: 0, zoom: 1 });
-
-          quickSaveToBrowser(toObject(), canvasID); //save the new canvas to browser storage
+  const checkCanvasParam = async (userParam: string | null, canvasParam: string | null) => {
+    if (!canvasParam){ //does the url requested canvas exist
+        return false;
+    }
+    else if (userParam && canvasParam && !canvasParam.includes(userParam)) { //is the url requested canvas formatted correctly
+      window.location.href = `/?userId=${userParam}&canvasId=${userParam}-${canvasParam}`;
+      return false;
+    }
+    else// check if it exists in the database
+    {
+        const response = await fetch(`${backend}/api/list-canvases/${userParam}`);
+        const data = await response.json();
+        if (!data.success || !data.canvases.includes(canvasParam)) { 
+            console.error(`${canvasParam} not found for the user ` + userParam + "in" + data.canvases);
+            return false;
         }
-        }
-        if (userParam && canvasParam) {
-          setCanvasId(`${userParam}-${canvasParam}`);
-          saveCanvas(toObject());
-        }
-        saveCurrentViewport(getViewport());
-      });
-      setattemptedQuickLoad(true);
-      }
-    }, [attemptedQuickLoad, canvasID, setNodes, setViewport]);
-
+    }
+    //ok we're good
+    return true;
+  };
 
   //our custom nodes change function called everytime a node changes, even a little
   const handleOnNodesChange = useCallback(
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
-      saveCanvas(toObject()); //everytime a node is changed, save it to the database
+      if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
+        //console.log("flow is saving canvas");
+        saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
+      }
     },
       [setNodes, quickSaveToBrowser, saveCanvas]
   );
@@ -143,23 +124,27 @@ useOnViewportChange({
   
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
-  const addTextWithKeywordsNode = (content: string = "your text here", provenance: "user" | "history" | "ai" = "user", position?: { x: number; y: number }) => {
-    const words = content.split(' ').map((word) => ({
-      value: word,
-    }));
+  const addTextWithKeywordsNode = (
+    content: string = "your text here",
+    provenance: "user" | "history" | "ai" = "user",
+    position?: { x: number; y: number },
+    hasNoKeywords: boolean = false
+  ) => {
+    const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
+      ? defaultTextWithKeywordsNodeData
+      : {
+          words: content.split(' ').map((word) => ({ value: word })),
+          provenance,
+          content,
+          intersections: [],
+          hasNoKeywords,
+        };
 
-    const data: TextWithKeywordsNodeData = {
-      words,
-      provenance,
-      content: wordsToString(words),
-      intersections: [],
-    };  
-    
     const newTextWithKeywordsNode: AppNode = {
       id: `text-${Date.now()}`,
       type: "text",
       zIndex: 1000,
-      position: position ?? {//if you've passed a position, put it there. otherwise, place it randomly.
+      position: position ?? {
         x: Math.random() * 250,
         y: Math.random() * 250,
       },
@@ -331,7 +316,7 @@ useOnViewportChange({
         zIndex: 1000,
         data: { content: "loading "},
       };
-      console.log("LOADING NODE:"+ loadingNode.zIndex);
+      ///console.log("LOADING NODE:"+ loadingNode.zIndex);
       setNodes((nodes) => [...nodes, loadingNode]);
 
       // let's generate a node... 
@@ -388,6 +373,93 @@ useOnViewportChange({
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
 
+  // ------------------------ LOAD UP THE PROPER NODES UPON LOGIN EFFECT ------------------------ //
+
+
+  useEffect(() => {
+    if (attemptedQuickLoad) return;
+
+    if (loginStatus === "logging in") return;
+
+    const fetchData = async () => {
+      if (loginStatus === "logged out") {
+        console.log("USER IS LOGGED OUT")
+        setCanvasId("browser");
+        const browserCanvas = pullCanvasFromBrowser("browser");
+        if (browserCanvas) {
+          console.log("Canvas loaded from browser storage!: ",  browserCanvas);
+          const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
+          setNodes(nodes);
+          setViewport(viewport);
+        } else {
+          console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
+          setNodes([]);
+          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
+          setViewport({ x: 0, y: 0, zoom: 1 });
+          quickSaveToBrowser(toObject(), "browser");
+        }
+        setattemptedQuickLoad(true);
+        return;
+      }
+
+
+      if (loginStatus === "logged in" && userID) {
+        //log in the canvasParam in the url
+        if (canvasParam) {
+          setCanvasId(canvasParam);
+          
+          // const browserCanvas = pullCanvasFromBrowser(canvasParam);
+          // if (browserCanvas) {
+          //   console.log("Canvas loaded from browser storage!: ", browserCanvas);
+          //   const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
+          //   setNodes(nodes);
+          //   setViewport(viewport);
+          //   const storedCanvasName = localStorage.getItem(`${canvasParam}-name`);
+          //   if (storedCanvasName) {
+          //     setCanvasName(storedCanvasName);
+          //   }
+          //   saveCanvas(browserCanvas, canvasParam);
+          //   setattemptedQuickLoad(true);
+          //   return;
+          // }
+
+          pullCanvas(`${canvasParam}`).then((savedCanvas: any) => {
+            if (savedCanvas) {
+              console.log("URL requested canvas found in the database!");
+              const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
+              setNodes(nodes);
+              setViewport(viewport);
+              setCanvasName(name);
+              setLastSaved(timestamp);
+              setattemptedQuickLoad(true);
+              return
+            }
+          });
+        }
+        // no canvas param, or canvas param didn't work. let's find a valid canvas param.
+        const response = await fetch(`${backend}/api/list-canvases/${userID}`);
+        const data = await response.json();
+        if (!canvasParam && data.success && data.canvases.length > 0) {
+          const lastCanvas = data.canvases[data.canvases.length - 1].id;
+          console.log("redirecting to the last canvas: ", lastCanvas);
+          //window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
+          setattemptedQuickLoad(true);
+
+          window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
+        } 
+        else {
+          createNewCanvas(userID);
+        }
+        setattemptedQuickLoad(true);
+        
+      }
+    };
+
+    fetchData();
+  }, [userID, loginStatus, attemptedQuickLoad, canvasParam, backend, checkCanvasParam, pullCanvas, setCanvasId, setNodes, setViewport, setCanvasName, setLastSaved, quickSaveToBrowser, toObject, addTextWithKeywordsNode, createNewCanvas, pullCanvasFromBrowser]);
+
+
+
 return(
       <>
 
@@ -416,7 +488,7 @@ return(
         </ReactFlow>
       </div>  
 
-      <Toolbar addTextWithKeywordsNode={addTextWithKeywordsNode} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
+      <Toolbar addTextWithKeywordsNode={() => addTextWithKeywordsNode()} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
 
       <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md overflow-scroll max-h-64">
         <button

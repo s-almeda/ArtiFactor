@@ -24,6 +24,8 @@ export type TextWithKeywordsNodeData = ArtifactorNodeData & {
   intersections: Array<{ id: string; position: { x: number; y: number }; content: string; }>; //info on nodes that are overlapping with this node
   similarTexts?: Keyword[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
+  hasNoKeywords?: boolean;
+  hasNoSimilarTexts?: boolean;
 };
 
 /* --------------- DEPRECATED --------------- */
