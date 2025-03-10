@@ -1,5 +1,5 @@
 /* what shows up in the Palette! */
-import { useState, type FC, type DragEvent } from "react";
+import { type FC, type DragEvent } from "react";//useState
 import { useDnD } from "../context/DnDContext";
 import type { NodeData } from "../context/PaletteContext";
 import { Download } from "lucide-react";
