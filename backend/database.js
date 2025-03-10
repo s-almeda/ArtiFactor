@@ -62,7 +62,7 @@ const defaultNodeData = JSON.stringify([
       content: "https://uploads3.wikiart.org/images/moise-kisling/portrait-with-a-collar-1938.jpg",
       prompt: '"Portrait with a collar"(1938) by Moise Kisling',
       provenance: "user",
-      artworks: [
+      similarArtworks: [
         {
           title: "Portrait with a collar",
           date: "1938",
