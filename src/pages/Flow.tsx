@@ -14,8 +14,7 @@ import {
   addEdge,
   useOnViewportChange,
   useReactFlow,
-  applyNodeChanges,
-  applyEdgeChanges
+
 } from "@xyflow/react";
 import {useSearchParams} from "react-router-dom";
 import { defaultTextWithKeywordsNodeData } from "../nodes";
@@ -38,9 +37,9 @@ import Toolbar from "../Toolbar";
 
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
-  const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
+  const { getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
   const { draggableType, setDraggableType, draggableData, setDraggableData, parentNodeId} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
@@ -238,7 +237,7 @@ useOnViewportChange({
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
       console.log(`you just dropped and: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
-      console.log("the parent for the node you just dropped has this id: ", parentNodeId);
+      //console.log("the parent for the node you just dropped has this id: ", parentNodeId);
       if (!draggableType) {
         return;
       }
@@ -370,7 +369,7 @@ useOnViewportChange({
           });
 
           if (response.status === 200) {
-            addTextWithKeywordsNode(response.data.text, "ai", position, false, parentNodeId);
+            addTextWithKeywordsNode(response.data.text, "ai", loadingNode.position, false, parentNodeId);
             deleteNodeById(loadingNodeId);
           } // response error
           else {
@@ -390,7 +389,7 @@ useOnViewportChange({
         
             if (response.status === 200) {
 
-              addImageWithLookupNode(response.data.imageUrl, position, prompt, "ai", parentNodeId);
+              addImageWithLookupNode(response.data.imageUrl, loadingNode.position, prompt, "ai", parentNodeId);
               deleteNodeById(loadingNodeId);
 
             } // response error
