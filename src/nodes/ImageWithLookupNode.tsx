@@ -5,7 +5,7 @@ import type { ImageWithLookupNode, Artwork } from "./types";
 import { usePaletteContext } from "../context/PaletteContext";
 import { useDnD } from "../context/DnDContext";
 import { motion } from "framer-motion";
-import { Search, Bookmark, Paperclip} from 'lucide-react'; // Eye, EyeClosed
+import { Search, Bookmark, Paperclip, Expand } from 'lucide-react'; // Eye, EyeClosed
 import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
@@ -223,6 +223,13 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
     const [isAIGenerated, setIsAIGenerated] = useState(false);
 
 
+    const [isImageEnlarged, setIsImageEnlarged] = useState(false);
+
+    const toggleEnlargedImage = () => {
+        setIsImageEnlarged(!isImageEnlarged);
+    };
+
+
 
     useEffect(() => {
         if (data.content) {
@@ -307,6 +314,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
             setShowDescription(false);
             setShowFolder(false);
             setShowControls(false);
+            setIsImageEnlarged(false); // close pop up
           }
           else {
             setShowControls(true);
@@ -390,8 +398,19 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 >
                     {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
                 </button> */}
+
+                <button
+                    className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                    type="button"
+                    onClick={toggleEnlargedImage}
+                    aria-label="Enlarge Image"
+                >
+                    <Expand size={16} />
+                </button>
                 </div>
+
             </NodeToolbar>
+            
 
             {/* CONTAINER FOR MAIN NODE BODY IMAGE */}
             <div
@@ -449,6 +468,20 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 />
 
             </motion.div>
+
+
+            {/* Enlarged Image Overlay */}
+            {isImageEnlarged && (
+                <motion.div
+                    className="fixed top-0 left-0 w-screen-[40vw] h-screen-[40vw] bg-black/70 flex justify-center items-center z-50"
+                    onClick={() => setIsImageEnlarged(false)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <img src={imageUrl} className="max-w-[40vw] max-h-[40vh] rounded-lg shadow-xl" />
+                </motion.div>
+            )}
         </motion.div>
     );
 }
