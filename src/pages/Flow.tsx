@@ -516,7 +516,7 @@ useOnViewportChange({
 
           window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
         } 
-        else {
+        else if(data.success && data.canvases.length == 0) { //we successfully logged in  and listed canvases, but there are no canvases
           createNewCanvas(userID);
         }
         setattemptedQuickLoad(true);
@@ -573,9 +573,8 @@ return(
             <p><strong>User ID:</strong> {userID}</p>
             <p><strong>Canvas Name:</strong> {canvasName}</p>
             <p><strong>Canvas ID:</strong> {canvasID}</p>
-            <p><strong>Flow Nodes:</strong> {JSON.stringify(nodes, null, 2)}</p>
-            <p><strong>CanvasData Currently Stored in Context:</strong> {JSON.stringify(pullCanvas, null, 2)}</p>
-          </div>
+            <p><strong>Login Status: </strong> {loginStatus}</p>
+            </div>
         )}
       </div>
 

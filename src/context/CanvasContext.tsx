@@ -76,7 +76,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => {
-   console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
+    //console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
     canvasIDToSave = canvasIDToSave || canvasID;
     canvasNameToSave = canvasNameToSave || canvasName;
     if (!userID) {
@@ -111,9 +111,6 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   }, [backend, userID, canvasID, canvasName]);
 
   const createNewCanvas = useCallback(async (userID: string) => {
-    if (loginStatus == "logging in"){
-      return
-    }
     if (loginStatus != "logged in"){
       console.error("You have to log in before you can create a new canvas. You are currently... ", loginStatus);
       return;
@@ -125,10 +122,10 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     console.log("received next canvas ID:", data.nextCanvasId, " calling save canvas on the new canvas");
-    saveCanvas({ nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }}, `${data.nextCanvasId}`, "Untitled");
+    await saveCanvas({ nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }}, `${data.nextCanvasId}`, "Untitled");
     console.log("redirecting to new canvas: " + data.nextCanvasId);
     window.location.href = `/?user=${userID}&canvas=${data.nextCanvasId}`;
-  },[]);
+  },[loginStatus]);
 
   const deleteCanvas = useCallback(async (canvasIDToDelete: string) => {
     if (!userID || userID === "default") {
