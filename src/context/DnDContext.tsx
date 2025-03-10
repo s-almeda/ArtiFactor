@@ -1,31 +1,27 @@
 import { createContext, useContext, useState } from 'react';
 
-// A Drag and Drop context keeps track of the type of node and content of node currently being dragged around the app! 
-// it needs to be separate so people can drag between different components (the palette and the Flow canvas)
-const DnDContext = createContext<
-  [
-    string, 
-    React.Dispatch<React.SetStateAction<string>>, 
-    object, 
-    React.Dispatch<React.SetStateAction<object>>, 
-    { x: number, y: number }, 
-    React.Dispatch<React.SetStateAction<{ x: number, y: number }>>
-  ]
->(["default", () => {}, {}, () => {}, { x: 0, y: 0 }, () => {}]);
+interface DnDContextType {
+  draggableType: string;
+  setDraggableType: React.Dispatch<React.SetStateAction<string>>;
+  draggableData: object;
+  setDraggableData: React.Dispatch<React.SetStateAction<object>>;
+  dragStartPosition: { x: number, y: number };
+  setDragStartPosition: React.Dispatch<React.SetStateAction<{ x: number, y: number }>>;
+  parentNodeId: string;
+  setParentNodeId: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const DnDContext = createContext<DnDContextType | undefined>(undefined);
 
 export const DnDProvider = ({ children }: { children: any }) => {
   const [draggableType, setDraggableType] = useState("default");
   const [draggableData, setDraggableData] = useState({});
-  const [dragStartPosition, setDragStartPosition] = useState({x: 0, y: 0});
+  const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
+  const [parentNodeId, setParentNodeId] = useState("none");
 
-  // useEffect(() => {
-  //   //console.log(`DnDProvider receiving: ${draggableType} and ${JSON.stringify(draggableData)}`);
-  // }, [draggableType, draggableData]);
-  
   return (
-    <DnDContext.Provider value={[draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition]}>
+    <DnDContext.Provider value={{ draggableType, setDraggableType, draggableData, setDraggableData, dragStartPosition, setDragStartPosition, parentNodeId, setParentNodeId }}>
       {children}
-      {/* {console.log(`you are dragging a <${draggableType}> node with this data: ${JSON.stringify(draggableData)}`)} */}
     </DnDContext.Provider>
   );
 }
@@ -33,5 +29,9 @@ export const DnDProvider = ({ children }: { children: any }) => {
 export default DnDContext;
 
 export const useDnD = () => {
-  return useContext(DnDContext);
+  const context = useContext(DnDContext);
+  if (context === undefined) {
+    throw new Error('useDnD must be used within a DnDProvider');
+  }
+  return context;
 }

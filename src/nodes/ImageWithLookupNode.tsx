@@ -1,4 +1,4 @@
-import { Position, NodeToolbar } from "@xyflow/react";
+import { Position, NodeToolbar, Handle } from "@xyflow/react";
 import { useState, useEffect } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { ImageWithLookupNode, Artwork } from "./types";
@@ -10,10 +10,9 @@ import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
 
-const FolderPanel: React.FC<{ similarArtworks: Artwork[]; width: number; height: number; showFolder: boolean; toggleFolder: () => void; imageUrl?: string; isAIGenerated: boolean }> = ({ similarArtworks, width, height, showFolder, toggleFolder, isAIGenerated }) => {
+const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; width: number; height: number; showFolder: boolean; toggleFolder: () => void; imageUrl?: string; isAIGenerated: boolean }> = ({ parentNodeId, similarArtworks, width, height, showFolder, toggleFolder, isAIGenerated }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-
-    const [_, setDraggableType, __, setDraggableData] = useDnD();
+    const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
 
     const onDragStart = (
         event: React.DragEvent<HTMLDivElement>,
@@ -24,6 +23,7 @@ const FolderPanel: React.FC<{ similarArtworks: Artwork[]; width: number; height:
         event.dataTransfer.effectAllowed = "move";
         setDraggableType(type);
         setDraggableData({ content: content, prompt: prompt });
+        setParentNodeId(parentNodeId);
     };
 
     const handlePrev = () => {
@@ -132,19 +132,23 @@ const DescriptionPanel: React.FC<{
     containerHeight: number;
     containerWidth: number;
     showDescription: boolean; 
+    parentNodeId: string;
     toggleDescription: () => void; 
     isAIGenerated: boolean;
-}> = ({content, showDescription = false, containerHeight = 100, containerWidth=100, toggleDescription, isAIGenerated=false }) => {
+}> = ({content, showDescription = false, containerHeight = 100, containerWidth=100, parentNodeId, toggleDescription, isAIGenerated=false }) => {
     
-    const [_, setDraggableType, __, setDraggableData] = useDnD()
+    const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
     
     const onDragStart = (
         event: React.DragEvent<HTMLDivElement>, 
-        content: string
+        content: string,
+        type: string = "text",
+        prompt?: string
     ) => {
       event.dataTransfer.effectAllowed = "move";
-      setDraggableType("text");
-      setDraggableData({ content: content });
+      setDraggableType(type);
+      setDraggableData({ content: content, prompt: prompt  });
+      setParentNodeId(parentNodeId);
     };   
 
     if (!content) return null;
@@ -207,7 +211,7 @@ const DescriptionPanel: React.FC<{
     );
 };
 
-export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLookupNode>) {
+export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithLookupNode>) {
     const { addClippedNode, getNextPaletteIndex } = usePaletteContext(); 
     const [imageUrl, setImageUrl] = useState("");
     const [width, _] = useState(150);
@@ -354,7 +358,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
             className="absolute"
             >
             
-            <FolderPanel similarArtworks={similarArtworks} width={width*2} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} isAIGenerated={isAIGenerated} />
+            <FolderPanel parentNodeId={id} similarArtworks={similarArtworks} width={width*2} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} isAIGenerated={isAIGenerated} />
             </motion.div>
             {/* end folder panel */}
 
@@ -409,6 +413,21 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
             </div>
 
 
+            <Handle
+        type="source"
+        position={Position.Bottom}
+        id="a"
+        isConnectable={false}
+        onConnect={(params) => console.log('handle onConnect', params)}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="b"
+        isConnectable={false}
+        onConnect={(params) => console.log('handle onConnect', params)}
+      />
+
             <motion.div
                 initial={{ top: 0 }}
                 animate={{ 
@@ -424,6 +443,7 @@ export function ImageWithLookupNode({ data, selected }: NodeProps<ImageWithLooku
                 containerWidth={width}
                 showDescription={showDescription} 
                 toggleDescription={toggleDescription} 
+                parentNodeId={id}
                 content={data.prompt}
                 isAIGenerated={isAIGenerated} 
                 />

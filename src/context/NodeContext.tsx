@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Node,  ReactFlowJsonObject, Viewport} from '@xyflow/react';
+import { Node, Edge, ReactFlowJsonObject, Viewport} from '@xyflow/react';
 import { TextWithKeywordsNodeData } from '../nodes/types';
 import { stringToWords } from '../utils/utilityFunctions';
 
 
 
+
 interface NodeContextProps {
   nodes: Node<any>[]; // Keep nodes generic
+  edges: Edge<any>[]; // Keep edges generic 
   currentViewport: Viewport;
   setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
-  nodesToObject: () => ReactFlowJsonObject;
+  setEdges: React.Dispatch<React.SetStateAction<Edge<any>[]>>; // Keep setEdges generic
+  canvasToObject: () => ReactFlowJsonObject;
   mergeNodes: (nodesToMerge: { id: string; content: string; position: { x: number; y: number } }[]) => void;
   saveCurrentViewport: (viewport: Viewport) => void;
 }
@@ -18,16 +21,17 @@ const NodeContext = createContext<NodeContextProps | undefined>(undefined);
 
 export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [nodes, setNodes] = useState<Node<any>[]>([]); // Keep nodes state generic
+  const [edges, setEdges] = useState<Edge<any>[]>([]); // Keep edges state generic
   const [currentViewport, setCurrentViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
 
   const saveCurrentViewport = useCallback((viewport: Viewport) => {
     setCurrentViewport(viewport);
   }, []);
 
-  const nodesToObject = useCallback((): ReactFlowJsonObject => {
+  const canvasToObject = useCallback((): ReactFlowJsonObject => {
     return {
       nodes: nodes,
-      edges: [],
+      edges: edges,
       viewport: currentViewport,
     };
   }, [nodes, currentViewport]);
@@ -63,8 +67,10 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }, []);
 
+
+
   return (
-    <NodeContext.Provider value={{ nodes, currentViewport, setNodes, mergeNodes, nodesToObject, saveCurrentViewport }}>
+    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, canvasToObject, saveCurrentViewport }}>
       {children}
     </NodeContext.Provider>
   );
