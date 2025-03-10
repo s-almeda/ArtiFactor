@@ -1,3 +1,4 @@
+/* what shows up in the Palette! */
 import { useState, type FC, type DragEvent } from "react";
 import { useDnD } from "../context/DnDContext";
 import type { NodeData } from "../context/PaletteContext";
@@ -16,8 +17,8 @@ const PaletteNode: FC<PaletteNodeProps> = ({
   type,
   removeNode,
 }) => {
-  const [___, setIsHovered] = useState(false);
-  const [_, setDraggableType, __, setDraggableData] = useDnD();
+  //const [___, setIsHovered] = useState(false);
+  const { setDraggableType, setDraggableData } = useDnD();
 
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.effectAllowed = "move";
@@ -53,8 +54,8 @@ const PaletteNode: FC<PaletteNodeProps> = ({
       className="border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm relative"
       draggable
       onDragStart={onDragStart}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      // onMouseEnter={() => setIsHovered(true)}
+      // onMouseLeave={() => setIsHovered(false)}
       style={{ width: "100%" }}
     >
       {type === "text" ? (

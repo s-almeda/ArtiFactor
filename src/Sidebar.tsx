@@ -12,7 +12,7 @@ const Sidebar = ({ onClose }: {
 }) => {
   const { canvasID, canvasName, saveCanvas, deleteCanvas, createNewCanvas } = useCanvasContext(); // canvasName
   const { backend, handleUserLogin, userID, admins, loginStatus } = useAppContext();
-  const { nodesToObject } = useNodeContext();
+  const { canvasToObject } = useNodeContext();
 
   const [enteredUserID, setEnteredUserID] = useState("");
   // const [enteredPassword, setEnteredPassword] = useState("");
@@ -35,7 +35,7 @@ const Sidebar = ({ onClose }: {
 
     try {
       console.log("sidebar is calling save canvas")
-      await saveCanvas(nodesToObject(), canvasID, canvasName);
+      await saveCanvas(canvasToObject(), canvasID, canvasName);
     } catch (error) {
       console.error("Error saving canvas:", error);
     }

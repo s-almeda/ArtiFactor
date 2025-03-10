@@ -3,7 +3,7 @@ import { usePaletteContext } from "./context/PaletteContext";
 import PaletteNode from "./nodes/PaletteNode";
 import { useEffect } from "react";
 
-
+//TODO: palette nodes need to store their parentNodeId, and broadcast it when they are dragged and dropped
 const charLimit = 25;
 
 const Palette: React.FC = () => {

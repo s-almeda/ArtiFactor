@@ -347,9 +347,10 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 });
 
   app.post("/api/save-canvas", async (req, res) => {
-    const { userID, canvasID, canvasName, nodes, viewport, timestamp } = req.body;
+    console.log("received request to save canvas.");
+    const { userID, canvasID, canvasName, nodes, edges, viewport, timestamp } = req.body;
     console.log("Attempting to save canvas:", req.body);
-    if (!userID || !canvasID || !nodes || !viewport || !timestamp) {
+    if (!userID || !canvasID || !nodes || !edges || !viewport || !timestamp) {
       
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -359,17 +360,18 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
       const existingCanvas = await db.get("SELECT id FROM canvases WHERE id = ?", [canvasID]);
       
       if (existingCanvas) {
-        console.log(`found canvas ${canvasID} for user ${userID}.`);
+        console.log(`found canvas ${canvasID} for user ${userID}. will update with new save`);
         await db.run(
-          `UPDATE canvases SET name = ?, nodes = ?, viewport = ?, timestamp = ? WHERE id = ?`,
-          [canvasName, JSON.stringify(nodes), JSON.stringify(viewport), timestamp, canvasID]
+          `UPDATE canvases SET name = ?, nodes = ?,edges = ?, viewport = ?, timestamp = ? WHERE id = ?`,
+          [canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp, canvasID]
         );
         console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}.`);
+
       } else {
         // ✅ Insert new canvas
         await db.run(
-          `INSERT INTO canvases (id, user_id, name, nodes, viewport, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
-          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(viewport), timestamp]
+          `INSERT INTO canvases (id, user_id, name, nodes, edges, viewport, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp]
         );
         console.log(`New canvas ${canvasID} created for user ${userID} with name ${canvasName}.`);
       }
@@ -415,9 +417,10 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 
       // ✅ Parse JSON fields
       canvas.nodes = JSON.parse(canvas.nodes);
+      canvas.edges = JSON.parse(canvas.edges);
       canvas.viewport = JSON.parse(canvas.viewport);
 
-      console.log(`✅ Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes.`);
+      console.log(`✅ Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes and ${canvas.edges.length} edges.`);
       res.json({ success: true, canvas, timestamp: canvas.timestamp });
     } catch (error) {
       console.error("Error loading canvas:", error);

@@ -10,9 +10,12 @@ import {
   //ReactFlowJsonObject,
   Node,
   // useNodesState,
+  Edge,
+  addEdge,
   useOnViewportChange,
   useReactFlow,
   applyNodeChanges,
+  applyEdgeChanges
 } from "@xyflow/react";
 import {useSearchParams} from "react-router-dom";
 import { defaultTextWithKeywordsNodeData } from "../nodes";
@@ -36,9 +39,9 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { nodes, setNodes, edges, setEdges, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
-  const [draggableType, setDraggableType, draggableData, setDraggableData] = useDnD(); //dragStartPosition, setDragStartPosition
+  const { draggableType, setDraggableType, draggableData, setDraggableData, parentNodeId} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
@@ -77,25 +80,38 @@ const Flow = () => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
       if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
-        console.log("flow is saving canvas to the database");
+        //console.log("flow is saving canvas to the database");
         saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
       }
     },
       [setNodes, quickSaveToBrowser, saveCanvas]
   );
-    const handleNodeClick = useCallback(
-    (event: MouseEvent, node: Node) => {
-      if (event.altKey) { 
-        if (node.data.content) {
-          generateNode(node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
-        } else if (Array.isArray(node.data.words)) {
-          const content = wordsToString(node.data.words);
-          generateNode(content, calcNearbyPosition(getNodesBounds([node])));
-        }  console.log("you option clicked this node:", node.data);
-      }
+
+  const handleOnEdgesChange = useCallback(
+    (changes: any) => {
+      console.log("edges changed");
+      // setEdges((eds) => applyEdgeChanges(changes, eds));
+      // quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
+      // if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
+      //   //console.log("flow is saving canvas to the database");
+      //   saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
+      // }
     },
-  []
-);
+    [setEdges],
+  );
+
+
+  const handleNodeClick = useCallback(
+  (event: MouseEvent, node: Node) => {
+    if (event.altKey) { 
+      if (node.data.content) {
+        generateNode(node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
+      } else if (Array.isArray(node.data.words)) {
+        const content = wordsToString(node.data.words);
+        generateNode(content, calcNearbyPosition(getNodesBounds([node])));
+      }  console.log("you option clicked this node:", node.data);
+    }
+  },[]);
 
 useOnViewportChange({
   onEnd: () => saveCurrentViewport(getViewport()),
@@ -128,7 +144,8 @@ useOnViewportChange({
     content: string = "your text here",
     provenance: "user" | "history" | "ai" = "user",
     position?: { x: number; y: number },
-    hasNoKeywords: boolean = false
+    hasNoKeywords: boolean = false,
+    parentNodeId?: string
   ) => {
     const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
       ? defaultTextWithKeywordsNodeData
@@ -151,13 +168,51 @@ useOnViewportChange({
       data: data,
     };
 
-    setNodes((prevNodes) => [...prevNodes, newTextWithKeywordsNode]);
+    setNodes((prevNodes) => {
+      const updatedNodes = [...prevNodes, newTextWithKeywordsNode];
+      if (parentNodeId) {
+        drawEdge(parentNodeId, newTextWithKeywordsNode.id, updatedNodes);
+      }
+      return updatedNodes;
+    });
+  };
+  const drawEdge = (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => {
+    console.log("Parent Node ID:", parentNodeId, "new node id: ", newNodeId);
+
+    const parentNode = updatedNodes.find((node) => node.id === parentNodeId);
+    const newNode = updatedNodes.find((node) => node.id === newNodeId);
+
+    if (parentNode && newNode) {
+      //console.log("Parent Node Content:", parentNode.data.content);
+      //console.log("New Node Content:", newNode.data.content);
+
+      const newEdge: Edge = {
+        id: `edge-${parentNodeId}-${newNodeId}`,
+        source: parentNodeId,
+        target: newNodeId,
+        type: 'default',
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    }
   };
 
+  // // Placeholder function to create an edge between two specific nodes
+  // const createPlaceholderEdge = () => {
+  //   const placeholderNodes = [
+  //     { id: 'image-1740983392180', type: 'image', position: { x: 100, y: 100 }, zIndex: 1000, data: { content: 'Image 1' } },
+  //     { id: 'image-1740983412123', type: 'image', position: { x: 200, y: 200 }, zIndex: 1000, data: { content: 'Image 2' } }
+  //   ];
+
+  //   drawEdge('image-1740983392180', 'image-1740983412123', placeholderNodes);
+  // };
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string) => {
+
+
+
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
@@ -166,22 +221,30 @@ useOnViewportChange({
       x: Math.random() * 250,
       y: Math.random() * 250,
     };
+    const newNodeId = `image-${Date.now()}`
     
     const newNode: AppNode = {
-      id: `image-${Date.now()}`,
+      id: newNodeId,
       type: "image",
       position: position,
       zIndex: 1000,
       data: {
-        content: content,
-        prompt: prompt,
-        provenance: provenance,
+      content: content,
+      prompt: prompt,
+      provenance: provenance,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
     };
 
-    setNodes((prevNodes) => [...prevNodes, newNode]);
-  };
+    setNodes((prevNodes) => {
+      const updatedNodes = [...prevNodes, newNode];
+      if (parentNodeId){
+      drawEdge(parentNodeId, newNodeId, updatedNodes);
+      }
+      return updatedNodes;
+    });
+    };
+
 
 
   /*------------ functions to handle changes to the Flow canvas ---------------*/
@@ -199,6 +262,7 @@ useOnViewportChange({
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
       console.log(`you just dropped and: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
+      console.log("the parent for the node you just dropped has this id: ", parentNodeId);
       if (!draggableType) {
         return;
       }
@@ -211,11 +275,11 @@ useOnViewportChange({
         const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";
         const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
         const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
-        addImageWithLookupNode(content, position, prompt, provenance);
+        addImageWithLookupNode(content, position, prompt, provenance, parentNodeId);
 
       } else if ("content" in draggableData) {
        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
-        addTextWithKeywordsNode(draggableData["content"] as string, provenance, position);
+        addTextWithKeywordsNode(draggableData["content"] as string, provenance, position, false, parentNodeId);
       }
       
     },
@@ -302,6 +366,7 @@ useOnViewportChange({
 
 // ------------------ GENERATE NODE FUNCTION ------------------ //
   const generateNode = useCallback(
+    //todo, add parentnodeid for edges
     // Requests through reagent, generates an image node with a prompt and optional position
     async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
 
@@ -383,23 +448,25 @@ useOnViewportChange({
 
     const fetchData = async () => {
       if (loginStatus === "logged out") {
-        console.log("USER IS LOGGED OUT")
-        setCanvasId("browser");
-        const browserCanvas = pullCanvasFromBrowser("browser");
-        if (browserCanvas) {
-          console.log("Canvas loaded from browser storage!: ",  browserCanvas);
-          const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
-          setNodes(nodes);
-          setViewport(viewport);
-        } else {
-          console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
-          setNodes([]);
-          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
-          setViewport({ x: 0, y: 0, zoom: 1 });
-          quickSaveToBrowser(toObject(), "browser");
-        }
-        setattemptedQuickLoad(true);
-        return;
+      console.log("USER IS LOGGED OUT")
+      setCanvasId("browser");
+      const browserCanvas = pullCanvasFromBrowser("browser");
+      if (browserCanvas) {
+        console.log("Canvas loaded from browser storage!: ",  browserCanvas);
+        const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
+        setNodes(nodes);
+        setEdges(edges);
+        setViewport(viewport);
+      } else {
+        console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
+        setNodes([]);
+        setEdges([]);
+        addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
+        setViewport({ x: 0, y: 0, zoom: 1 });
+        quickSaveToBrowser(toObject(), "browser");
+      }
+      setattemptedQuickLoad(true);
+      return;
       }
 
 
@@ -423,20 +490,22 @@ useOnViewportChange({
           //   return;
           // }
 
-          pullCanvas(`${canvasParam}`).then((savedCanvas: any) => {
+            pullCanvas(`${canvasParam}`).then((savedCanvas: any) => {
             if (savedCanvas) {
               console.log("URL requested canvas found in the database!");
-              const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
+              console.log(savedCanvas);
+              const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], edges: Edge[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
               setNodes(nodes);
+              setEdges(edges);
               setViewport(viewport);
               setCanvasName(name);
               setLastSaved(timestamp);
               setattemptedQuickLoad(true);
               return
             }
-          });
-        }
-        // no canvas param, or canvas param didn't work. let's find a valid canvas param.
+            });
+          }
+                // no canvas param, or canvas param didn't work. let's find a valid canvas param.
         const response = await fetch(`${backend}/api/list-canvases/${userID}`);
         const data = await response.json();
         if (!canvasParam && data.success && data.canvases.length > 0) {
@@ -458,7 +527,7 @@ useOnViewportChange({
     fetchData();
   }, [userID, loginStatus, attemptedQuickLoad, canvasParam, backend, checkCanvasParam, pullCanvas, setCanvasId, setNodes, setViewport, setCanvasName, setLastSaved, quickSaveToBrowser, toObject, addTextWithKeywordsNode, createNewCanvas, pullCanvasFromBrowser]);
 
-
+ 
 
 return(
       <>
@@ -469,9 +538,11 @@ return(
       <div style={{ width: '100%', height: '100%' }}>
         <ReactFlow
           nodes={nodes}
+          edges={edges}
           nodeTypes={nodeTypes}
           minZoom={0.009}
           onNodesChange={handleOnNodesChange}
+          onEdgesChange={handleOnEdgesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           //onNodeDragStart={onNodeDragStart}

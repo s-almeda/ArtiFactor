@@ -1,6 +1,5 @@
 import { useAppContext } from '../context/AppContext';
-import type { NodeProps} from "@xyflow/react";
-import {NodeToolbar, Position} from "@xyflow/react";
+import {NodeToolbar, Position, Handle, NodeProps} from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from './types';
 import { stringToWords, wordsToString } from '../utils/utilityFunctions';
 import React, { useRef, useState, useEffect } from 'react';
@@ -48,7 +47,7 @@ export const KeywordComponent: React.FC<{ keyword: Keyword; handleKeywordClick: 
   );
 };
 export const RelatedKeywords: React.FC<{ relatedKeywords: string[], isAIGenerated: boolean }> = ({ relatedKeywords, isAIGenerated }) => {
-  const [_, setDraggableType, __, setDraggableData] = useDnD();
+  const { setDraggableType, setDraggableData } = useDnD();
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -81,11 +80,12 @@ export const KeywordDescription: React.FC<{
   containerHeight?: number;
   containerWidth?: number;
   showDescription: boolean; 
+  parentNodeId: string;
   toggleDescription: () => void;
   isAIGenerated: boolean;
-}> = ({ keyword, containerHeight = 100, showDescription = false, toggleDescription, isAIGenerated=false }) => { //containerWidth = 100,
+}> = ({ keyword, containerHeight = 100, showDescription = false, parentNodeId, toggleDescription, isAIGenerated=false }) => { //containerWidth = 100,
 
-  const [_, setDraggableType, __, setDraggableData] = useDnD();
+  const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -96,6 +96,7 @@ export const KeywordDescription: React.FC<{
     event.dataTransfer.effectAllowed = "move";
     setDraggableType(type);
     setDraggableData({ content: content, prompt: prompt, provenance: "history" });
+    setParentNodeId(parentNodeId);
   };
 
   if (!keyword) return null;
@@ -185,11 +186,11 @@ export const KeywordDescription: React.FC<{
 
 
 // -- FOLDER PANEL COMPONENT (the panel that opens on the left side) --- //
-const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean; toggleFolder: () => void; similarTexts: Keyword[]; isAIGenerated: boolean; }> = ({ width, height, showFolder, toggleFolder, similarTexts, isAIGenerated=false }) => {
+const FolderPanel: React.FC<{ parentNodeId: string; width: number; height: number; showFolder: boolean; toggleFolder: () => void; similarTexts: Keyword[]; isAIGenerated: boolean; }> = ({ parentNodeId, width, height, showFolder, toggleFolder, similarTexts, isAIGenerated=false }) => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   // const [contentState, setContentState] = useState<string | null>(content || '');
-  const [_, setDraggableType, __, setDraggableData] = useDnD();
+  const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -198,6 +199,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
     prompt?: string
   ) => {
     event.dataTransfer.effectAllowed = "move";
+    setParentNodeId(parentNodeId)
     setDraggableType(type);
     setDraggableData({ content: content, prompt: prompt, provenance: "history" }); //everything in the folder wil  be human made
   };
@@ -288,7 +290,7 @@ const FolderPanel: React.FC<{ width: number; height: number; showFolder: boolean
 
 //------------------- TEXT WITH KEYWORDS NODE ------------------//
 
-export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywordsNode>) {
+export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithKeywordsNode>) {
   // -- handling state on text area edit  ---//
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(data.content || '');
@@ -606,6 +608,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
           className="absolute"
         >
           <FolderPanel
+            parentNodeId={id}
             width={width} 
             height={height} 
             showFolder={showFolder} 
@@ -686,6 +689,21 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
               </>
             )}
 
+                        <Handle
+                    type="source"
+                    position={Position.Bottom}
+                    id="a"
+                    isConnectable={false}
+                    onConnect={(params) => console.log('handle onConnect', params)}
+                  />
+                  <Handle
+                    type="target"
+                    position={Position.Top}
+                    id="b"
+                    isConnectable={false}
+                    onConnect={(params) => console.log('handle onConnect', params)}
+                  />
+
         </div>
 
          {/* Description panel that appears below. motion.div animates it moving up and down.  */}
@@ -703,6 +721,7 @@ export function TextWithKeywordsNode({ data, selected }: NodeProps<TextWithKeywo
             containerHeight={height*2}
             containerWidth={width}
             showDescription={showDescription}
+            parentNodeId={id}
             toggleDescription={toggleDescription} 
             isAIGenerated={isAIGenerated}
           />

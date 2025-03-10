@@ -11,7 +11,7 @@ interface TitleBarProps {
 const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
   const { canvasID, canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
   const { loginStatus } = useAppContext();
-  const { nodesToObject } = useNodeContext();
+  const { canvasToObject } = useNodeContext();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(canvasName);
   const [displayDate, setDisplayDate] = useState("Never");
@@ -23,7 +23,7 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
     } else {
       setNewName(canvasName);
     }
-    const canvasObject = nodesToObject();
+    const canvasObject = canvasToObject();
     console.log("title bar is saving the canvas.")
     saveCanvas(canvasObject, canvasID, canvasName);
   };
