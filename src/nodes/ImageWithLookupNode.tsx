@@ -255,7 +255,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
     }];
     
 
-    const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.artworks || defaultArtworks);
+    const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.similarArtworks || defaultArtworks);
     const { backend } = useAppContext();
 
     const fetchSimilarArtworks = async () => {
@@ -289,7 +289,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 image: item.image || "Unknown",
             }));
             console.log('fetched similar artworks from backend:', artworks);
-            data.artworks=artworks;
+            data.similarArtworks=artworks;
             setSimilarArtworks(artworks);
             setInitialCheck(false);
         } catch (error) {
@@ -316,8 +316,8 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
     
     useEffect(() => {
         // console.log("initial check", initialCheck);
-        if (data.artworks && initialCheck){
-            setSimilarArtworks(data.artworks);
+        if (data.similarArtworks && initialCheck){
+            setSimilarArtworks(data.similarArtworks);
             setInitialCheck(false);
         }
         else if (initialCheck && imageUrl!=='') {

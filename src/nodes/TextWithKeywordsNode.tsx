@@ -321,7 +321,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
 
 
   const fetchSimilarTexts = async (query: string) => {
-    //console.log("fetching texts for:", query);
+    console.log("fetching texts for:", query);
     try {
       const response = await fetch(`${backend}/api/get-similar-texts`, {
         method: 'POST',

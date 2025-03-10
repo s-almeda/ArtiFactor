@@ -36,8 +36,9 @@ function AppContent() {
 
   return (
     <AppProvider backend={backend_url}>
-    <NodeProvider>
     <CanvasProvider>
+    <NodeProvider>
+
       <PaletteProvider>
         <div className="relative h-screen w-screen overflow-hidden">
           {/* Sidebar */}
@@ -106,8 +107,9 @@ function AppContent() {
           </ReactFlowProvider>
         </div>
       </PaletteProvider>
+
+      </NodeProvider>
     </CanvasProvider>
-    </NodeProvider>
     </AppProvider>
   );
 }

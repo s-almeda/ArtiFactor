@@ -39,7 +39,7 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { canvasName, canvasID, setCanvasId, pullCanvas, saveCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, saveCurrentViewport } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { toObject, getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
   const { draggableType, setDraggableType, draggableData, setDraggableData, parentNodeId} = useDnD(); //dragStartPosition, setDragStartPosition
 
@@ -50,7 +50,7 @@ const Flow = () => {
 
   //const location = useLocation();
   const [searchParams] = useSearchParams();
-  const userParam = searchParams.get('user');
+  //const userParam = searchParams.get('user');
   const canvasParam = searchParams.get('canvas');
 
   const checkCanvasParam = async (userParam: string | null, canvasParam: string | null) => {
@@ -74,41 +74,15 @@ const Flow = () => {
     return true;
   };
 
-  //our custom nodes change function called everytime a node changes, even a little
-  const handleOnNodesChange = useCallback(
-    (changes: any) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
-      quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
-      if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
-        //console.log("flow is saving canvas to the database");
-        saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
-      }
-    },
-      [setNodes, quickSaveToBrowser, saveCanvas]
-  );
-
-  const handleOnEdgesChange = useCallback(
-    (changes: any) => {
-      console.log("edges changed");
-      // setEdges((eds) => applyEdgeChanges(changes, eds));
-      // quickSaveToBrowser(toObject()); //everytime a node is changed, save it to the browser storage
-      // if (userParam && canvasParam && loginStatus  === "logged in") { //if we have a user and canvas id set in the url,
-      //   //console.log("flow is saving canvas to the database");
-      //   saveCanvas(toObject(), canvasID, canvasName); //everytime a node is changed, save to the database
-      // }
-    },
-    [setEdges],
-  );
-
 
   const handleNodeClick = useCallback(
   (event: MouseEvent, node: Node) => {
     if (event.altKey) { 
       if (node.data.content) {
-        generateNode(node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
+        generateNode(node.id, node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
       } else if (Array.isArray(node.data.words)) {
         const content = wordsToString(node.data.words);
-        generateNode(content, calcNearbyPosition(getNodesBounds([node])));
+        generateNode(node.id, content, calcNearbyPosition(getNodesBounds([node])));
       }  console.log("you option clicked this node:", node.data);
     }
   },[]);
@@ -176,8 +150,10 @@ useOnViewportChange({
       return updatedNodes;
     });
   };
+
+
   const drawEdge = (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => {
-    console.log("Parent Node ID:", parentNodeId, "new node id: ", newNodeId);
+    //console.log("Parent Node ID:", parentNodeId, "new node id: ", newNodeId);
 
     const parentNode = updatedNodes.find((node) => node.id === parentNodeId);
     const newNode = updatedNodes.find((node) => node.id === newNodeId);
@@ -359,7 +335,7 @@ useOnViewportChange({
 
   const deleteNodeById = (nodeId: string) => {  
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-    quickSaveToBrowser(toObject(), canvasID); //everytime a node is changed, save it to the browser storage
+    quickSaveToBrowser(canvasToObject(), canvasID); //everytime a node is changed, save it to the browser storage
   };
 
 
@@ -368,7 +344,7 @@ useOnViewportChange({
   const generateNode = useCallback(
     //todo, add parentnodeid for edges
     // Requests through reagent, generates an image node with a prompt and optional position
-    async (prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
+    async (parentNodeId: string, prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
 
       // True if the "prompt" is actually an image
       const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(prompt);
@@ -394,7 +370,7 @@ useOnViewportChange({
           });
 
           if (response.status === 200) {
-            addTextWithKeywordsNode(response.data.text, "ai", position);
+            addTextWithKeywordsNode(response.data.text, "ai", position, false, parentNodeId);
             deleteNodeById(loadingNodeId);
           } // response error
           else {
@@ -414,7 +390,7 @@ useOnViewportChange({
         
             if (response.status === 200) {
 
-              addImageWithLookupNode(response.data.imageUrl, position, prompt, "ai");
+              addImageWithLookupNode(response.data.imageUrl, position, prompt, "ai", parentNodeId);
               deleteNodeById(loadingNodeId);
 
             } // response error
@@ -463,7 +439,7 @@ useOnViewportChange({
         setEdges([]);
         addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
         setViewport({ x: 0, y: 0, zoom: 1 });
-        quickSaveToBrowser(toObject(), "browser");
+        quickSaveToBrowser(canvasToObject(), "browser");
       }
       setattemptedQuickLoad(true);
       return;
@@ -525,7 +501,7 @@ useOnViewportChange({
     };
 
     fetchData();
-  }, [userID, loginStatus, attemptedQuickLoad, canvasParam, backend, checkCanvasParam, pullCanvas, setCanvasId, setNodes, setViewport, setCanvasName, setLastSaved, quickSaveToBrowser, toObject, addTextWithKeywordsNode, createNewCanvas, pullCanvasFromBrowser]);
+  }, [userID, loginStatus, attemptedQuickLoad, canvasParam, backend, checkCanvasParam, pullCanvas, setCanvasId, setNodes, setViewport, setCanvasName, setLastSaved, quickSaveToBrowser, canvasToObject, addTextWithKeywordsNode, createNewCanvas, pullCanvasFromBrowser]);
 
  
 

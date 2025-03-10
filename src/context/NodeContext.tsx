@@ -1,8 +1,16 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Node, Edge, ReactFlowJsonObject, Viewport} from '@xyflow/react';
+import { 
+  Node, 
+  Edge, 
+  ReactFlowJsonObject, 
+  Viewport,   
+  applyNodeChanges,
+  applyEdgeChanges} from '@xyflow/react';
 import { TextWithKeywordsNodeData } from '../nodes/types';
 import { stringToWords } from '../utils/utilityFunctions';
-
+import {useSearchParams} from "react-router-dom";
+import { useAppContext } from './AppContext';
+import { useCanvasContext } from './CanvasContext';
 
 
 
@@ -10,6 +18,8 @@ interface NodeContextProps {
   nodes: Node<any>[]; // Keep nodes generic
   edges: Edge<any>[]; // Keep edges generic 
   currentViewport: Viewport;
+  handleOnNodesChange: (changes: any) => void;
+  handleOnEdgesChange: (changes: any) => void;
   setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
   setEdges: React.Dispatch<React.SetStateAction<Edge<any>[]>>; // Keep setEdges generic
   canvasToObject: () => ReactFlowJsonObject;
@@ -20,6 +30,12 @@ interface NodeContextProps {
 const NodeContext = createContext<NodeContextProps | undefined>(undefined);
 
 export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { loginStatus } = useAppContext(); //userID, backend
+  const { canvasName, canvasID, saveCanvas, quickSaveToBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const [searchParams] = useSearchParams();
+  const userParam = searchParams.get('user');
+  const canvasParam = searchParams.get('canvas');
+  
   const [nodes, setNodes] = useState<Node<any>[]>([]); // Keep nodes state generic
   const [edges, setEdges] = useState<Edge<any>[]>([]); // Keep edges state generic
   const [currentViewport, setCurrentViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
@@ -29,6 +45,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const canvasToObject = useCallback((): ReactFlowJsonObject => {
+    //console.log("current nodes:" , nodes)
     return {
       nodes: nodes,
       edges: edges,
@@ -67,10 +84,32 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }, []);
 
+  const handleOnNodesChange = useCallback(
+    (changes: any) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      quickSaveToBrowser(canvasToObject()); // Save to browser storage
+      if (userParam && canvasParam && loginStatus === "logged in") {
+        saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
+      }
+    },
+    [setNodes, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
+  );
+  
+  const handleOnEdgesChange = useCallback(
+    (changes: any) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+      quickSaveToBrowser(canvasToObject()); // Save to browser storage
+      if (userParam && canvasParam && loginStatus === "logged in") {
+        saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
+      }
+    },
+    [setEdges, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
+  );
+
 
 
   return (
-    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, canvasToObject, saveCurrentViewport }}>
+    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport }}>
       {children}
     </NodeContext.Provider>
   );

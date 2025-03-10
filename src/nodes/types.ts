@@ -14,7 +14,7 @@ export type ArtifactorNodeData = { // all of our nodes will have these things!
 
 export type ImageWithLookupNodeData = ArtifactorNodeData & {
   prompt?: string;
-  artworks?: Artwork[];
+  similarArtworks?: Artwork[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
 };
