@@ -366,7 +366,7 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
           [canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp, canvasID]
         );
         console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}`);
-        console.log("nodes:", nodes);
+        console.log(`Number of nodes saved: ${nodes.length}`);
 
       } else {
         // ✅ Insert new canvas
