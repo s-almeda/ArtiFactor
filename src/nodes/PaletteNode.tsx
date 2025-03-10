@@ -1,14 +1,13 @@
-/* what shows up in the Palette! */
-import { type FC, type DragEvent } from "react";//useState
+import React, { FC, DragEvent, useState } from "react";
 import { useDnD } from "../context/DnDContext";
-import type { NodeData } from "../context/PaletteContext";
 import { Download } from "lucide-react";
+import type { NodeData } from "../context/PaletteContext";
 
 interface PaletteNodeProps {
   data: NodeData;
   charLimit: number;
   type: "text" | "image";
-  removeNode: (id: number) => void; // Function to remove the node
+  removeNode: (id: number) => void;
 }
 
 const PaletteNode: FC<PaletteNodeProps> = ({
@@ -17,8 +16,8 @@ const PaletteNode: FC<PaletteNodeProps> = ({
   type,
   removeNode,
 }) => {
-  //const [___, setIsHovered] = useState(false);
   const { setDraggableType, setDraggableData } = useDnD();
+  const [expanded, setExpanded] = useState(false); // State for image expansion
 
   const onDragStart = (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.effectAllowed = "move";
@@ -54,8 +53,6 @@ const PaletteNode: FC<PaletteNodeProps> = ({
       className="border border-gray-600 rounded-md p-2 cursor-grab hover:bg-gray-50 hover:shadow-sm transition-all text-sm relative"
       draggable
       onDragStart={onDragStart}
-      // onMouseEnter={() => setIsHovered(true)}
-      // onMouseLeave={() => setIsHovered(false)}
       style={{ width: "100%" }}
     >
       {type === "text" ? (
@@ -69,7 +66,7 @@ const PaletteNode: FC<PaletteNodeProps> = ({
             type="button"
             className="absolute top-1 right-1 bg-white text-black rounded-full w-5 h-5 text-xs flex items-center justify-center z-50"
             onClick={(e) => {
-              e.stopPropagation(); // Prevent interference with dragging
+              e.stopPropagation();
               removeNode(data.id);
             }}
           >
@@ -77,45 +74,62 @@ const PaletteNode: FC<PaletteNodeProps> = ({
           </button>
         </div>
       ) : (
-        <div className="relative max-h-[60px] overflow-hidden">
-          <img
-            src={data.content}
-            alt={data.prompt}
-            className="rounded-md object-cover w-full h-full"
-          />
+        <div className="relative">
           <div
-            className="absolute bottom-0 left-0 w-full h-full bg-white bg-opacity-50 
-             text-gray-800 text-md uppercase text-center p-1 opacity-0 
-             transition-opacity duration-300 hover:opacity-100 font-bold italic 
-             leading-tight flex flex-col items-center justify-center"
-            style={{ zIndex: 10 }}
+            className={`max-h-${
+              expanded ? "full" : "60"
+            } overflow-hidden relative`}
+            style={{ height: expanded ? "auto" : "60px" }}
           >
-            <span>
-              {data.prompt.length > 60
-                ? `${data.prompt.substring(0, 60)}...`
-                : data.prompt}
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                downloadImage();
-              }}
-              className="bg-gray-800 text-white px-2 py-1 rounded-md text-sm mt-2"
+            <img
+              src={data.content}
+              alt={data.prompt}
+              className="rounded-md object-cover w-full h-full"
+            />
+            <div
+              className="absolute bottom-0 left-0 w-full h-full bg-white bg-opacity-50 
+                         text-gray-800 text-md uppercase text-center p-1 opacity-0 
+                         transition-opacity duration-300 hover:opacity-100 font-bold italic 
+                         leading-tight flex flex-col items-center justify-center"
+              style={{ zIndex: 10 }}
             >
-              <Download size={16} />
-            </button>
-            <button
-              type="button"
-              className="absolute top-1 right-1 bg-white text-black rounded-full w-5 h-5 text-xs flex items-center justify-center z-50"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent interference with dragging
-                removeNode(data.id);
-              }}
-            >
-              ✕
-            </button>
+              <span>
+                {data.prompt.length > 60
+                  ? `${data.prompt.substring(0, 60)}...`
+                  : data.prompt}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadImage();
+                }}
+                className="bg-gray-800 text-white px-2 py-1 rounded-md text-sm mt-2"
+              >
+                <Download size={16} />
+              </button>
+            </div>
           </div>
+          <button
+            type="button"
+            className="absolute bottom-1 right-1 bg-white text-black rounded-full w-5 h-5 text-xs flex items-center justify-center z-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+          >
+            {expanded ? "▼" : "▶"}
+          </button>
+          <button
+            type="button"
+            className="absolute top-1 right-1 bg-white text-black rounded-full w-5 h-5 text-xs flex items-center justify-center z-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeNode(data.id);
+            }}
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

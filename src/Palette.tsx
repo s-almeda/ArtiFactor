@@ -33,7 +33,7 @@ const Palette: React.FC = () => {
   const filteredNodes = clippedNodes.filter((node) => node.type === activeTab);
 
   return (
-    <div className="p-4 ">
+    <div className="p-4 h-[50vw] overflow-y-auto border border-gray-300 rounded-md">
       {/* Toggle Tabs */}
       <div className="flex space-x-2 mb-4">
         {["text", "image"].map((tab) => (
