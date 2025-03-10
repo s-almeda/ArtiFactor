@@ -365,7 +365,8 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
           `UPDATE canvases SET name = ?, nodes = ?,edges = ?, viewport = ?, timestamp = ? WHERE id = ?`,
           [canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp, canvasID]
         );
-        console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}.`);
+        console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}`);
+        console.log("nodes:", nodes);
 
       } else {
         // ✅ Insert new canvas
