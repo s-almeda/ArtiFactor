@@ -38,7 +38,6 @@ const Admin: React.FC = () => {
     const [enteredUserID, setEnteredUserID] = useState<string>('');
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
-    const [actualCanvasId, setActualCanvasId] = useState<string>('');
 
     const handlePasswordSubmit = (password: string) => {
         if (password === 'miku') {
@@ -87,8 +86,6 @@ const Admin: React.FC = () => {
                 type: node.type,
                 content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
             })));
-            //const canvasIdParts = canvasId.split('-');
-            setActualCanvasId(canvasId);
         } else {
             const response = await fetch(`${backend}/api/get-canvas/${canvasId}`);
             const result = await response.json();
@@ -101,8 +98,6 @@ const Admin: React.FC = () => {
                     type: node.type,
                     content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
                 })));
-                const canvasIdParts = result.canvas.id.split('-');
-                setActualCanvasId(canvasIdParts.length > 1 ? canvasIdParts.slice(1).join('-') : result.canvas.id);
             }
         }
     };
@@ -218,8 +213,8 @@ const Admin: React.FC = () => {
                                 <button 
                                     onClick={() => {
 
-                                        console.log("sending user to: " + selectedUser + " and canvas to:" + actualCanvasId);
-                                        window.location.href = `/?user=${selectedUser}&canvas=${actualCanvasId}`;
+                                        console.log("sending user to: " + selectedUser + " and canvas to:" + canvasId);
+                                        window.location.href = `/?user=${selectedUser}&canvas=${canvasId}`;
                                     }} 
                                     className='bg-blue-500 text-white px-4 py-2 mb-4'
                                 >
