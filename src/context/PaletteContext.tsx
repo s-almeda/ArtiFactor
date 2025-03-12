@@ -43,17 +43,17 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
 
   const addClippedNode = async (node: NodeData) => {
     // if the node with the same content is already in the list, don't add it again
-    if (clippedNodes.some((n) => n.content === node.content)) {
-      return;
-    }
-    console.log("Adding node to palette:", node);
-    setClippedNodes((prevNodes) => [...prevNodes, node]);
-
     if (node.type == 'image') {
       setActiveTab("images");
     } else {
       setActiveTab("text");
     }
+
+    if (clippedNodes.some((n) => n.content === node.content)) {
+      return;
+    }
+    console.log("Adding node to palette:", node);
+    setClippedNodes((prevNodes) => [...prevNodes, node]);
 
     if (loginStatus === "logged in") { // if logged in, also add the clipping to database
       try {
@@ -73,9 +73,9 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
         console.error("Error adding clipping to database:", error);
       }
     }
-    else if (loginStatus === "logged out") {
-      savePaletteToBrowser();
-    }
+
+
+
   };
 
   const removeNode = (id: number) => {
@@ -151,6 +151,13 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
       loadPaletteFromBrowser();
     }
   }, [userID, loginStatus]);
+
+  useEffect(() => {
+    if (loginStatus === "logged out") {
+      savePaletteToBrowser();
+    }
+  }
+  , [clippedNodes]);
 
   return (
     <PaletteContext.Provider

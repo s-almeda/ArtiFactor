@@ -459,7 +459,7 @@ useOnViewportChange({
           setEdges([]);
           addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
           setViewport({ x: 0, y: 0, zoom: 1 });
-          quickSaveToBrowser(canvasToObject(), "browser");
+          quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
         }
         setattemptedQuickLoad(true);
         return;
@@ -471,25 +471,25 @@ useOnViewportChange({
           setCanvasId(canvasParam);
           // Pull the canvas data from the API
           pullCanvas(`${canvasParam}`).then((savedCanvas: { canvasData: ReactFlowJsonObject, canvasName: string, timestamp: string } | null) => {
-        if (savedCanvas !== null) {
-          console.log("URL requested canvas found in the database!");
-          console.log(savedCanvas);
-      
-          // Destructure and set canvas data
-          const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas.canvasData;
+            if (savedCanvas !== null) {
+              console.log("URL requested canvas found in the database!");
+              console.log(savedCanvas);
           
-          console.log ("flow has received: ", savedCanvas);
-          // Update state with canvas data
-          setNodes(nodes);
-          setEdges(edges);
-          setViewport(viewport);
-          setCanvasName(savedCanvas.canvasName);  // Make sure to use canvasName here
-          setLastSaved(savedCanvas.timestamp);
-          setattemptedQuickLoad(true);
-          return;
-        } else {
-          console.log("No canvas found for the given ID.");
-        }
+              // Destructure and set canvas data
+              const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas.canvasData;
+              
+              console.log ("flow has received: ", savedCanvas);
+              // Update state with canvas data
+              setNodes(nodes);
+              setEdges(edges);
+              setViewport(viewport);
+              setCanvasName(savedCanvas.canvasName);  // Make sure to use canvasName here
+              setLastSaved(savedCanvas.timestamp);
+              setattemptedQuickLoad(true);
+              return;
+            } else {
+              console.log("No canvas found for the given ID.");
+            }
           });
         }  // If no canvasParam or canvasParam didn't work, find a valid canvas param
         else {
@@ -497,7 +497,7 @@ useOnViewportChange({
           const data = await response.json();
       
           if (data.success && data.canvases.length > 0) {
-            const lastCanvas = data.canvases[data.canvases.length - 1].id;
+            const lastCanvas = data.canvases[data.canvases.length - 1].canvasId;
             console.log("Redirecting to the last canvas:", lastCanvas);
       
             // Redirect to the last canvas
@@ -519,9 +519,11 @@ useOnViewportChange({
 
 useEffect(() => {
   const interval = setInterval(() => {
-    quickSaveToBrowser(canvasToObject(), "browser");
     if (userID) {
       saveCanvas(canvasToObject(), canvasID, canvasName);
+    }
+    else{
+      quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
     }
   }, 60000); // 60 seconds
 
