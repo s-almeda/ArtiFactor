@@ -197,7 +197,7 @@ app.post("/api/generate-image", async (req, res) => {
 
 app.post("/api/add-user", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  const { userID, password = "" } = req.body;
+  const { userID = "" } = req.body;
 
   if (!userID) {
     return res.status(400).json({ error: "Missing required field: userID" });
@@ -207,13 +207,12 @@ app.post("/api/add-user", async (req, res) => {
     const db = await dbPromise;
 
     // Check if user already exists
-    const existingUser = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
+    const existingUser = await db.get(`SELECT * FROM users WHERE userId = ?`, [userID]);
     if (existingUser) {
       return res.json({ success: true, message: "User already exists", userID });
     }
 
-    // Insert new user with a blank password by default
-    await db.run(`INSERT INTO users (id, password) VALUES (?, ?)`, [userID, password]);
+    await db.run(`INSERT INTO users (userId) VALUES (?)`, [userID]);  //no passwords for now
 
     res.json({ success: true, userID, message: "User added successfully!" });
   } catch (error) {
@@ -221,36 +220,30 @@ app.post("/api/add-user", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-//check a user's password -- no encryption for now lol, super simple. 
-app.post("/api/authenticate-user", async (req, res) => {
-  const { userID, password } = req.body;
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  if (!userID) {
-    return res.status(400).json({ error: "Missing required field: userID" });
-  }
-
-  try {
-    const db = await dbPromise;
-
-    // Fetch the user
-    const user = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check password (blank is allowed)
-    if (user.password !== password) {
-      return res.status(401).json({ error: "Incorrect password" });
-    }
-
-    res.json({ success: true, userID, message: "User authenticated!" });
-  } catch (error) {
-    console.error("Error authenticating user:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
+//check a user's password -- no encryption for now lol, super simple, 
+// app.post("/api/authenticate-user", async (req, res) => {
+//   const { userID, password } = req.body;
+//   res.setHeader('Access-Control-Allow-Origin', '*');
+//   if (!userID) {
+//     return res.status(400).json({ error: "Missing required field: userID" });
+//   }
+//   try {
+//     const db = await dbPromise;
+//     // Fetch the user
+//     const user = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
+//     if (!user) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+//     // Check password (blank is allowed)
+//     if (user.password !== password) {
+//       return res.status(401).json({ error: "Incorrect password" });
+//     }
+//     res.json({ success: true, userID, message: "User authenticated!" });
+//   } catch (error) {
+//     console.error("Error authenticating user:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
 
 
 
@@ -265,19 +258,19 @@ app.get("/api/list-canvases/:userID", async (req, res) => {
     const db = await dbPromise;
 
     // Check if user exists
-    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
+    const user = await db.get(`SELECT userId FROM users WHERE userId = ?`, [userID]);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
     // Get all canvases for the user
-    const canvases = await db.all(`SELECT id, name FROM canvases WHERE user_id = ?`, [userID]);
+    const canvases = await db.all(`SELECT canvasId, canvasName FROM canvases WHERE userId = ?`, [userID]);
 
     // Format the canvases
     const formattedCanvases = canvases.map(canvas => ({
-      id: canvas.id,
-      name: canvas.name
+      canvasId: canvas.canvasId,
+      canvasName: canvas.canvasName
     }));
-    console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}`);
+    console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}: ${formattedCanvases.map(c => c.name).join(", ")}`);
 
     res.json({ success: true, canvases: formattedCanvases });
   } catch (error) {
@@ -293,24 +286,23 @@ app.get("/api/list-users", async (req, res) => {
     const db = await dbPromise;
 
     // Get all users
-    const users = await db.all(`SELECT id FROM users`);
+    const users = await db.all(`SELECT userId FROM users`);
 
     // Get each user's canvases asynchronously
     const usersWithCanvases = await Promise.all(
       users.map(async (user) => {
-        const canvases = await db.all(`SELECT * FROM canvases WHERE user_id = ?`, [user.id]);
+        const canvases = await db.all(`SELECT * FROM canvases WHERE userId = ?`, [user.userId]);
         return {
-          id: user.id,
+          userId: user.userId,
           canvases: canvases.map((canvas) => ({
-            id: canvas.id,
-            name: canvas.name,
+            canvasId: canvas.canvasId,
+            canvasName: canvas.canvasName,
             timestamp: canvas.timestamp,
           })),
         };
       })
     );
-
-    console.log(`Listed ${usersWithCanvases.length} users`);
+    console.log(`/list-users Listed ${usersWithCanvases.length} users`);
     res.json({ success: true, users: usersWithCanvases });
   } catch (error) {
     console.error("Error listing users:", error);
@@ -324,110 +316,225 @@ app.get("/api/list-users", async (req, res) => {
 app.get("/api/next-canvas-id/:userID", async (req, res) => {
   const { userID } = req.params;
   console.log("Attempting to get next canvas ID for user:", userID);
+  
   try {
     const db = await dbPromise;
+
     // Check if user exists
-    const user = await db.get(`SELECT id FROM users WHERE id = ?`, [userID]);
+    const user = await db.get(`SELECT userId FROM users WHERE userId = ?`, [userID]);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    // Get all canvas IDs for the user
-    const canvases = await db.all(`SELECT id FROM canvases WHERE user_id = ?`, [userID]);
-    // Find the next available canvas ID
-    const canvasIds = canvases
-      .map(canvas => parseInt(canvas.id.split('-')[1], 10))
-      .filter(id => !isNaN(id));
-    const nextCanvasId = `${userID}-${Math.max(0, ...canvasIds) + 1}`;
+
+    // Get the highest canvas number for this user using MAX()
+    const result = await db.get(
+      `SELECT MAX(CAST(SUBSTR(canvasId, INSTR(canvasId, '-') + 1) AS INTEGER)) AS maxId
+       FROM canvases WHERE userId = ?`,
+      [userID]
+    );
+
+    const nextCanvasId = `${userID}-${(result?.maxId ?? -1) + 1}`;
+
     console.log(`Next canvas ID for user ${userID} is ${nextCanvasId}`);
     res.json({ success: true, nextCanvasId });
+
   } catch (error) {
     console.error("Error getting next canvas ID:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-  app.post("/api/save-canvas", async (req, res) => {
-    console.log("received request to save canvas.");
-    const { userID, canvasID, canvasName, nodes, edges, viewport, timestamp } = req.body;
-    console.log("Attempting to save canvas:", req.body);
-    if (!userID || !canvasID || !nodes || !edges || !viewport || !timestamp) {
-      
-      return res.status(400).json({ error: "Missing required fields" });
+
+app.post("/api/save-canvas", async (req, res) => {
+  console.log("Received request to save canvas.");
+  const { userID, canvasID, canvasName, canvasJSONObject, timestamp: reqTimestamp } = req.body;
+  const timestamp = reqTimestamp || new Date().toISOString();
+  
+  console.log("Attempting to save canvas:", req.body);
+
+  if (!userID || !canvasID || !canvasName || !canvasJSONObject) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const db = await dbPromise;
+    
+    // Check if canvas already exists
+    const existingCanvas = await db.get("SELECT canvasId FROM canvases WHERE canvasId = ?", [canvasID]);
+
+    if (existingCanvas) {
+      console.log(`Found existing canvas ${canvasID} for user ${userID}. Updating with new save.`);
+
+      // Update the canvas name
+      await db.run(
+        `UPDATE canvases SET canvasName = ? WHERE canvasId = ?`,
+        [canvasName, canvasID]
+      );
+
+    } else {
+      console.log(`Creating new canvas ${canvasID} for user ${userID}.`);
+
+      // Insert new canvas
+      await db.run(
+        `INSERT INTO canvases (canvasId, userId, canvasName) VALUES (?, ?, ?)`,
+        [canvasID, userID, canvasName]
+      );
     }
 
-    try {
-      const db = await dbPromise;
-      const existingCanvas = await db.get("SELECT id FROM canvases WHERE id = ?", [canvasID]);
-      
-      if (existingCanvas) {
-        console.log(`found canvas ${canvasID} for user ${userID}. will update with new save`);
-        await db.run(
-          `UPDATE canvases SET name = ?, nodes = ?,edges = ?, viewport = ?, timestamp = ? WHERE id = ?`,
-          [canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp, canvasID]
-        );
-        console.log(`updated canvas ${canvasID} for user ${userID} with name ${canvasName}`);
-        console.log(`Number of nodes saved: ${nodes.length}`);
+    // Retrieve the latest version of the canvas
+    const latestVersion = await db.get(
+      `SELECT * FROM versions WHERE canvasId = ? ORDER BY timestamp DESC LIMIT 1`,
+      [canvasID]
+    );
 
-      } else {
-        // ✅ Insert new canvas
-        await db.run(
-          `INSERT INTO canvases (id, user_id, name, nodes, edges, viewport, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [canvasID, userID, canvasName, JSON.stringify(nodes), JSON.stringify(edges), JSON.stringify(viewport), timestamp]
-        );
-        console.log(`New canvas ${canvasID} created for user ${userID} with name ${canvasName}.`);
+    let saveNewVersion = true;
+
+    if (latestVersion) {
+      const latestCanvasData = JSON.parse(latestVersion.jsonBlob);
+      const latestNodeIds = latestCanvasData.nodes.map(node => node.id);
+      const newNodeIds = canvasJSONObject.nodes.map(node => node.id);
+
+      // Check if node IDs have changed
+      if (JSON.stringify(latestNodeIds) === JSON.stringify(newNodeIds)) {
+        saveNewVersion = false;
       }
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error saving canvas:", error);
-      res.status(500).json({ error: "Internal server error" });
     }
-  });
 
-  app.delete("/api/delete-canvas/:userID/:canvasID", async (req, res) => {
-    const { userID, canvasID } = req.params;
-    console.log(`Attempting to delete canvas ${canvasID} for user ${userID}`);
-
-    try {
-      const db = await dbPromise;
-      const result = await db.run(`DELETE FROM canvases WHERE id = ? AND user_id = ?`, [canvasID, userID]);
-
-      if (result.changes === 0) {
-        return res.status(404).json({ error: "Canvas not found or does not belong to the user" });
-      }
-      console.log(`Canvas ${canvasID} deleted successfully for user ${userID}.`);
-      res.json({ success: true, message: "Canvas deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting canvas:", error);
-      res.status(500).json({ error: "Internal server error" });
+    if (saveNewVersion) {
+      // Save a new version in the versions table
+      await db.run(
+        `INSERT INTO versions (versionId, canvasId, timestamp, jsonBlob) VALUES (?, ?, ?, ?)`,
+        [`${canvasID}-${timestamp}`, `${canvasID}`, timestamp, JSON.stringify(canvasJSONObject)]
+      );
+      console.log(`Saved new version for canvas ${canvasID} at ${timestamp}`);
+    } else {
+      // Overwrite the latest version
+      await db.run(
+        `UPDATE versions SET jsonBlob = ?, timestamp = ? WHERE versionId = ?`,
+        [JSON.stringify(canvasJSONObject), timestamp, latestVersion.versionId]
+      );
+      console.log(`Overwrote latest version for canvas ${canvasID} at ${timestamp}`);
     }
-  });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error("Error saving canvas:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
-  app.get("/api/get-canvas/:canvasID", async (req, res) => {
-    console.log("Attempting to pull canvas from database:", req.params);
-    const { canvasID } = req.params;
+app.delete("/api/delete-canvas/:userID/:canvasID", async (req, res) => {
+  const { userID, canvasID } = req.params;
+  console.log(`Attempting to delete canvas ${canvasID} for user ${userID}`);
 
-    try {
-      const db = await dbPromise;
-      const canvas = await db.get(`SELECT * FROM canvases WHERE id = ?`, [canvasID]);
+  try {
+    const db = await dbPromise;
+    
+    // Delete canvas from the canvases table
+    const result = await db.run(
+      `DELETE FROM canvases WHERE canvasId = ? AND userId = ?`, 
+      [canvasID, userID]
+    );
 
-      if (!canvas) {
-        return res.status(404).json({ error: "Canvas not found" });
-      }
-
-      // ✅ Parse JSON fields
-      canvas.nodes = JSON.parse(canvas.nodes);
-      canvas.edges = JSON.parse(canvas.edges);
-      canvas.viewport = JSON.parse(canvas.viewport);
-
-      console.log(`✅ Canvas ${canvasID} loaded with ${canvas.nodes.length} nodes and ${canvas.edges.length} edges.`);
-      res.json({ success: true, canvas, timestamp: canvas.timestamp });
-    } catch (error) {
-      console.error("Error loading canvas:", error);
-      res.status(500).json({ error: "Internal server error" });
+    // Check if any canvas was deleted
+    if (result.changes === 0) {
+      return res.status(404).json({ error: "Canvas not found or does not belong to the user" });
     }
-  });
+
+    // Delete all versions associated with the canvas
+    await db.run(
+      `DELETE FROM versions WHERE canvasId = ?`, 
+      [canvasID]
+    );
+
+    console.log(`Canvas ${canvasID} and its versions deleted successfully for user ${userID}.`);
+    res.json({ success: true, message: "Canvas and its versions deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting canvas:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+app.get("/api/get-canvas/:canvasID", async (req, res) => {
+  console.log("Attempting to pull canvas from database:", req.params);
+  const { canvasID } = req.params;
+
+  try {
+    const db = await dbPromise;
+
+    // Retrieve the canvas name from the canvases table
+    const canvas = await db.get(`SELECT canvasName FROM canvases WHERE canvasId = ?`, [canvasID]);
+    if (!canvas) {
+      return res.status(404).json({ error: "Canvas not found" });
+    }
+
+    // Retrieve the latest version of the canvas
+    const version = await db.get(`SELECT * FROM versions WHERE canvasId = ? ORDER BY timestamp DESC LIMIT 1`, [canvasID]);
+    if (!version) {
+      return res.status(404).json({ error: "Canvas version not found" });
+    }
+
+    // ✅ Parse JSON fields from the version data
+    const canvasData = JSON.parse(version.jsonBlob);
+    const { nodes, edges, viewport } = canvasData;
+
+    console.log(`✅ Canvas ${canvasID} loaded with ${nodes.length} nodes and ${edges.length} edges from time: ${version.timestamp}`);
+    res.json({ success: true, canvas: { canvasID, canvasName: canvas.canvasName, nodes, edges, viewport }, timestamp: version.timestamp });
+  } catch (error) {
+    console.error("Error loading canvas:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/list-versions/:canvasID", async (req, res) => {
+  const { canvasID } = req.params;
+  console.log(`Attempting to list versions for canvas: ${canvasID}`);
+
+  try {
+    const db = await dbPromise;
+
+    // Retrieve all versions for the given canvas ID
+    const versions = await db.all(`SELECT versionId FROM versions WHERE canvasId = ? ORDER BY timestamp DESC`, [canvasID]);
+
+    if (versions.length === 0) {
+      return res.status(404).json({ error: "No versions found for the specified canvas ID" });
+    }
+
+    console.log(`Listed ${versions.length} versions for canvas ${canvasID}`);
+    res.json({ success: true, versions });
+  } catch (error) {
+    console.error("Error listing versions:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/get-version/:versionID", async (req, res) => {
+  const { versionID } = req.params;
+  console.log(`Attempting to get version: ${versionID}`);
+
+  try {
+    const db = await dbPromise;
+
+    // Retrieve the specific version by version ID
+    const version = await db.get(`SELECT * FROM versions WHERE versionId = ?`, [versionID]);
+
+    if (!version) {
+      return res.status(404).json({ error: "Version not found" });
+    }
+
+    // Parse the JSON blob
+    const jsonBlob = JSON.parse(version.jsonBlob);
+
+    console.log(`Retrieved version ${versionID}`);
+    res.json({ success: true, version: { versionId: version.versionId, timestamp: version.timestamp, jsonBlob } });
+  } catch (error) {
+    console.error("Error getting version:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
   //------------- CLIPPINGS (for saving and loading a user's Palette) ---------//
@@ -440,7 +547,7 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 
     try {
       const db = await dbPromise;
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -455,30 +562,46 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 
   app.post("/api/add-clipping", async (req, res) => {
     const { userID, clipping } = req.body;
-  
+
     if (!userID || !clipping || typeof clipping !== "object") {
       return res.status(400).json({ error: "Invalid userID or clipping format" });
     }
-  
+
     try {
       const db = await dbPromise;
-  
+
       // Fetch current clippings
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-  
-      let clippings = JSON.parse(user.clippings);
-  
-      // Prevent duplicate clippings
-      if (!clippings.some((c) => JSON.stringify(c) === JSON.stringify(clipping))) {
-        clippings.push(clipping);
+
+      let clippings;
+      try {
+        clippings = JSON.parse(user.clippings);
+        if (!Array.isArray(clippings)) {
+          clippings = []; // Ensure it's an array, not an object
+        }
+      } catch (error) {
+        clippings = []; // Fallback to an empty array if parsing fails
       }
-  
+      console.log("clippings:", clippings);
+
+      if (clippings.length === 0) {
+        clippings = [clipping];
+      } else {
+        // Prevent duplicate clippings by checking for existing clipping
+        const clippingExists = clippings.some((c) => JSON.stringify(c) === JSON.stringify(clipping));
+        if (!clippingExists) {
+          clippings.push(clipping);
+        } else {
+          return res.status(400).json({ error: "Clipping already exists" });
+        }
+      }
+
       // Update user's clippings
-      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
-  
+      await db.run(`UPDATE users SET clippings = ? WHERE userId = ?`, [JSON.stringify(clippings), userID]);
+
       res.json({ success: true, message: "Clipping added!", clippings });
     } catch (error) {
       console.error("Error adding clipping:", error);
@@ -490,29 +613,33 @@ app.get("/api/next-canvas-id/:userID", async (req, res) => {
 
 
   app.post("/api/remove-clipping", async (req, res) => {
+
     const { userID, clipping } = req.body;
   
     if (!userID || !clipping || typeof clipping !== "object") {
       return res.status(400).json({ error: "Invalid userID or clipping format" });
     }
+    console.log("removing clipping...", clipping);
   
     try {
       const db = await dbPromise;
   
       // Fetch current clippings
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
   
       let clippings = JSON.parse(user.clippings);
+      console.log("number of clippings:", clippings.length);
   
-      // Remove clipping by filtering it out
-      clippings = clippings.filter((c) => JSON.stringify(c) !== JSON.stringify(clipping));
+      // Remove clipping by filtering it out based on the clipping ID
+      clippings = clippings.filter((c) => c.id !== clipping.id);
   
       // Update user's clippings
-      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
-  
+      await db.run(`UPDATE users SET clippings = ? WHERE userId = ?`, [JSON.stringify(clippings), userID]);
+      console.log("new num of clippings:", clippings.length);
       res.json({ success: true, message: "Clipping removed!", clippings });
     } catch (error) {
       console.error("Error removing clipping:", error);

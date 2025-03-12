@@ -7,7 +7,7 @@ import {
   Background,
   Controls,
   //MiniMap,
-  //ReactFlowJsonObject,
+  ReactFlowJsonObject,
   Node,
   // useNodesState,
   Edge,
@@ -77,12 +77,17 @@ const Flow = () => {
   const handleNodeClick = useCallback(
   (event: MouseEvent, node: Node) => {
     if (event.altKey) { 
-      if (node.data.content) {
+      if (node.data.type === "default"){ //don't generate the loading node
+        return
+      }
+      else if (node.data.content && node.data.content!= "loading ") {
         generateNode(node.id, node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
-      } else if (Array.isArray(node.data.words)) {
+      } 
+      else if (Array.isArray(node.data.words)) {
         const content = wordsToString(node.data.words);
         generateNode(node.id, content, calcNearbyPosition(getNodesBounds([node])));
-      }  console.log("you option clicked this node:", node.data);
+      }  
+      console.log("you option clicked this node:", node.data);
     }
   },[]);
 
@@ -118,7 +123,8 @@ useOnViewportChange({
     provenance: "user" | "history" | "ai" = "user",
     position?: { x: number; y: number },
     hasNoKeywords: boolean = false,
-    parentNodeId?: string
+    parentNodeId?: string,
+    similarTexts?: any[]
   ) => {
     const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
       ? defaultTextWithKeywordsNodeData
@@ -127,6 +133,7 @@ useOnViewportChange({
           provenance,
           content,
           intersections: [],
+          similarTexts: similarTexts ?? [],
           hasNoKeywords,
         };
 
@@ -170,7 +177,6 @@ useOnViewportChange({
 
       setEdges((eds) => addEdge(newEdge, eds));
     }
-    saveCanvas(canvasToObject(), canvasID, canvasName);
   };
 
   // // Placeholder function to create an edge between two specific nodes
@@ -188,10 +194,11 @@ useOnViewportChange({
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string) => {
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string, similarArtworks?: any[]) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
+    similarArtworks = similarArtworks && similarArtworks.length > 0 ? similarArtworks : undefined;  
     console.log("addImageWithLookupNode is adding an image to the canvas: ", content, prompt, provenance, parentNodeId);
     position = position ?? { 
       x: Math.random() * 250,
@@ -209,6 +216,7 @@ useOnViewportChange({
       prompt: prompt,
       provenance: provenance,
       parentNodeId: parentNodeId,
+      similarArtworks: similarArtworks,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
 
@@ -221,8 +229,9 @@ useOnViewportChange({
       }
       return updatedNodes;
     });
-
-    saveCanvas(canvasToObject(), canvasID, canvasName);
+    if (userID){
+      saveCanvas(canvasToObject(), canvasID, canvasName);
+    }
   };
 
 
@@ -256,19 +265,34 @@ useOnViewportChange({
         const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
         const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
         const parentNodeId = "parentNodeId" in draggableData ? draggableData["parentNodeId"] as string : undefined;
-        addImageWithLookupNode(content, position, prompt, provenance, parentNodeId);
+        const similarArtworks = "similarArtworks" in draggableData ? draggableData["similarArtworks"] as any[] : [];
+        addImageWithLookupNode(content, position, prompt, provenance, parentNodeId, similarArtworks);
 
       } else if ("content" in draggableData) {
        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
        const parentNodeId = "parentNodeId" in draggableData ? draggableData["parentNodeId"] as string : undefined; 
-       addTextWithKeywordsNode(draggableData["content"] as string, provenance, position, false, parentNodeId);
+       const similarTexts = "similarTexts" in draggableData ? draggableData["similarTexts"] as any[] : [];
+       addTextWithKeywordsNode(draggableData["content"] as string, provenance, position, false, parentNodeId, similarTexts);
       }
     
       saveCanvas(canvasToObject(), canvasID, canvasName);
     },
-    [draggableType, draggableData,screenToFlowPosition],
+    [draggableType, draggableData,screenToFlowPosition, loginStatus],
   );
 
+
+  // const handleNodeDelete = useCallback(
+  //   (node: Node) => {
+  //     console.log("deleting node: ", node);
+  //     setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== node.id && edge.target !== node.id));
+  //     setNodes((currentNodes) => currentNodes.filter((n) => n.id !== node.id));
+  //     if (userID){
+
+  //       saveCanvas(canvasToObject(), canvasID, canvasName);
+  //     }
+  //   }
+  //   ,[setNodes, setEdges, saveCanvas, canvasToObject, userID, canvasID, canvasName]
+  // );
 
   /* -------------------------------- NODE DRAGGING -------------------------*/
 
@@ -282,6 +306,8 @@ useOnViewportChange({
   // );
 
   //keep track o fhte node dragging 
+
+
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       setDraggableType(draggedNode.type as string);
@@ -297,9 +323,11 @@ useOnViewportChange({
   const onNodeDragStop = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
-      saveCanvas(canvasToObject(), canvasID, canvasName);
+      if (userID){
+        saveCanvas(canvasToObject(), canvasID, canvasName);
+        }
     },
-    [setNodes]
+    [setNodes, userID]
   );
 
 
@@ -344,8 +372,9 @@ useOnViewportChange({
   const deleteNodeById = (nodeId: string) => {
     setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-
-    saveCanvas(canvasToObject(), canvasID, canvasName);
+    if (userID){
+      saveCanvas(canvasToObject(), canvasID, canvasName);
+    }
   };
 
 
@@ -428,92 +457,98 @@ useOnViewportChange({
 
 
   useEffect(() => {
-    if (attemptedQuickLoad) return;
 
-    if (loginStatus === "logging in") return;
+    if (attemptedQuickLoad) return; //we've already tried loading
+
+    if (loginStatus === "logging in") return; //we are still logging in
 
     const fetchData = async () => {
-      if (loginStatus === "logged out") {
-      console.log("USER IS LOGGED OUT")
-      setCanvasId("browser");
-      const browserCanvas = pullCanvasFromBrowser("browser");
-      if (browserCanvas) {
-        console.log("Canvas loaded from browser storage!: ",  browserCanvas);
-        const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
-        setNodes(nodes);
-        setEdges(edges);
-        setViewport(viewport);
-      } else {
-        console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
-        setNodes([]);
-        setEdges([]);
-        addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
-        setViewport({ x: 0, y: 0, zoom: 1 });
-        quickSaveToBrowser(canvasToObject(), "browser");
+      if (loginStatus === "logged out") { //we are logged out; use the browser
+        console.log("USER IS LOGGED OUT")
+        setCanvasId("browser");
+        const browserCanvas = pullCanvasFromBrowser("browser");
+        if (browserCanvas) {
+          console.log("Canvas loaded from browser storage!: ",  browserCanvas);
+          const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
+          setNodes(nodes);
+          setEdges(edges);
+          setViewport(viewport);
+        } else {
+          console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
+          setNodes([]);
+          setEdges([]);
+          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
+          setViewport({ x: 0, y: 0, zoom: 1 });
+          quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
+        }
+        setattemptedQuickLoad(true);
+        return;
       }
-      setattemptedQuickLoad(true);
-      return;
-      }
+      if (loginStatus === "logged in" && userID) { //were logged in!
+        // If a canvasParam exists in the URL
 
-
-      if (loginStatus === "logged in" && userID) {
-        //log in the canvasParam in the url
         if (canvasParam) {
           setCanvasId(canvasParam);
-          
-          // const browserCanvas = pullCanvasFromBrowser(canvasParam);
-          // if (browserCanvas) {
-          //   console.log("Canvas loaded from browser storage!: ", browserCanvas);
-          //   const { nodes = [], viewport = { x: 0, y: 0, zoom: 1 } } = browserCanvas;
-          //   setNodes(nodes);
-          //   setViewport(viewport);
-          //   const storedCanvasName = localStorage.getItem(`${canvasParam}-name`);
-          //   if (storedCanvasName) {
-          //     setCanvasName(storedCanvasName);
-          //   }
-          //   saveCanvas(browserCanvas, canvasParam);
-          //   setattemptedQuickLoad(true);
-          //   return;
-          // }
-
-            pullCanvas(`${canvasParam}`).then((savedCanvas: any) => {
-            if (savedCanvas) {
+          // Pull the canvas data from the API
+          pullCanvas(`${canvasParam}`).then((savedCanvas: { canvasData: ReactFlowJsonObject, canvasName: string, timestamp: string } | null) => {
+            if (savedCanvas !== null) {
               console.log("URL requested canvas found in the database!");
               console.log(savedCanvas);
-              const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 }, name, timestamp } = savedCanvas as { nodes: Node[], edges: Edge[], viewport: { x: number, y: number, zoom: number }, name: string, timestamp: string };
+          
+              // Destructure and set canvas data
+              const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = savedCanvas.canvasData;
+              
+              console.log ("flow has received: ", savedCanvas);
+              // Update state with canvas data
               setNodes(nodes);
               setEdges(edges);
               setViewport(viewport);
-              setCanvasName(name);
-              setLastSaved(timestamp);
+              setCanvasName(savedCanvas.canvasName);  // Make sure to use canvasName here
+              setLastSaved(savedCanvas.timestamp);
               setattemptedQuickLoad(true);
-              return
+              return;
+            } else {
+              console.log("No canvas found for the given ID.");
             }
-            });
+          });
+        }  // If no canvasParam or canvasParam didn't work, find a valid canvas param
+        else {
+          const response = await fetch(`${backend}/api/list-canvases/${userID}`);
+          const data = await response.json();
+      
+          if (data.success && data.canvases.length > 0) {
+            const lastCanvas = data.canvases[data.canvases.length - 1].canvasId;
+            console.log("Redirecting to the last canvas:", lastCanvas);
+      
+            // Redirect to the last canvas
+            setattemptedQuickLoad(true);
+            window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
+          } else if (data.success && data.canvases.length === 0) {
+            console.log("No canvases found, creating a new one.");
+            createNewCanvas(userID); // Trigger the function to create a new canvas
           }
-                // no canvas param, or canvas param didn't work. let's find a valid canvas param.
-        const response = await fetch(`${backend}/api/list-canvases/${userID}`);
-        const data = await response.json();
-        if (!canvasParam && data.success && data.canvases.length > 0) {
-          const lastCanvas = data.canvases[data.canvases.length - 1].id;
-          console.log("redirecting to the last canvas: ", lastCanvas);
-          //window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
+      
           setattemptedQuickLoad(true);
-
-          window.location.href = `/?user=${userID}&canvas=${lastCanvas}`;
-        } 
-        else if(data.success && data.canvases.length == 0) { //we successfully logged in  and listed canvases, but there are no canvases
-          createNewCanvas(userID);
         }
-        setattemptedQuickLoad(true);
-        
-      }
+      }      
     };
 
     fetchData();
+
   }, [userID, loginStatus, attemptedQuickLoad, canvasParam, backend, checkCanvasParam, pullCanvas, setCanvasId, setNodes, setViewport, setCanvasName, setLastSaved, quickSaveToBrowser, canvasToObject, addTextWithKeywordsNode, createNewCanvas, pullCanvasFromBrowser]);
 
- 
+useEffect(() => {
+  const interval = setInterval(() => {
+    if (userID) {
+      saveCanvas(canvasToObject(), canvasID, canvasName);
+    }
+    else{
+      quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
+    }
+  }, 60000); // 60 seconds
+
+  return () => clearInterval(interval); // Cleanup on unmount
+}, [userID, canvasID, canvasName, quickSaveToBrowser, saveCanvas, canvasToObject]);
 
 return(
       <>
@@ -555,7 +590,14 @@ return(
           {showDebugInfo ? "Hide Debug Info" : "Show Debug Info"}
         </button>
         {showDebugInfo && (
+
           <div className="overflow-scroll max-h-48" onClick={() => setShowDebugInfo(false)}>
+              <button
+            onClick={() => console.log(canvasToObject())}
+            className="bg-green-500 text-white p-2 rounded mb-2 ml-2"
+          >
+            Print Canvas to Console
+          </button>
             <p><strong>User ID:</strong> {userID}</p>
             <p><strong>Canvas Name:</strong> {canvasName}</p>
             <p><strong>Canvas ID:</strong> {canvasID}</p>

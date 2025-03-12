@@ -1,0 +1,336 @@
+{
+    "nodes": [
+        {
+            "id": "text-1741740122907",
+            "type": "text",
+            "zIndex": 1000,
+            "position": { "x": 344.55958143936624, "y": 147.08802849083366 },
+            "data": {
+                "words": [
+                    { "value": "your" },
+                    { "value": "text" },
+                    { "value": "here." },
+                    { "value": "click" },
+                    { "value": "the" },
+                    { "value": "pencil" },
+                    { "value": "icon" },
+                    { "value": "in" },
+                    { "value": "the" },
+                    { "value": "top" },
+                    { "value": "right" },
+                    { "value": "to" },
+                    { "value": "edit." },
+                    { "value": "Use" },
+                    { "value": "Option+Click" },
+                    { "value": "to" },
+                    { "value": "generate" },
+                    { "value": "new" },
+                    { "value": "nodes." }
+                ],
+                "intersections": [
+                    {
+                        "id": "text-1741740122907",
+                        "position": { "x": 344.55958143936624, "y": 147.08802849083366 },
+                        "content": "your text here. click the pencil icon in the top right to edit. Use Option+Click to generate new nodes."
+                    }
+                ],
+                "similarTexts": [
+                    {
+                        "id": "4d8b929e4eb68a1b2c0002f8",
+                        "value": "Tom Bennett",
+                        "description": "Tom Bennett (aka Bennett Tom, Bennett). from Brooklyn, NY, USA. American artist.",
+                        "relatedKeywordStrings": [],
+                        "type": "artist"
+                    },
+                    {
+                        "id": "4d8b92b74eb68a1b2c000418",
+                        "value": "Philomena Marano",
+                        "description": "Philomena Marano (aka Marano Philomena, Marano). born 1952. from Brooklyn, NY, USA. American artist.",
+                        "relatedKeywordStrings": [],
+                        "type": "artist"
+                    },
+                    {
+                        "id": "4d8b92614eb68a1b2c000060",
+                        "value": "Stephen Basso",
+                        "description": "Stephen Basso (aka Basso Stephen, Basso). from Brooklyn, NY, USA. American artist.",
+                        "relatedKeywordStrings": [],
+                        "type": "artist"
+                    },
+                    {
+                        "id": "4d8b92a24eb68a1b2c000316",
+                        "value": "Yuran Lee",
+                        "description": "Yuran Lee (aka Lee Yuran, Lee).",
+                        "relatedKeywordStrings": [],
+                        "type": "artist"
+                    },
+                    {
+                        "id": "4d8b92864eb68a1b2c0001c0",
+                        "value": "Michael Price",
+                        "description": "Michael Price, also known as Price Michael, is an artist from Brooklyn, NY, associated with contemporary art practices.",
+                        "relatedKeywordStrings": [],
+                        "type": "artist"
+                    }
+                ],
+                "provenance": "user",
+                "hasNoKeywords": true,
+                "hasNoSimilarTexts": true,
+                "content": "your text here. click the pencil icon in the top right to edit. Use Option+Click to generate new nodes."
+            },
+            "measured": { "width": 200, "height": 150 },
+            "selected": false,
+            "dragging": false
+        },
+        {
+            "id": "image-1741740135542",
+            "type": "image",
+            "position": { "x": 492.8507678426614, "y": 426.44747949431536 },
+            "zIndex": 1000,
+            "data": {
+                "content": "https://noggin-run-outputs.rgdata.net/efadd4b3-4b18-42af-8af4-696854220dc6.webp",
+                "prompt": "your text here. click the pencil icon in the top right to edit. Use Option+Click to generate new nodes.",
+                "provenance": "ai",
+                "parentNodeId": "text-1741740122907",
+                "similarArtworks": [
+                    {
+                        "title": "Costrizione WUH6",
+                        "date": "1985",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Costrizione WUH6 / Concretism / abstract / 1985",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-wuh6-1985.jpg"
+                    },
+                    {
+                        "title": "Composizione Kan 12",
+                        "date": "1988",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Composizione Kan 12 / Concretism / abstract / 1988",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/composizione-kan-12-1988.jpg"
+                    },
+                    {
+                        "title": "Composition",
+                        "date": "1944",
+                        "artist": "Wassily Kandinsky",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Abstract Art" }
+                        ],
+                        "description": "Wassily Kandinsky / Composition / Abstract Art / abstract / 1944",
+                        "image": "https://uploads3.wikiart.org/images/wassily-kandinsky/composition-1944.jpg"
+                    }
+                ],
+                "intersections": [
+                    {
+                        "id": "image-1741740135542",
+                        "position": { "x": 492.8507678426614, "y": 426.44747949431536 },
+                        "content": "https://noggin-run-outputs.rgdata.net/efadd4b3-4b18-42af-8af4-696854220dc6.webp"
+                    }
+                ]
+            },
+            "dragHandle": ".drag-handle__invisible",
+            "measured": { "width": 150, "height": 150 },
+            "selected": false,
+            "dragging": false
+        },
+        {
+            "id": "image-1741740160012",
+            "type": "image",
+            "position": { "x": 637.5728696622062, "y": 651.2059592096876 },
+            "zIndex": 1000,
+            "data": {
+                "content": "https://uploads3.wikiart.org/images/wassily-kandinsky/composition-1944.jpg",
+                "prompt": "\"Composition\"(1944) by Wassily Kandinsky",
+                "provenance": "history",
+                "parentNodeId": "image-1741740135542",
+                "similarArtworks": [
+                    {
+                        "title": "Composition VIII",
+                        "date": "1923",
+                        "artist": "Wassily Kandinsky",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Abstract Art" }
+                        ],
+                        "description": "Wassily Kandinsky / Composition VIII / Abstract Art / abstract / 1923",
+                        "image": "https://uploads3.wikiart.org/images/wassily-kandinsky/composition-viii-1923.jpg"
+                    },
+                    {
+                        "title": "Yellow-Red-Blue",
+                        "date": "1925",
+                        "artist": "Wassily Kandinsky",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Abstract Art" }
+                        ],
+                        "description": "Wassily Kandinsky / Yellow-Red-Blue / Abstract Art / abstract / 1925",
+                        "image": "https://uploads3.wikiart.org/images/wassily-kandinsky/yellow-red-blue-1925.jpg"
+                    },
+                    {
+                        "title": "Composition X",
+                        "date": "1939",
+                        "artist": "Wassily Kandinsky",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Abstract Art" }
+                        ],
+                        "description": "Wassily Kandinsky / Composition X / Abstract Art / abstract / 1939",
+                        "image": "https://uploads3.wikiart.org/images/wassily-kandinsky/composition-x-1939.jpg"
+                    }
+                ],
+                "intersections": [
+                    {
+                        "id": "image-1741740160012",
+                        "position": { "x": 637.5728696622062, "y": 651.2059592096876 },
+                        "content": "https://uploads3.wikiart.org/images/wassily-kandinsky/composition-1944.jpg"
+                    }
+                ]
+            },
+            "dragHandle": ".drag-handle__invisible",
+            "measured": { "width": 150, "height": 150 },
+            "selected": false,
+            "dragging": false
+        },
+        {
+            "id": "image-1741740164590",
+            "type": "image",
+            "position": { "x": 438.7208572339073, "y": 683.6428123008287 },
+            "zIndex": 1000,
+            "data": {
+                "content": "https://uploads3.wikiart.org/images/luigi-veronesi/composizione-kan-12-1988.jpg",
+                "prompt": "\"Composizione Kan 12\"(1988) by Luigi Veronesi",
+                "provenance": "history",
+                "parentNodeId": "image-1741740135542",
+                "similarArtworks": [
+                    {
+                        "title": "Composizione",
+                        "date": "1960",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Composizione / Concretism / abstract / 1960",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/composizione-1960.jpg"
+                    },
+                    {
+                        "title": "Composizione",
+                        "date": "1965",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Composizione / Concretism / abstract / 1965",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/composizione-1965.jpg"
+                    },
+                    {
+                        "title": "Composizione",
+                        "date": "1970",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Composizione / Concretism / abstract / 1970",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/composizione-1970.jpg"
+                    }
+                ]
+            },
+            "dragHandle": ".drag-handle__invisible",
+            "measured": { "width": 150, "height": 150 },
+            "selected": false,
+            "dragging": false
+        },
+        {
+            "id": "image-1741740229635",
+            "type": "image",
+            "position": { "x": 280.7674856596557, "y": 686.4634082217975 },
+            "zIndex": 1000,
+            "data": {
+                "content": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-wuh6-1985.jpg",
+                "prompt": "\"Costrizione WUH6\"(1985) by Luigi Veronesi",
+                "provenance": "history",
+                "parentNodeId": "image-1741740135542",
+                "similarArtworks": [
+                    {
+                        "title": "Costrizione",
+                        "date": "1980",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Costrizione / Concretism / abstract / 1980",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-1980.jpg"
+                    },
+                    {
+                        "title": "Costrizione",
+                        "date": "1983",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Costrizione / Concretism / abstract / 1983",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-1983.jpg"
+                    },
+                    {
+                        "title": "Costrizione",
+                        "date": "1987",
+                        "artist": "Luigi Veronesi",
+                        "keywords": [
+                            { "id": "genre-1741740138968", "type": "genre", "value": "abstract" },
+                            { "id": "style-1741740138968", "type": "style", "value": "Concretism" }
+                        ],
+                        "description": "Luigi Veronesi / Costrizione / Concretism / abstract / 1987",
+                        "image": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-1987.jpg"
+                    }
+                ],
+                "intersections": [
+                    {
+                        "id": "image-1741740229635",
+                        "position": { "x": 280.7674856596557, "y": 686.4634082217975 },
+                        "content": "https://uploads3.wikiart.org/images/luigi-veronesi/costrizione-wuh6-1985.jpg"
+                    }
+                ]
+            },
+            "dragHandle": ".drag-handle__invisible",
+            "measured": { "width": 150, "height": 150 },
+            "selected": false,
+            "dragging": false
+        }
+    ],
+    "edges": [
+        {
+            "id": "edge-text-1741740122907-image-1741740135542",
+            "source": "text-1741740122907",
+            "target": "image-1741740135542",
+            "type": "default"
+        },
+        {
+            "id": "edge-image-1741740135542-image-1741740160012",
+            "source": "image-1741740135542",
+            "target": "image-1741740160012",
+            "type": "default"
+        },
+        {
+            "id": "edge-image-1741740135542-image-1741740164590",
+            "source": "image-1741740135542",
+            "target": "image-1741740164590",
+            "type": "default"
+        },
+        {
+            "id": "edge-image-1741740135542-image-1741740229635",
+            "source": "image-1741740135542",
+            "target": "image-1741740229635",
+            "type": "default"
+        }
+    ],
+    "viewport": { "x": 6.916193934491957, "y": -6.750621114151443, "zoom": 0.7090700178397294 }
+}

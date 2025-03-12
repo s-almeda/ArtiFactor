@@ -18,7 +18,7 @@ const Sidebar = ({ onClose }: {
   // const [enteredPassword, setEnteredPassword] = useState("");
 
   const [error, setError] = useState("");
-  const [canvasList, setCanvasList] = useState<{ id: string; name: string }[]>([]); // Initialize as an empty array
+  const [canvasList, setCanvasList] = useState<{ canvasId: string; canvasName: string }[]>([]); // Initialize as an empty array
   const [editingCanvasList, setEditingCanvasList] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -199,21 +199,21 @@ const Sidebar = ({ onClose }: {
             <ul className="mt-2">
             {canvasList && canvasList.length > 0 ? ( // Add a check to ensure canvasList is defined
               canvasList.map((canvas) => (
-              <li key={canvas.id} className="mt-1 flex items-center">
+              <li key={canvas.canvasId} className="mt-1 flex items-center">
                 <motion.button
                   onClick={() => {
-                  window.location.href = `/?user=${userID}&canvas=${canvas.id}`;
+                  window.location.href = `/?user=${userID}&canvas=${canvas.canvasId}`;
                     }}
-                    className={`w-full text-left p-2 rounded ${canvas.id === canvasID ? "bg-stone-500" : editingCanvasList ? "bg-gray-700" : "bg-gray-700 hover:bg-gray-600"}`}
-                    disabled={editingCanvasList || canvas.id === canvasID}
-                    animate={editingCanvasList && canvas.id != canvasID ? { rotate: [0, -1, 1, 0] } : {}}
+                    className={`w-full text-left p-2 rounded ${canvas.canvasId === canvasID ? "bg-stone-500" : editingCanvasList ? "bg-gray-700" : "bg-gray-700 hover:bg-gray-600"}`}
+                    disabled={editingCanvasList || canvas.canvasId === canvasID}
+                    animate={editingCanvasList && canvas.canvasId != canvasID ? { rotate: [0, -1, 1, 0] } : {}}
                     transition={{ duration: 0.3, repeat: editingCanvasList ? Infinity : 0 }}
                   >
-                  {canvas.name} {canvas.id === canvasID && "(current canvas)"}
+                  {canvas.canvasName} {canvas.canvasId === canvasID && "(current canvas)"}
                 </motion.button>
-                {editingCanvasList && canvas.id!= canvasID &&(
+                {editingCanvasList && canvas.canvasId!= canvasID &&(
                 <button 
-                  onClick={() => handleDeleteCanvas(canvas.id)} 
+                  onClick={() => handleDeleteCanvas(canvas.canvasId)} 
                   className="ml-2 text-red-500 hover:text-red-700">
                   🗑️
                 </button>
@@ -238,6 +238,7 @@ const Sidebar = ({ onClose }: {
       {userID && admins.includes(userID) && (
         <div className="mt-4 p-4 bg-black rounded">
           <h2 className="text-lg font-bold mb-2">Admin Controls</h2>
+          
 
           <button 
             onClick={() => window.location.href = "/admin"} 
