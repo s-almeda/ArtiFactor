@@ -2,7 +2,7 @@ import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fs from 'fs';
 
-const defaultCanvasData = JSON.parse(fs.readFileSync('./defaultcanvasdata.json', 'utf-8'));
+const defaultCanvasData = JSON.parse(fs.readFileSync('./defaultCanvasData.json', 'utf-8'));
 const dbPromise = open({
   filename: "./database.db",
   driver: sqlite3.Database,
