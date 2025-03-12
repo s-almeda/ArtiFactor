@@ -6,11 +6,12 @@ import { useEffect } from "react";
 
 const Palette: React.FC = () => {
   const {
+    removeNode,
     activeTab,
     setActiveTab,
     clippedNodes = [],
-    setClippedNodes, // Add setClippedNodes from context
   } = usePaletteContext() as {
+    removeNode: (id: number) => void;
     activeTab: "text" | "image";
     setActiveTab: (tab: "text" | "image") => void;
     clippedNodes: any[];
@@ -24,16 +25,16 @@ const Palette: React.FC = () => {
     }
   }, [clippedNodes, setActiveTab]);
 
-  const removeNode = (index: number) => {
-    setClippedNodes(clippedNodes.filter((_, i) => i !== index)); // Update state
+  const handleRemoveNode = (id: number) => {
+    removeNode(id);
   };
 
   const filteredNodes = clippedNodes.filter((node) => node.type === activeTab);
 
   return (
-    <div className="p-4 h-[50vw] overflow-y-auto border border-gray-300 rounded-md">
+    <div className="p-4 overflow-y-auto rounded-md">
       {/* Toggle Tabs */}
-      <div className="flex space-x-2 mb-4">
+      <div className="flex space-x-2 mb-4"></div>
         {["text", "image"].map((tab) => (
           <button
             key={tab}
@@ -48,7 +49,6 @@ const Palette: React.FC = () => {
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
-      </div>
 
       {/* Tab Content */}
       <div className="space-y-3">
@@ -57,13 +57,13 @@ const Palette: React.FC = () => {
             <PaletteNode
               data={data}
               type={activeTab as "text" | "image"}
-              removeNode={() => removeNode(index)} // Pass correct function
+              removeNode={() => handleRemoveNode(data.id)}
             />
           </div>
         ))}
       </div>
     </div>
   );
-};
+}
 
 export default Palette;

@@ -324,6 +324,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
         if (data.similarArtworks && data.similarArtworks.length > 0) {
             //console.log('setting similar artworks from data:', data.similarArtworks);
             setSimilarArtworks(data.similarArtworks);
+
             setInitialCheck(false);
         } else if (initialCheck && imageUrl !== '') {
             fetchSimilarArtworks();

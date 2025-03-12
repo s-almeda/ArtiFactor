@@ -15,7 +15,7 @@ const dbPromise = open({
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       userId TEXT PRIMARY KEY,
-      clippings TEXT NOT NULL DEFAULT '{}' -- JSON blob of nodes in their palette
+      clippings TEXT NOT NULL DEFAULT '[]' -- JSON blob of nodes in their palette
     )
   `);
   // Create Canvases table

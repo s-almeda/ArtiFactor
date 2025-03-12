@@ -267,8 +267,8 @@ app.get("/api/list-canvases/:userID", async (req, res) => {
 
     // Format the canvases
     const formattedCanvases = canvases.map(canvas => ({
-      id: canvas.canvasId,
-      name: canvas.canvasName
+      canvasId: canvas.canvasId,
+      canvasName: canvas.canvasName
     }));
     console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}: ${formattedCanvases.map(c => c.name).join(", ")}`);
 
@@ -293,10 +293,10 @@ app.get("/api/list-users", async (req, res) => {
       users.map(async (user) => {
         const canvases = await db.all(`SELECT * FROM canvases WHERE userId = ?`, [user.userId]);
         return {
-          id: user.userId,
+          userId: user.userId,
           canvases: canvases.map((canvas) => ({
-            id: canvas.canvasId,
-            name: canvas.canvasName,
+            canvasId: canvas.canvasId,
+            canvasName: canvas.canvasName,
             timestamp: canvas.timestamp,
           })),
         };
@@ -362,12 +362,10 @@ app.post("/api/save-canvas", async (req, res) => {
     // Check if canvas already exists
     const existingCanvas = await db.get("SELECT canvasId FROM canvases WHERE canvasId = ?", [canvasID]);
 
-    //const timestamp = new Date().toISOString();
-
     if (existingCanvas) {
       console.log(`Found existing canvas ${canvasID} for user ${userID}. Updating with new save.`);
 
-      // ✅ Update the canvas name
+      // Update the canvas name
       await db.run(
         `UPDATE canvases SET canvasName = ? WHERE canvasId = ?`,
         [canvasName, canvasID]
@@ -376,20 +374,47 @@ app.post("/api/save-canvas", async (req, res) => {
     } else {
       console.log(`Creating new canvas ${canvasID} for user ${userID}.`);
 
-      // ✅ Insert new canvas
+      // Insert new canvas
       await db.run(
         `INSERT INTO canvases (canvasId, userId, canvasName) VALUES (?, ?, ?)`,
         [canvasID, userID, canvasName]
       );
     }
 
-    // ✅ Save a new version in the versions table
-    await db.run(
-      `INSERT INTO versions (versionId, canvasId, timestamp, jsonBlob) VALUES (?,?, ?, ?)`,
-      [`${canvasID}-${timestamp}`, `${canvasID}`, timestamp, JSON.stringify(canvasJSONObject)]
+    // Retrieve the latest version of the canvas
+    const latestVersion = await db.get(
+      `SELECT * FROM versions WHERE canvasId = ? ORDER BY timestamp DESC LIMIT 1`,
+      [canvasID]
     );
 
-    console.log(`Saved version for canvas ${canvasID} at ${timestamp}`);
+    let saveNewVersion = true;
+
+    if (latestVersion) {
+      const latestCanvasData = JSON.parse(latestVersion.jsonBlob);
+      const latestNodeIds = latestCanvasData.nodes.map(node => node.id);
+      const newNodeIds = canvasJSONObject.nodes.map(node => node.id);
+
+      // Check if node IDs have changed
+      if (JSON.stringify(latestNodeIds) === JSON.stringify(newNodeIds)) {
+        saveNewVersion = false;
+      }
+    }
+
+    if (saveNewVersion) {
+      // Save a new version in the versions table
+      await db.run(
+        `INSERT INTO versions (versionId, canvasId, timestamp, jsonBlob) VALUES (?, ?, ?, ?)`,
+        [`${canvasID}-${timestamp}`, `${canvasID}`, timestamp, JSON.stringify(canvasJSONObject)]
+      );
+      console.log(`Saved new version for canvas ${canvasID} at ${timestamp}`);
+    } else {
+      // Overwrite the latest version
+      await db.run(
+        `UPDATE versions SET jsonBlob = ?, timestamp = ? WHERE versionId = ?`,
+        [JSON.stringify(canvasJSONObject), timestamp, latestVersion.versionId]
+      );
+      console.log(`Overwrote latest version for canvas ${canvasID} at ${timestamp}`);
+    }
 
     res.json({ success: true });
 
@@ -418,8 +443,14 @@ app.delete("/api/delete-canvas/:userID/:canvasID", async (req, res) => {
       return res.status(404).json({ error: "Canvas not found or does not belong to the user" });
     }
 
-    console.log(`Canvas ${canvasID} deleted successfully for user ${userID}.`);
-    res.json({ success: true, message: "Canvas deleted successfully" });
+    // Delete all versions associated with the canvas
+    await db.run(
+      `DELETE FROM versions WHERE canvasId = ?`, 
+      [canvasID]
+    );
+
+    console.log(`Canvas ${canvasID} and its versions deleted successfully for user ${userID}.`);
+    res.json({ success: true, message: "Canvas and its versions deleted successfully" });
   } catch (error) {
     console.error("Error deleting canvas:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -458,6 +489,52 @@ app.get("/api/get-canvas/:canvasID", async (req, res) => {
   }
 });
 
+app.get("/api/list-versions/:canvasID", async (req, res) => {
+  const { canvasID } = req.params;
+  console.log(`Attempting to list versions for canvas: ${canvasID}`);
+
+  try {
+    const db = await dbPromise;
+
+    // Retrieve all versions for the given canvas ID
+    const versions = await db.all(`SELECT versionId FROM versions WHERE canvasId = ? ORDER BY timestamp DESC`, [canvasID]);
+
+    if (versions.length === 0) {
+      return res.status(404).json({ error: "No versions found for the specified canvas ID" });
+    }
+
+    console.log(`Listed ${versions.length} versions for canvas ${canvasID}`);
+    res.json({ success: true, versions });
+  } catch (error) {
+    console.error("Error listing versions:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/get-version/:versionID", async (req, res) => {
+  const { versionID } = req.params;
+  console.log(`Attempting to get version: ${versionID}`);
+
+  try {
+    const db = await dbPromise;
+
+    // Retrieve the specific version by version ID
+    const version = await db.get(`SELECT * FROM versions WHERE versionId = ?`, [versionID]);
+
+    if (!version) {
+      return res.status(404).json({ error: "Version not found" });
+    }
+
+    // Parse the JSON blob
+    const jsonBlob = JSON.parse(version.jsonBlob);
+
+    console.log(`Retrieved version ${versionID}`);
+    res.json({ success: true, version: { versionId: version.versionId, timestamp: version.timestamp, jsonBlob } });
+  } catch (error) {
+    console.error("Error getting version:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 
   //------------- CLIPPINGS (for saving and loading a user's Palette) ---------//
@@ -470,7 +547,7 @@ app.get("/api/get-canvas/:canvasID", async (req, res) => {
 
     try {
       const db = await dbPromise;
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -485,30 +562,46 @@ app.get("/api/get-canvas/:canvasID", async (req, res) => {
 
   app.post("/api/add-clipping", async (req, res) => {
     const { userID, clipping } = req.body;
-  
+
     if (!userID || !clipping || typeof clipping !== "object") {
       return res.status(400).json({ error: "Invalid userID or clipping format" });
     }
-  
+
     try {
       const db = await dbPromise;
-  
+
       // Fetch current clippings
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-  
-      let clippings = JSON.parse(user.clippings);
-  
-      // Prevent duplicate clippings
-      if (!clippings.some((c) => JSON.stringify(c) === JSON.stringify(clipping))) {
-        clippings.push(clipping);
+
+      let clippings;
+      try {
+        clippings = JSON.parse(user.clippings);
+        if (!Array.isArray(clippings)) {
+          clippings = []; // Ensure it's an array, not an object
+        }
+      } catch (error) {
+        clippings = []; // Fallback to an empty array if parsing fails
       }
-  
+      console.log("clippings:", clippings);
+
+      if (clippings.length === 0) {
+        clippings = [clipping];
+      } else {
+        // Prevent duplicate clippings by checking for existing clipping
+        const clippingExists = clippings.some((c) => JSON.stringify(c) === JSON.stringify(clipping));
+        if (!clippingExists) {
+          clippings.push(clipping);
+        } else {
+          return res.status(400).json({ error: "Clipping already exists" });
+        }
+      }
+
       // Update user's clippings
-      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
-  
+      await db.run(`UPDATE users SET clippings = ? WHERE userId = ?`, [JSON.stringify(clippings), userID]);
+
       res.json({ success: true, message: "Clipping added!", clippings });
     } catch (error) {
       console.error("Error adding clipping:", error);
@@ -520,29 +613,33 @@ app.get("/api/get-canvas/:canvasID", async (req, res) => {
 
 
   app.post("/api/remove-clipping", async (req, res) => {
+
     const { userID, clipping } = req.body;
   
     if (!userID || !clipping || typeof clipping !== "object") {
       return res.status(400).json({ error: "Invalid userID or clipping format" });
     }
+    console.log("removing clipping...", clipping);
   
     try {
       const db = await dbPromise;
   
       // Fetch current clippings
-      const user = await db.get(`SELECT clippings FROM users WHERE id = ?`, [userID]);
+      const user = await db.get(`SELECT clippings FROM users WHERE userId = ?`, [userID]);
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
   
       let clippings = JSON.parse(user.clippings);
+      console.log("number of clippings:", clippings.length);
   
-      // Remove clipping by filtering it out
-      clippings = clippings.filter((c) => JSON.stringify(c) !== JSON.stringify(clipping));
+      // Remove clipping by filtering it out based on the clipping ID
+      clippings = clippings.filter((c) => c.id !== clipping.id);
   
       // Update user's clippings
-      await db.run(`UPDATE users SET clippings = ? WHERE id = ?`, [JSON.stringify(clippings), userID]);
-  
+      await db.run(`UPDATE users SET clippings = ? WHERE userId = ?`, [JSON.stringify(clippings), userID]);
+      console.log("new num of clippings:", clippings.length);
       res.json({ success: true, message: "Clipping removed!", clippings });
     } catch (error) {
       console.error("Error removing clipping:", error);

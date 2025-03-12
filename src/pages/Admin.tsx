@@ -26,20 +26,21 @@ import { useAppContext } from '../context/AppContext';
 
 const Admin: React.FC = () => {
     const { backend, addUser } = useAppContext();
-    //const [isAuthenticated, setIsAuthenticated] = useState(true); //TODO, turn the password back on by setting this to false 
+//const [isAuthenticated, setIsAuthenticated] = useState(true); //TODO, turn the password back on by setting this to false 
     const [data, setData] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [canvases, setCanvases] = useState<any[]>([]);
+    const [versions, setVersions] = useState<any[]>([]);
     const [selectedUser, setSelectedUser] = useState<string>('');
     const [selectedCanvas, setSelectedCanvas] = useState<string>('');
-    const [canvasId, setCanvasId] = useState<string>('');
+    const [selectedVersion, setSelectedVersion] = useState<string>('');
     const [timestamp, setTimestamp] = useState<string>('');
     const [rawData, setRawData] = useState<string>('');
     const [enteredUserID, setEnteredUserID] = useState<string>('');
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
 
-    // const handlePasswordSubmit = (password: string) => {
+// const handlePasswordSubmit = (password: string) => {
     //     if (password === 'miku') {
     //         setIsAuthenticated(true);
     //     } else {
@@ -50,9 +51,11 @@ const Admin: React.FC = () => {
         const userId = e.target.value;
         setSelectedUser(userId);
         setSelectedCanvas('');
-        setCanvasId('');
+        setSelectedVersion('');
         setTimestamp('');
         setRawData('');
+        setData([]);
+
         if (userId === 'browserdata') {
             const browserData = Object.keys(localStorage).filter(key => localStorage.getItem(key)?.includes('"nodes":'));
             setCanvases(browserData.map(key => ({ id: key, name: key })));
@@ -60,7 +63,7 @@ const Admin: React.FC = () => {
             const response = await fetch(`${backend}/api/list-users`);
             const result = await response.json();
             if (result.success) {
-                const user = result.users.find((user: any) => user.id === userId);
+                const user = result.users.find((user: any) => user.userId === userId);
                 setCanvases(user ? user.canvases : []);
             } else {
                 console.error("Failed to fetch users:", result.error);
@@ -68,37 +71,48 @@ const Admin: React.FC = () => {
         }
     };
 
-    const isValidImageUrl = (url: string) => {
-        return /\.(jpeg|jpg|gif|png|webp)$/.test(url);
-    };
-
     const handleCanvasChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const canvasId = e.target.value;
         setSelectedCanvas(canvasId);
-        if (selectedUser === 'browserdata') {
-            const canvasData = JSON.parse(localStorage.getItem(canvasId) || '{}');
-            setCanvasId(canvasId);
-            setTimestamp(canvasData.timestamp || '');
-            setRawData(JSON.stringify(canvasData, null, 2));
-            setData(canvasData.nodes.map((node: any) => ({
+        setSelectedVersion('');
+        setTimestamp('');
+        setRawData('');
+        setData([]);
+
+        const response = await fetch(`${backend}/api/list-versions/${canvasId}`);
+        const result = await response.json();
+        if (result.success) {
+            console.log("fetched versions:", result);
+            setVersions(result.versions);
+        } else {
+            console.error("Failed to fetch versions:", result.error);
+        }
+    };
+
+
+
+    const handleVersionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const versionId = e.target.value;
+        setSelectedVersion(versionId);
+
+        const response = await fetch(`${backend}/api/get-version/${versionId}`);
+        const result = await response.json();
+        if (result.success) {
+            const versionData = result.version.jsonBlob;
+            setTimestamp(result.version.timestamp);
+            setRawData(JSON.stringify(versionData, null, 2));
+            setData(versionData.nodes.map((node: any) => ({
                 node_id: node.id,
                 type: node.type,
                 content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
             })));
         } else {
-            const response = await fetch(`${backend}/api/get-canvas/${canvasId}`);
-            const result = await response.json();
-            if (result.success) {
-                setCanvasId(result.canvas.id);
-                setTimestamp(result.canvas.timestamp);
-                setRawData(JSON.stringify(result.canvas, null, 2));
-                setData(result.canvas.nodes.map((node: any) => ({
-                    node_id: node.id,
-                    type: node.type,
-                    content: isValidImageUrl(node.data.content) ? <img src={node.data.content} alt="node content" style={{ maxWidth: '50px' }} /> : node.data.content.substring(0, 100)
-                })));
-            }
+            console.error("Failed to fetch version:", result.error);
         }
+    };
+
+    const isValidImageUrl = (url: string) => {
+        return /\.(jpeg|jpg|gif|png|webp)$/.test(url);
     };
 
     const handleDeleteCanvas = async () => {
@@ -112,7 +126,6 @@ const Admin: React.FC = () => {
                 if (result.success) {
                     alert('Canvas deleted successfully');
                     setSelectedCanvas('');
-                    setCanvasId('');
                     setTimestamp('');
                     setData([]);
                     setRawData('');
@@ -129,6 +142,7 @@ const Admin: React.FC = () => {
                 const response = await fetch(`${backend}/api/list-users`);
                 const result = await response.json();
                 if (result.success) {
+                    console.log("fetched users:", result);
                     setUsers(result.users);
                 } else {
                     console.error("Failed to fetch users:", result.error);
@@ -138,130 +152,182 @@ const Admin: React.FC = () => {
             }
         };
         fetchUsers();
-    }, []);
+    }, [backend]);
 
     return (
         <div className='flex flex-col mt-20 overflow-scroll px-10' style={{ height: 'calc(100vh - 100px)' }}>
-            {/* {isAuthenticated ? ( */}
-                <>
-                    <div className='flex flex-wrap bg-stone-200 p-4'>
-                        <div className='mr-4 mb-4'>
-                            <h3 onClick={() => setIsAddUserOpen(!isAddUserOpen)} className="cursor-pointer">
-                                {isAddUserOpen ? '▼' : '▶'} Add new user
-                            </h3>
-                            {isAddUserOpen && (
-                                <div>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter new user ID"
-                                        value={enteredUserID}
-                                        onChange={(e) => setEnteredUserID(e.target.value)}
-                                        className="w-full p-2 border rounded text-black mb-2"
-                                    />
-                                    <input
-                                        type="password"
-                                        placeholder="Enter new user password"
-                                        value={enteredPassword}
-                                        onChange={(e) => setEnteredPassword(e.target.value)}
-                                        className="w-full p-2 border rounded text-black mb-2"
-                                    />
-                                    <button 
-                                        onClick={() => addUser(enteredUserID, enteredPassword)} 
-                                        className="w-full bg-stone-500 text-white p-2 rounded"
-                                    >
-                                        Add User
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className='mr-4 mb-4 display-block w-full p-3 relative'>
-                        <button 
-                                        onClick={() => console.log(localStorage)} 
-                                        className="w-50% bg-brown-500 text-white p-2 rounded mt-2"
-                                    >
-                                        Print Local Storage to console
-                                    </button>
-                            <br></br>
-                            <label htmlFor='user-select'>Select User: </label>
-                            <select id='user-select' value={selectedUser} onChange={handleUserChange} className="w-full p-2 border rounded text-black mb-2">
-                                <option value=''>Select a user</option>
-                                {users.map(user => (
-                                    <option key={user.id} value={user.id}>{user.id}</option>
-                                ))}
-                                <option value='browserdata'>Browser Data</option>
-                            </select>
-                        </div>
-                        {selectedUser && (
-                            <div className='mr-4 mb-4'>
-                                <label htmlFor='canvas-select'>Select Canvas: </label>
-                                <select id='canvas-select' value={selectedCanvas} onChange={handleCanvasChange} className="w-full p-2 border rounded text-black mb-2">
-                                    <option value=''>Select a canvas</option>
-                                    {canvases.map(canvas => (
-                                        <option key={canvas.canvasId} value={canvas.canvasId}>{canvas.canvasName}</option>
-                                    ))}
-                                </select>
+{/* {isAuthenticated ? ( */}
+            <>
+                <div className='flex flex-wrap bg-stone-200 p-4'>
+                    <div className='mr-4 mb-4'>
+                        <h3 onClick={() => setIsAddUserOpen(!isAddUserOpen)} className="cursor-pointer">
+                            {isAddUserOpen ? '▼' : '▶'} Add new user
+                        </h3>
+                        {isAddUserOpen && (
+                            <div>
+                                <input
+                                    type="text"
+                                    placeholder="Enter new user ID"
+                                    value={enteredUserID}
+                                    onChange={(e) => setEnteredUserID(e.target.value)}
+                                    className="w-full p-2 border rounded text-black mb-2"
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Enter new user password"
+                                    value={enteredPassword}
+                                    onChange={(e) => setEnteredPassword(e.target.value)}
+                                    className="w-full p-2 border rounded text-black mb-2"
+                                />
+                                <button 
+                                    onClick={() => addUser(enteredUserID, enteredPassword)} 
+                                    className="w-full bg-stone-500 text-white p-2 rounded"
+                                >
+                                    Add User
+                                </button>
                             </div>
                         )}
-
                     </div>
+                    
+                    <div className='mr-4 mb-4 display-block w-full p-3 relative'>
+                        <button 
+                            onClick={() => console.log(localStorage)} 
+                            className="w-50% bg-brown-500 text-white p-2 rounded mt-2"
+                        >
+                            Print Local Storage to console
+                        </button>
+                        <br></br>
+                        <label htmlFor='user-select'>Select User: </label>
+                        <select id='user-select' value={selectedUser} onChange={handleUserChange} className="w-full p-2 border rounded text-black mb-2">
+                            <option value=''>Select a user</option>
+                            {users.map(user => (
+                                <option key={user.userId} value={user.userId}>{user.userId}</option>
+                            ))}
+                            <option value='browserdata'>Browser Data</option>
+                        </select>
+                    </div>
+                    {selectedUser && (
+                        <div className='mr-4 mb-4'>
+                            <label htmlFor='canvas-select'>Select Canvas: </label>
+                            <select id='canvas-select' value={selectedCanvas} onChange={handleCanvasChange} className="w-full p-2 border rounded text-black mb-2">
+                                <option value=''>Select a canvas</option>
+                                {canvases.map(canvas => (
+                                    <option key={canvas.canvasId} value={canvas.canvasId}>{canvas.canvasName}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     {selectedCanvas && (
-                        <div className='bg-brown-200 p-4'>
-                            <div className='mb-4'>
+                        <div className='mr-4 mb-4'>
+                            <label htmlFor='version-select'>Select Version: </label>
+                            <select id='version-select' value={selectedVersion} onChange={handleVersionChange} className="w-full p-2 border rounded text-black mb-2">
+                                <option value=''>Select a version</option>
+                                {versions.map(version => (
+                                    <option key={version.versionId} value={version.versionId}>{version.versionId}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+
+                
+                {selectedCanvas && selectedVersion && (
+                    <div className='bg-brown-200 p-4'>
+                        <div className='mb-4'>
+                            <button 
+                                onClick={() => {
+                                    console.log("sending user to: " + selectedUser + " and canvas to:" + selectedCanvas);
+                                    window.location.href = `/?user=${selectedUser}&canvas=${selectedCanvas}`;
+                                }} 
+                                className='bg-blue-500 text-white px-4 py-2 mb-4'
+                            >
+                                Go to Canvas Page
+                            </button>
+
+                            <p>Canvas ID in database: {selectedCanvas}</p>
+                            <p>Timestamp: {timestamp}</p>
+                            <p>Number of Nodes: {data.length}</p>
+                            <p className="font-bold">Raw canvas data dump from server: </p>
+                            <div className='overflow-scroll bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
+                                <pre>{rawData}</pre>
+                            </div>
+
+                            <button onClick={handleDeleteCanvas} className='bg-red-500 text-white px-4 py-2'>Delete Canvas</button>
+                        </div>
+
+                        <div className='overflow-scroll' style={{ height: 'calc(100vh - 100px)' }}>
+
+                        {selectedCanvas && (
+                            <div className='flex justify-between mb-4'>
+                                <button 
+                                    onClick={() => {
+                                        const currentIndex = versions.findIndex(version => version.versionId === selectedVersion);
+                                        if (currentIndex > 0) {
+                                            const previousVersionId = versions[currentIndex - 1].versionId;
+                                            setSelectedVersion(previousVersionId);
+                                            handleVersionChange({ target: { value: previousVersionId } } as React.ChangeEvent<HTMLSelectElement>);
+                                        }
+                                    }} 
+                                    className='bg-gray-500 text-white px-4 py-2'
+                                    disabled={versions.findIndex(version => version.versionId === selectedVersion) === 0}
+                                >
+                                    Previous
+                                </button>
+                                <span className='px-4 py-2 text-center'>
+                                    {versions.findIndex(version => version.versionId === selectedVersion) + 1} / {versions.length}
+                                    <p className='text-center'>Version ID: {selectedVersion}</p>
+                                </span>
 
                                 <button 
                                     onClick={() => {
-
-                                        console.log("sending user to: " + selectedUser + " and canvas to:" + canvasId);
-                                        window.location.href = `/?user=${selectedUser}&canvas=${canvasId}`;
+                                        const currentIndex = versions.findIndex(version => version.versionId === selectedVersion);
+                                        if (currentIndex < versions.length - 1) {
+                                            const nextVersionId = versions[currentIndex + 1].versionId;
+                                            setSelectedVersion(nextVersionId);
+                                            handleVersionChange({ target: { value: nextVersionId } } as React.ChangeEvent<HTMLSelectElement>);
+                                        }
                                     }} 
-                                    className='bg-blue-500 text-white px-4 py-2 mb-4'
+                                    className='bg-gray-500 text-white px-4 py-2'
+                                    disabled={versions.findIndex(version => version.versionId === selectedVersion) === versions.length - 1}
                                 >
-                                    Go to Canvas Page
+                                    Next
                                 </button>
-
-                                <p>Canvas ID in database: {canvasId}</p>
-
-                                <p>Timestamp: {timestamp}</p>
-                                <p>Number of Nodes: {data.length}</p>
-                                <p className="font-bold">Raw canvas data dump from server: </p>
-                                <div className='overflow-scroll bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
-                                    <pre>{rawData}</pre>
-                                </div>
-
-                                <button onClick={handleDeleteCanvas} className='bg-red-500 text-white px-4 py-2'>Delete Canvas</button>
                             </div>
-                            <div className='overflow-scroll' style={{ height: 'calc(100vh - 100px)' }}>
-                                <p className="font-bold">Node data from server, as a table: </p>
-                                <table className='min-w-full'>
-                                    <thead>
-                                        <tr>
-                                            <th className='px-4 py-2'></th>
-                                            {data.length > 0 && Object.keys(data[0]).map((key) => (
-                                                <th key={key} className='px-4 py-2'>{key}</th>
+                        )}
+
+                            <p className="font-bold">Node data from server, as a table: </p>
+                            <table className='min-w-full'>
+                                <thead>
+                                    <tr>
+                                        <th className='px-4 py-2'></th>
+                                        {data.length > 0 && Object.keys(data[0]).map((key) => (
+                                            <th key={key} className='px-4 py-2'>{key}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.map((row, index) => (
+                                        <tr key={index}>
+                                            <td className='border px-4 py-2'>{index + 1}</td>
+                                            {Object.values(row).map((value, idx) => (
+                                                <td key={idx} className='border px-4 py-2'>{value as React.ReactNode}</td>
                                             ))}
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {data.map((row, index) => (
-                                            <tr key={index}>
-                                                <td className='border px-4 py-2'>{index + 1}</td>
-                                                {Object.values(row).map((value, idx) => (
-                                                    <td key={idx} className='border px-4 py-2'>{value as React.ReactNode}</td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-                </>
-            
+                    </div>
+                )}
+
+
+            </>
+
             {/* // ) : (
             //    // <PasswordEntry onSubmit={handlePasswordSubmit} />
             // )} */}
         </div>
     );
 };
+
 export default Admin;

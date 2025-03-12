@@ -466,6 +466,7 @@ useOnViewportChange({
       }
       if (loginStatus === "logged in" && userID) { //were logged in!
         // If a canvasParam exists in the URL
+
         if (canvasParam) {
           setCanvasId(canvasParam);
           // Pull the canvas data from the API

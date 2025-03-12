@@ -63,7 +63,7 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
             const data = await response.json();
         
             if (response.ok) {
-                const userExists = data.users.some((user: { id: string }) => user.id === userParam);
+                const userExists = data.users.some((user: { userId: string }) => user.userId === userParam);
                 if (userExists) {
                     setUserID(userParam);
                     console.log(`User logged in: ${userParam}...`);
