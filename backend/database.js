@@ -48,25 +48,26 @@ const dbPromise = open({
   for (const user of admins) {
     await stmt.run(user, user);
 
-    // Delete existing canvas if it exists
-    await db.run("DELETE FROM canvases WHERE canvasId = ?", `${user}-0`);
+    // Check if the default canvas for the user already exists
+    const canvasExists = await db.get("SELECT 1 FROM canvases WHERE canvasId = ?", `${user}-0`);
+    if (!canvasExists) {
+      // Insert new canvas data
+      const canvasStmt = await db.prepare(`
+        INSERT INTO canvases (canvasId, userId, canvasName) 
+        VALUES (?, ?, ?)
+      `);
+      await canvasStmt.run(`${user}-0`, user, `${user}'s default test canvas`);
 
-    // Insert new canvas data
-    const canvasStmt = await db.prepare(`
-      INSERT INTO canvases (canvasId, userId, canvasName) 
-      VALUES (?, ?, ?)
-    `);
-    await canvasStmt.run(`${user}-0`, user, `${user}'s default test canvas`);
-
-    // Insert into versions table
-    const timestamp = new Date().toISOString();
-    const versionStmt = await db.prepare(`
-      INSERT INTO versions (versionId, canvasId, timestamp, jsonBlob) 
-      VALUES (?, ?, ?, ?)
-    `);
-    await versionStmt.run(`${user}-0-${timestamp}`, `${user}-0`, timestamp, JSON.stringify(defaultCanvasData));
-    await canvasStmt.finalize();
-    await versionStmt.finalize();
+      // Insert into versions table
+      const timestamp = new Date().toISOString();
+      const versionStmt = await db.prepare(`
+        INSERT INTO versions (versionId, canvasId, timestamp, jsonBlob) 
+        VALUES (?, ?, ?, ?)
+      `);
+      await versionStmt.run(`${user}-0-${timestamp}`, `${user}-0`, timestamp, JSON.stringify(defaultCanvasData));
+      await canvasStmt.finalize();
+      await versionStmt.finalize();
+    }
   }
 
   await stmt.finalize();

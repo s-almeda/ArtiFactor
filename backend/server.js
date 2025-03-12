@@ -207,12 +207,12 @@ app.post("/api/add-user", async (req, res) => {
     const db = await dbPromise;
 
     // Check if user already exists
-    const existingUser = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
+    const existingUser = await db.get(`SELECT * FROM users WHERE userId = ?`, [userID]);
     if (existingUser) {
       return res.json({ success: true, message: "User already exists", userID });
     }
 
-    await db.run(`INSERT INTO users (id) VALUES (?)`, [userID]);  //no passwords for now
+    await db.run(`INSERT INTO users (userId) VALUES (?)`, [userID]);  //no passwords for now
 
     res.json({ success: true, userID, message: "User added successfully!" });
   } catch (error) {
