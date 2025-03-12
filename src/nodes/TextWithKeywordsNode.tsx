@@ -472,11 +472,16 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
         setSelectedKeyword(firstKeyword);
       }
     }
-    if (similarTexts.length > 0) {
+    //console.log('current data in this node:', data);
+  }, [JSON.stringify(data.words), selectedKeyword]);
+
+  useEffect(() => {
+    if (data.similarTexts && data.similarTexts.length > 0) {
       setSimilarTexts(data.similarTexts || []);
     }
-    //console.log('current data in this node:', data);
-  }, [data.words, selectedKeyword, data.similarTexts]);
+  }
+  ,[JSON.stringify(data.similarTexts)]);
+
 
 
   useEffect(() => {

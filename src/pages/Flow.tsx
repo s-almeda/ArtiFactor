@@ -77,12 +77,17 @@ const Flow = () => {
   const handleNodeClick = useCallback(
   (event: MouseEvent, node: Node) => {
     if (event.altKey) { 
-      if (node.data.content) {
+      if (node.data.type === "default"){ //don't generate the loading node
+        return
+      }
+      else if (node.data.content && node.data.content!= "loading ") {
         generateNode(node.id, node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
-      } else if (Array.isArray(node.data.words)) {
+      } 
+      else if (Array.isArray(node.data.words)) {
         const content = wordsToString(node.data.words);
         generateNode(node.id, content, calcNearbyPosition(getNodesBounds([node])));
-      }  console.log("you option clicked this node:", node.data);
+      }  
+      console.log("you option clicked this node:", node.data);
     }
   },[]);
 
@@ -276,6 +281,19 @@ useOnViewportChange({
   );
 
 
+  // const handleNodeDelete = useCallback(
+  //   (node: Node) => {
+  //     console.log("deleting node: ", node);
+  //     setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== node.id && edge.target !== node.id));
+  //     setNodes((currentNodes) => currentNodes.filter((n) => n.id !== node.id));
+  //     if (userID){
+
+  //       saveCanvas(canvasToObject(), canvasID, canvasName);
+  //     }
+  //   }
+  //   ,[setNodes, setEdges, saveCanvas, canvasToObject, userID, canvasID, canvasName]
+  // );
+
   /* -------------------------------- NODE DRAGGING -------------------------*/
 
 
@@ -288,6 +306,8 @@ useOnViewportChange({
   // );
 
   //keep track o fhte node dragging 
+
+
   const onNodeDrag = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       setDraggableType(draggedNode.type as string);

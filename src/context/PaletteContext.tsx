@@ -25,8 +25,8 @@ interface PaletteContextType {
   addClippedNode: (node: NodeData) => void;
   removeNode: (id: number) => void;
   loadPalette: (userID: string) => Promise<void>;
-  activeTab: "images" | "text";
-  setActiveTab: (tab: "images" | "text") => void;
+  activeTab: "image" | "text";
+  setActiveTab: (tab: "image" | "text") => void;
   getNextPaletteIndex: () => number;
 }
 
@@ -39,16 +39,19 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { userID, backend, loginStatus } = useAppContext(); // add this back when we start saving palette data to the database
   const [clippedNodes, setClippedNodes] = useState<NodeData[]>([]);
-  const [activeTab, setActiveTab] = useState<"images" | "text">("images");
+  const [activeTab, setActiveTab] = useState<"image" | "text">("image");
 
   const addClippedNode = async (node: NodeData) => {
-    // if the node with the same content is already in the list, don't add it again
+
     if (node.type == 'image') {
-      setActiveTab("images");
+      //console.log("Setting active tab to image");
+      setActiveTab("image");
+      console.log(activeTab);
     } else {
+      //console.log("Setting active tab to text: ", node.type);
       setActiveTab("text");
     }
-
+     // if the node with the same content is already in the list, don't add it again
     if (clippedNodes.some((n) => n.content === node.content)) {
       return;
     }

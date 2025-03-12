@@ -37,6 +37,10 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
 
     const currentArtwork = similarArtworks[currentIndex];
 
+    useEffect(() => {
+        setCurrentIndex(0);
+    }, [similarArtworks]);
+
     return (
         <>
             {/* FOLDER BUTTON */}
@@ -73,7 +77,7 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
                     style={{ height: `${height}px`, width: `${width}px` }}
                 >
                     {/* Display a loader until the initial check for artworks is done */}
-                    {!currentArtwork || currentArtwork.title === "" ? (
+                    {currentArtwork.title === "" ? (
                         <div style={{ display: 'flex', width:'100%', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div className="loader"></div>
                         </div>
@@ -211,7 +215,7 @@ const DescriptionPanel: React.FC<{
     );
 };
 
-export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithLookupNode>) {
+export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<ImageWithLookupNode>) {
     const { addClippedNode, getNextPaletteIndex } = usePaletteContext(); 
     const [imageUrl, setImageUrl] = useState("");
     const [width, _] = useState(150);
@@ -265,7 +269,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
     const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.similarArtworks || defaultArtworks);
     const { backend, userID, admins} = useAppContext();
 
-    const fetchSimilarArtworks = async () => {
+    const fetchSimilarArtworks = async (imageUrl: string): Promise<Artwork[]> => {
         try {
             console.log("sending this image to the backend for lookup:", imageUrl);
             const response = await axios.post(`${backend}/api/get-similar-images`, {
@@ -296,10 +300,10 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 image: item.image || "Unknown",
             }));
             console.log('fetched similar artworks from backend:', artworks);
-            data.similarArtworks = artworks;
+            return artworks;
         } catch (error) {
             console.error('Error fetching similar artworks:', error);
-            data.similarArtworks = defaultArtworks;
+            return defaultArtworks;
         }
     };
 
@@ -307,7 +311,6 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
 
     useEffect(() => {   
         setImageUrl(data.content || 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019');
-
         if (!selected) {
             setShowDescription(false);
             setShowFolder(false);
@@ -316,26 +319,43 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
           }
           else {
             setShowControls(true);
+            if (data.similarArtworks && data.similarArtworks.length > 0 && !dragging){
+                setShowFolder(true);
+            }
+            if (data.prompt && !dragging){
+                setShowDescription(true
+                );
+            }
+
           }
     }, [selected, imageUrl, data.content]);
 
     
     useEffect(() => {
         if (data.similarArtworks && data.similarArtworks.length > 0) {
-            //console.log('setting similar artworks from data:', data.similarArtworks);
+            //console.log('setting new similar artworks data:', data.similarArtworks);
             setSimilarArtworks(data.similarArtworks);
-
-            setInitialCheck(false);
-        } else if (initialCheck && imageUrl !== '') {
-            fetchSimilarArtworks();
-            
         }
-    }, [initialCheck, imageUrl, data.similarArtworks]);
+    }, [JSON.stringify(data.similarArtworks)]);
+
 
     //update isAIGenerated flag if data.provenance changes
     useEffect(() => {
         setIsAIGenerated(data.provenance === 'ai');
       },[data.provenance]);
+
+    
+    useEffect(() => {
+        const fetchArtworks = async () => {
+                const artworks = await fetchSimilarArtworks(imageUrl);
+                data.similarArtworks = artworks;
+                setSimilarArtworks(artworks);
+                setInitialCheck(false);
+        };
+        if (initialCheck && (!data.similarArtworks || data.similarArtworks.length <= 0) && imageUrl !== "") {
+            fetchArtworks();
+        }
+    }, [initialCheck, data.similarArtworks, imageUrl]);
 
         
 
