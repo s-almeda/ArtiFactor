@@ -88,9 +88,9 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(canvasToObject()); // Save to browser storage
-      if (userParam && canvasParam && loginStatus === "logged in") {
-        saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
-      }
+      // if (userParam && canvasParam && loginStatus === "logged in") {
+      //   saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
+      // }
     },
     [setNodes, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
   );
@@ -99,9 +99,9 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (changes: any) => {
       setEdges((eds) => applyEdgeChanges(changes, eds));
       quickSaveToBrowser(canvasToObject()); // Save to browser storage
-      if (userParam && canvasParam && loginStatus === "logged in") {
-        saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
-      }
+      // if (userParam && canvasParam && loginStatus === "logged in") {
+      //   saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
+      // }
     },
     [setEdges, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
   );

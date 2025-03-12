@@ -17,6 +17,7 @@ export type ImageWithLookupNodeData = ArtifactorNodeData & {
   similarArtworks?: Artwork[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
+  parentNodeId?: string;
 };
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {
@@ -26,6 +27,7 @@ export type TextWithKeywordsNodeData = ArtifactorNodeData & {
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   hasNoKeywords?: boolean;
   hasNoSimilarTexts?: boolean;
+  parentNodeId?: string;
 };
 
 /* --------------- DEPRECATED --------------- */

@@ -37,10 +37,10 @@ import Toolbar from "../Toolbar";
 
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
-  const { canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
-  const { draggableType, setDraggableType, draggableData, setDraggableData, parentNodeId} = useDnD(); //dragStartPosition, setDragStartPosition
+  const { draggableType, setDraggableType, draggableData, setDraggableData} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
@@ -170,6 +170,7 @@ useOnViewportChange({
 
       setEdges((eds) => addEdge(newEdge, eds));
     }
+    saveCanvas(canvasToObject(), canvasID, canvasName);
   };
 
   // // Placeholder function to create an edge between two specific nodes
@@ -191,7 +192,7 @@ useOnViewportChange({
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
-    console.log("adding an image to the canvas: ", content, prompt);
+    console.log("addImageWithLookupNode is adding an image to the canvas: ", content, prompt, provenance, parentNodeId);
     position = position ?? { 
       x: Math.random() * 250,
       y: Math.random() * 250,
@@ -207,8 +208,10 @@ useOnViewportChange({
       content: content,
       prompt: prompt,
       provenance: provenance,
+      parentNodeId: parentNodeId,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
+
     };
 
     setNodes((prevNodes) => {
@@ -218,7 +221,9 @@ useOnViewportChange({
       }
       return updatedNodes;
     });
-    };
+
+    saveCanvas(canvasToObject(), canvasID, canvasName);
+  };
 
 
 
@@ -236,7 +241,7 @@ useOnViewportChange({
   const onDrop = useCallback(
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
-      console.log(`you just dropped and: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
+      console.log(`you just dropped a: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
       //console.log("the parent for the node you just dropped has this id: ", parentNodeId);
       if (!draggableType) {
         return;
@@ -250,13 +255,16 @@ useOnViewportChange({
         const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";
         const prompt = "prompt" in draggableData ? draggableData["prompt"] as string : "";
         const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
+        const parentNodeId = "parentNodeId" in draggableData ? draggableData["parentNodeId"] as string : undefined;
         addImageWithLookupNode(content, position, prompt, provenance, parentNodeId);
 
       } else if ("content" in draggableData) {
        const provenance = "provenance" in draggableData ? draggableData["provenance"] as "user" | "history" | "ai" : "user";
-        addTextWithKeywordsNode(draggableData["content"] as string, provenance, position, false, parentNodeId);
+       const parentNodeId = "parentNodeId" in draggableData ? draggableData["parentNodeId"] as string : undefined; 
+       addTextWithKeywordsNode(draggableData["content"] as string, provenance, position, false, parentNodeId);
       }
-      
+    
+      saveCanvas(canvasToObject(), canvasID, canvasName);
     },
     [draggableType, draggableData,screenToFlowPosition],
   );
@@ -278,7 +286,9 @@ useOnViewportChange({
     (_: MouseEvent, draggedNode: Node) => {
       setDraggableType(draggedNode.type as string);
       setDraggableData(draggedNode.data);
-      updateIntersections(draggedNode, nodes);
+      if (draggedNode.type === "text") {
+        updateIntersections(draggedNode, nodes);
+      }
     },
       [setNodes, getIntersectingNodes]
     );
@@ -287,6 +297,7 @@ useOnViewportChange({
   const onNodeDragStop = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
+      saveCanvas(canvasToObject(), canvasID, canvasName);
     },
     [setNodes]
   );
@@ -330,11 +341,11 @@ useOnViewportChange({
       return node;
     });
   };
-
-
-  const deleteNodeById = (nodeId: string) => {  
+  const deleteNodeById = (nodeId: string) => {
+    setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-    quickSaveToBrowser(canvasToObject(), canvasID); //everytime a node is changed, save it to the browser storage
+
+    saveCanvas(canvasToObject(), canvasID, canvasName);
   };
 
 

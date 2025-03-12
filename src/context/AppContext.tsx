@@ -20,7 +20,7 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
     const userParam = searchParams.get('user');
     const canvasParam = searchParams.get('canvas');
 
-    const admins = ["shm", "elaine", "ethan", "sophia"];
+    const admins = ["shm", "elaine", "ethan", "sophia", "bob"];
 
     const addUser = async (userID: string, password: string) => {
         try {

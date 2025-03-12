@@ -11,6 +11,7 @@ import NavigationButtons from '../utils/commonComponents';
 
 import {useNodeContext} from '../context/NodeContext';
 
+
 export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
   return (
   <span style={{ position: 'relative', display: 'inline-block' }}>
@@ -85,18 +86,17 @@ export const KeywordDescription: React.FC<{
   isAIGenerated: boolean;
 }> = ({ keyword, containerHeight = 100, showDescription = false, parentNodeId, toggleDescription, isAIGenerated=false }) => { //containerWidth = 100,
 
-  const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
+  const { setDraggableType, setDraggableData } = useDnD();
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     type: string,
     content: string,
-    prompt?: string
+    prompt?: string,
   ) => {
     event.dataTransfer.effectAllowed = "move";
     setDraggableType(type);
-    setDraggableData({ content: content, prompt: prompt, provenance: "history" });
-    setParentNodeId(parentNodeId);
+    setDraggableData({ content: content, prompt: prompt, provenance: "history", parentNodeId: parentNodeId });
   };
 
   if (!keyword) return null;
@@ -190,7 +190,7 @@ const FolderPanel: React.FC<{ parentNodeId: string; width: number; height: numbe
 
   const [currentIndex, setCurrentIndex] = useState(0);
   // const [contentState, setContentState] = useState<string | null>(content || '');
-  const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
+  const { setDraggableType, setDraggableData } = useDnD();
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -199,9 +199,8 @@ const FolderPanel: React.FC<{ parentNodeId: string; width: number; height: numbe
     prompt?: string
   ) => {
     event.dataTransfer.effectAllowed = "move";
-    setParentNodeId(parentNodeId)
     setDraggableType(type);
-    setDraggableData({ content: content, prompt: prompt, provenance: "history" }); //everything in the folder wil  be human made
+    setDraggableData({ content: content, prompt: prompt, provenance: "history", parentNodeId: parentNodeId }); //everything in the folder wil  be human made
   };
 
 
@@ -310,7 +309,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
   const [showDescription, setShowDescription] = useState(false);
   const [showFolder, setShowFolder] = useState(false);
 
-  const { backend } = useAppContext();
+  const { backend, userID, admins } = useAppContext();
   const { addClippedNode, getNextPaletteIndex } = usePaletteContext();
 
   const [initialCheck, setInitialCheck] = useState(true);
@@ -631,6 +630,8 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
               id: getNextPaletteIndex(),
               type: 'text',
               content: wordsToString(words),
+              provenance: data.provenance || "user",
+              parentNodeId: data.parentNodeId || id,
               prompt: "none"
               })}
             aria-label="Save to Palette"
@@ -649,6 +650,17 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
                 <BookCopy size={16} />
               </button>
             )}
+            { (userID && admins.includes(userID)) && //only show if we're in admin mode
+                <button
+                    className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                    type="button"
+                    onClick={() => console.log(id, data)}
+                    aria-label="Print Node Data"
+                >
+                    <Bookmark size={16} />
+                </button>
+              }
+            
           </div>
         </NodeToolbar>
 

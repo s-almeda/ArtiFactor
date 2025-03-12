@@ -8,6 +8,8 @@ export interface NodeData {
   id: number;
   type: "image" | "text";
   content: string; // is either text, or an imageUrl
+  provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
+  parentNodeId?: string;
   prompt: string; // for storing the prompt, or the title/artist alt text for the artwork
 }
 
@@ -37,6 +39,7 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
     if (clippedNodes.some((n) => n.content === node.content)) {
       return;
     }
+    console.log("Adding node to palette:", node);
     setClippedNodes((prevNodes) => [...prevNodes, node]);
 
     if (node.type == 'image') {

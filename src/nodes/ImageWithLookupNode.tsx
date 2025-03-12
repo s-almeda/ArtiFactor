@@ -12,8 +12,9 @@ import axios from "axios";
 
 const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; width: number; height: number; showFolder: boolean; toggleFolder: () => void; imageUrl?: string; isAIGenerated: boolean }> = ({ parentNodeId, similarArtworks, width, height, showFolder, toggleFolder, isAIGenerated }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
+    const { setDraggableType, setDraggableData } = useDnD();
 
+    
     const onDragStart = (
         event: React.DragEvent<HTMLDivElement>,
         type: string,
@@ -22,9 +23,9 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
     ) => {
         event.dataTransfer.effectAllowed = "move";
         setDraggableType(type);
-        setDraggableData({ content: content, prompt: prompt });
-        setParentNodeId(parentNodeId);
+        setDraggableData({ content: content, prompt: prompt, parentNodeId: parentNodeId, provenance: "history" });
     };
+    
 
     const handlePrev = () => {
         setCurrentIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : similarArtworks.length - 1));
@@ -137,7 +138,7 @@ const DescriptionPanel: React.FC<{
     isAIGenerated: boolean;
 }> = ({content, showDescription = false, containerHeight = 100, containerWidth=100, parentNodeId, toggleDescription, isAIGenerated=false }) => {
     
-    const { setDraggableType, setDraggableData, setParentNodeId } = useDnD();
+    const { setDraggableType, setDraggableData } = useDnD();
     
     const onDragStart = (
         event: React.DragEvent<HTMLDivElement>, 
@@ -147,8 +148,7 @@ const DescriptionPanel: React.FC<{
     ) => {
       event.dataTransfer.effectAllowed = "move";
       setDraggableType(type);
-      setDraggableData({ content: content, prompt: prompt  });
-      setParentNodeId(parentNodeId);
+      setDraggableData({ content: content, prompt: prompt, provenance: isAIGenerated? "ai" : "history", parentNodeId: parentNodeId });
     };   
 
     if (!content) return null;
@@ -263,7 +263,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
     
 
     const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.similarArtworks || defaultArtworks);
-    const { backend } = useAppContext();
+    const { backend, userID, admins} = useAppContext();
 
     const fetchSimilarArtworks = async () => {
         try {
@@ -381,7 +381,9 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                         id: getNextPaletteIndex(),
                         type: 'image',
                         content: imageUrl,
-                        prompt: data.prompt || ""
+                        prompt: data.prompt || "",
+                        provenance: data.provenance || "user",
+                        parentNodeId: data.parentNodeId || id,
                     }
                     )}
                     aria-label="Save to Palette"
@@ -389,15 +391,6 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 >
                  < Paperclip size={16}/>
                 </button>
-                {/* <button
-                    className="border-5 bg-white"
-                    type="button"
-                    onClick={() => hideControls()}
-                    aria-label="Hide Controls"
-                    style={{height:'30px' }}
-                >
-                    {showControls ? <Eye size={16} className="text-gray-600" /> : <EyeClosed size={16} className="text-gray-600" />}
-                </button> */}
 
                 <button
                     className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
@@ -408,6 +401,17 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                     <Expand size={16} />
                 </button>
                 </div>
+
+                { (userID && admins.includes(userID)) && //only show if we're in admin mode
+                    <button
+                        className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                        type="button"
+                        onClick={() => console.log(id, data)}
+                        aria-label="Print Node Data"
+                    >
+                        <Bookmark size={16} />
+                    </button>
+                }
 
             </NodeToolbar>
             
@@ -473,13 +477,13 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
             {/* Enlarged Image Overlay */}
             {isImageEnlarged && (
                 <motion.div
-                    className="fixed top-0 left-0 w-screen-[40vw] h-screen-[40vw] bg-black/70 flex justify-center items-center z-50"
+                    className="fixed top-0 left-0 w-screen-[45vw] h-screen-[45vw] bg-black/70 flex justify-center items-center z-50"
                     onClick={() => setIsImageEnlarged(false)}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                 >
-                    <img src={imageUrl} className="max-w-[40vw] max-h-[40vh] rounded-lg shadow-xl" />
+                    <img src={imageUrl} className="max-w-[45vw] max-h-[45vh] rounded-lg shadow-xl" />
                 </motion.div>
             )}
         </motion.div>

@@ -76,7 +76,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => {
-    console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
+    //console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
     canvasIDToSave = canvasIDToSave || canvasID;
     canvasNameToSave = canvasNameToSave || canvasName;
     if (!userID) {
