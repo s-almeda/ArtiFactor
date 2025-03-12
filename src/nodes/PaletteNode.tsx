@@ -7,14 +7,12 @@ import { motion } from "framer-motion";
 
 interface PaletteNodeProps {
   data: NodeData;
-  charLimit: number;
   type: "text" | "image";
   removeNode: (id: number) => void;
 }
 
 const PaletteNode: FC<PaletteNodeProps> = ({
   data,
-  charLimit,
   type,
   removeNode,
 }) => {

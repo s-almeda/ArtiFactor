@@ -3,8 +3,6 @@ import { usePaletteContext } from "./context/PaletteContext";
 import PaletteNode from "./nodes/PaletteNode";
 import { useEffect } from "react";
 
-//TODO: palette nodes need to store their parentNodeId, and broadcast it when they are dragged and dropped
-const charLimit = 25;
 
 const Palette: React.FC = () => {
   const {
@@ -58,7 +56,6 @@ const Palette: React.FC = () => {
           <div key={index} className="relative">
             <PaletteNode
               data={data}
-              charLimit={charLimit}
               type={activeTab as "text" | "image"}
               removeNode={() => removeNode(index)} // Pass correct function
             />
