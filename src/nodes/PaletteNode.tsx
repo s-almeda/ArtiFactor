@@ -66,10 +66,11 @@ const PaletteNode: FC<PaletteNodeProps> = ({
       {type === "text" ? (
         <motion.div
           className="relative pr-2.5"
-          style={{ textOverflow: "ellipsis", overflow: "hidden", height: "20px" }}
+          style={{ textOverflow: "ellipsis", overflow: "hidden" }}
           animate={{ height: expanded ? "auto" : "20px" }}
           transition={{ duration: 0.35 }}
         >
+
         {data.content}
           <button
         type="button"
@@ -82,11 +83,13 @@ const PaletteNode: FC<PaletteNodeProps> = ({
         ✕
           </button>
         </motion.div>
-            ) : (
+      ) : (
         <div className="relative">
           <motion.div
-            className={`max-h-60 overflow-hidden relative`}
-            style={{ height: "60px" }}
+            className={`max-h-${
+              expanded ? "full" : "60"
+            } overflow-hidden relative`}
+            style={{ height: expanded ? "auto" : "60px" }}
             animate={{ height: expanded ? "auto" : "60px" }}
             transition={{ duration: 0.35 }}
           >

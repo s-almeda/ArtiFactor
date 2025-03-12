@@ -46,7 +46,6 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
     if (node.type == 'image') {
       //console.log("Setting active tab to image");
       setActiveTab("image");
-      console.log(activeTab);
     } else {
       //console.log("Setting active tab to text: ", node.type);
       setActiveTab("text");

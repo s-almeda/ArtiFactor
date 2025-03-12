@@ -328,7 +328,7 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
             }
 
           }
-    }, [selected, imageUrl, data.content]);
+    }, [selected, imageUrl, data.content, data.similarArtworks]);
 
     
     useEffect(() => {

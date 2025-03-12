@@ -238,6 +238,7 @@ const Sidebar = ({ onClose }: {
       {userID && admins.includes(userID) && (
         <div className="mt-4 p-4 bg-black rounded">
           <h2 className="text-lg font-bold mb-2">Admin Controls</h2>
+          
 
           <button 
             onClick={() => window.location.href = "/admin"} 

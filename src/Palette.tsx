@@ -32,9 +32,9 @@ const Palette: React.FC = () => {
   const filteredNodes = clippedNodes.filter((node) => node.type === activeTab);
 
   return (
-    <div className="p-4 overflow-y-auto rounded-md">
+    <div className="p-4 h-[100%] rounded-md flex flex-col">
       {/* Toggle Tabs */}
-      <div className="flex space-x-2 mb-4"></div>
+      <div className="flex space-x-2 mb-4 sticky top-0 bg-white z-10">
         {["text", "image"].map((tab) => (
           <button
             key={tab}
@@ -49,9 +49,10 @@ const Palette: React.FC = () => {
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
+      </div>
 
       {/* Tab Content */}
-      <div className="space-y-3">
+      <div className="space-y-3 overflow-y-scroll flex-grow">
         {filteredNodes.map((data, index) => (
           <div key={index} className="relative">
             <PaletteNode

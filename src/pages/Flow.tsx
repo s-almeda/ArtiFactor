@@ -198,7 +198,7 @@ useOnViewportChange({
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
-    //similarArtworks = similarArtworks ?? [];
+    similarArtworks = similarArtworks && similarArtworks.length > 0 ? similarArtworks : undefined;  
     console.log("addImageWithLookupNode is adding an image to the canvas: ", content, prompt, provenance, parentNodeId);
     position = position ?? { 
       x: Math.random() * 250,
@@ -216,7 +216,7 @@ useOnViewportChange({
       prompt: prompt,
       provenance: provenance,
       parentNodeId: parentNodeId,
-      //similarArtworks: similarArtworks,
+      similarArtworks: similarArtworks,
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
 

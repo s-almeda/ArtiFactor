@@ -475,12 +475,13 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
     //console.log('current data in this node:', data);
   }, [JSON.stringify(data.words), selectedKeyword]);
 
+
   useEffect(() => {
     if (data.similarTexts && data.similarTexts.length > 0) {
       setSimilarTexts(data.similarTexts || []);
     }
   }
-  ,[JSON.stringify(data.similarTexts)]);
+  ,[data.similarTexts]);
 
 
 
@@ -508,13 +509,15 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
           setSimilarTexts(data.similarTexts);
         } else {
           const result = await fetchSimilarTexts(wordsToString(words));
-          setSimilarTexts(result);
           data.similarTexts = result;
         }
 
         setInitialCheck(false);
       }
       onCreate();
+      if (data.similarTexts && data.similarTexts.length > 0) {
+      setSimilarTexts(data.similarTexts || []);
+      }
 
     }
   }, []);

@@ -72,10 +72,14 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
                     localStorage.setItem("last_password", password);
 
                     setLoginStatus("logged in");
+                    
                 
                 } else {
                     console.error(`User does not exist: ${userParam}`);
-                    setLoginStatus("logged out");
+                    //setLoginStatus("logged out");
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.delete('user');
+                    window.location.href = newUrl.toString();
                 }
             } else {
                 console.error(`Error fetching users: ${data.error}`);
