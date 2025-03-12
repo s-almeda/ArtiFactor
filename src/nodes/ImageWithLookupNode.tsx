@@ -72,8 +72,8 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
                     className={`nowheel absolute left-0 top-0 transform -translate-x-[${width + 6}px] ${isAIGenerated ? 'bg-blue-100' : 'bg-[#f2e7ce]'} border shadow-md z-3`}
                     style={{ height: `${height}px`, width: `${width}px` }}
                 >
-                    {/* Display a loader until the initial check for keywords is done */}
-                    {currentArtwork.title === "" ? (
+                    {/* Display a loader until the initial check for artworks is done */}
+                    {!currentArtwork || currentArtwork.title === "" ? (
                         <div style={{ display: 'flex', width:'100%', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div className="loader"></div>
                         </div>
@@ -296,12 +296,10 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                 image: item.image || "Unknown",
             }));
             console.log('fetched similar artworks from backend:', artworks);
-            data.similarArtworks=artworks;
-            setSimilarArtworks(artworks);
-            setInitialCheck(false);
+            data.similarArtworks = artworks;
         } catch (error) {
             console.error('Error fetching similar artworks:', error);
-            setSimilarArtworks(defaultArtworks);
+            data.similarArtworks = defaultArtworks;
         }
     };
 
@@ -323,20 +321,22 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
 
     
     useEffect(() => {
-        // console.log("initial check", initialCheck);
-        if (data.similarArtworks && initialCheck){
+        if (data.similarArtworks && data.similarArtworks.length > 0) {
+            //console.log('setting similar artworks from data:', data.similarArtworks);
             setSimilarArtworks(data.similarArtworks);
             setInitialCheck(false);
-        }
-        else if (initialCheck && imageUrl!=='') {
+        } else if (initialCheck && imageUrl !== '') {
             fetchSimilarArtworks();
+            
         }
-    }, [initialCheck, imageUrl]);
+    }, [initialCheck, imageUrl, data.similarArtworks]);
 
     //update isAIGenerated flag if data.provenance changes
     useEffect(() => {
         setIsAIGenerated(data.provenance === 'ai');
       },[data.provenance]);
+
+        
 
 
         // Node styling based on isAIGenerated flag
@@ -384,6 +384,7 @@ export function ImageWithLookupNode({ id, data, selected }: NodeProps<ImageWithL
                         prompt: data.prompt || "",
                         provenance: data.provenance || "user",
                         parentNodeId: data.parentNodeId || id,
+                        similarArtworks: similarArtworks
                     }
                     )}
                     aria-label="Save to Palette"

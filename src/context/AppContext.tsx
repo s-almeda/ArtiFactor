@@ -42,7 +42,6 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
         }
     };
 
-
     const handleUserLogin = async (enteredUserID: string, password?: string) => {
         //logs in the user in the url, or sends us to the url to log you in on the next load
         password = password || "";
@@ -54,7 +53,7 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.set('user', enteredUserID);
             if (canvasParam) {
-            newUrl.searchParams.set('canvas', canvasParam);
+                newUrl.searchParams.set('canvas', canvasParam);
             }
             window.location.href = newUrl.toString();
             return;
@@ -72,7 +71,6 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
                     localStorage.setItem("last_userID", userParam);
                     localStorage.setItem("last_password", password);
 
-                     
                     setLoginStatus("logged in");
                 
                 } else {
@@ -87,7 +85,6 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
             console.error('Error logging in user:', error);
             setLoginStatus("logged out");
         }
-
     };
 
     useEffect(() => { //LOGIN... 

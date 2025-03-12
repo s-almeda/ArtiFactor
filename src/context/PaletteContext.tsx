@@ -11,6 +11,9 @@ export interface NodeData {
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   parentNodeId?: string;
   prompt: string; // for storing the prompt, or the title/artist alt text for the artwork
+  similarArtworks?: any[]; // for storing similar artworks
+  similarTexts?: any[]; // for storing similar texts
+  words?: any[]; // for storing words
 }
 
 // Define the context type

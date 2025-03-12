@@ -476,7 +476,8 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
       setSimilarTexts(data.similarTexts || []);
     }
     //console.log('current data in this node:', data);
-  }, [data.words, selectedKeyword]);
+  }, [data.words, selectedKeyword, data.similarTexts]);
+
 
   useEffect(() => {
     // if we already have keywords and similar texts OR we have flags up to say NO keywords NO similar texts pls 
@@ -632,6 +633,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
               content: wordsToString(words),
               provenance: data.provenance || "user",
               parentNodeId: data.parentNodeId || id,
+              similarTexts: data.similarTexts,
               prompt: "none"
               })}
             aria-label="Save to Palette"

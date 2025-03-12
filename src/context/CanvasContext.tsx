@@ -12,7 +12,7 @@ interface CanvasContextType {
   saveCanvas: (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => void;
   deleteCanvas: (canvasID: string) => void;
   createNewCanvas: (userID: string) => void;
-  pullCanvas: (canvasID: string) => Promise<ReactFlowJsonObject | null>;
+  pullCanvas: (canvasID: string) => Promise<{ canvasData: ReactFlowJsonObject, canvasName: string, timestamp: string } | null>;
   quickSaveToBrowser: (canvasData: ReactFlowJsonObject, targetCanvasID?: string, targetCanvasName?: string) => void;
   pullCanvasFromBrowser: (canvasID: string) => ReactFlowJsonObject | null;
   lastSaved: string;
@@ -46,19 +46,35 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [canvasID]);
 
-  const pullCanvas = useCallback(async (canvasID: string): Promise<ReactFlowJsonObject | null> => {
+  const pullCanvas = useCallback(async (canvasID: string): Promise<{ canvasData: ReactFlowJsonObject, canvasName: string, timestamp: string } | null> => {
     try {
       const response = await axios.get(`${backend}/api/get-canvas/${canvasID}`);
+      
       if (response.status === 200 && response.data.success) {
-        const canvasData: ReactFlowJsonObject = response.data.canvas;
-        canvasData.edges = typeof canvasData.edges === 'string' ? JSON.parse(canvasData.edges) : canvasData.edges; // Parse edges field if it's a string
-        return canvasData;
+        console.log("response.data FROM BACKEND after pulling canvas:", response.data);
+        const { canvasName, nodes, edges, viewport } = response.data.canvas;
+        const timestamp = response.data['timestamp'];
+        // Ensure the edges and nodes are parsed correctly if they are in string format
+        const parsedEdges = typeof edges === 'string' ? JSON.parse(edges) : edges;
+        const parsedNodes = typeof nodes === 'string' ? JSON.parse(nodes) : nodes;
+
+        // Construct and return the data structure
+        const canvasData: ReactFlowJsonObject = {
+          nodes: parsedNodes || [],
+          edges: parsedEdges || [],
+          viewport: viewport || { x: 0, y: 0, zoom: 1 }, // Default viewport if not provided
+        };
+
+        console.log(`Loaded canvas "${canvasName}" (ID: ${canvasID}) with ${parsedNodes.length} nodes and ${parsedEdges.length} edges and timestamp: ${timestamp}`);
+        
+        return { canvasData, canvasName, timestamp };
       }
     } catch (error) {
       console.error("Error loading canvas:", error);
     }
     return null;
-  }, [backend, canvasID]);
+  }, [backend]);
+  
 
   const pullCanvasFromBrowser = (canvasID: string) => {
     try {
@@ -76,11 +92,10 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => {
-    //console.log("attempting to save this canvasID: ", canvasIDToSave, " with this data:", canvasData);
     canvasIDToSave = canvasIDToSave || canvasID;
-    canvasNameToSave = canvasNameToSave || canvasName;
-    if (!userID) {
-      console.error("You have to log in before you can save your canvas.");
+    canvasNameToSave = canvasNameToSave || canvasName || "Untitled";
+    if (loginStatus != "logged in"){
+      console.error("You have to log in before you can create a new canvas. You are currently... ", loginStatus);
       return;
     }
 
@@ -88,27 +103,21 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("No canvas data provided. Cannot save.");
       return;
     }
-    //console.log(`attempting to save this canvasID: ${canvasID} with this data:`, canvasData);
 
     try {
-      const { nodes, edges, viewport } = canvasData;
-      //console.log("saving canvas to server:", canvasData.edges);
-      const timestamp =(new Date().toISOString());
+      const timestamp = new Date().toISOString();
       await axios.post(`${backend}/api/save-canvas`, {
         userID,
-        canvasID : canvasIDToSave,
-        canvasName : canvasNameToSave,
-        nodes,
-        edges,
-        viewport,
+        canvasID: canvasIDToSave,
+        canvasName: canvasNameToSave,
+        canvasJSONObject: canvasData,
         timestamp
       });
-      //console.log(`Canvas ${canvasIDToSave} (${canvasNameToSave}) saved successfully for user ${userID}.`);
       setLastSaved(timestamp);
     } catch (error) {
       console.error("Error saving canvas:", error);
     }
-  }, [backend, userID, canvasID, canvasName]);
+  }, [backend, userID, canvasID, canvasName, loginStatus]);
 
   const createNewCanvas = useCallback(async (userID: string) => {
     if (loginStatus != "logged in"){
@@ -130,10 +139,6 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   const deleteCanvas = useCallback(async (canvasIDToDelete: string) => {
     if (!userID || userID === "default") {
       console.error("You aren't logged in.");
-      return;
-    }
-    if (canvasIDToDelete === "new-canvas") {
-      console.error("Nothing to delete!");
       return;
     }
 

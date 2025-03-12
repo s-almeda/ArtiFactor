@@ -31,7 +31,7 @@ const NodeContext = createContext<NodeContextProps | undefined>(undefined);
 
 export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { loginStatus } = useAppContext(); //userID, backend
-  const { canvasName, canvasID, saveCanvas, quickSaveToBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
+  const { canvasName, canvasID, quickSaveToBrowser } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [searchParams] = useSearchParams();
   const userParam = searchParams.get('user');
   const canvasParam = searchParams.get('canvas');
@@ -88,22 +88,16 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (changes: any) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
       quickSaveToBrowser(canvasToObject()); // Save to browser storage
-      // if (userParam && canvasParam && loginStatus === "logged in") {
-      //   saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
-      // }
     },
-    [setNodes, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
+    [setNodes, quickSaveToBrowser, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
   );
   
   const handleOnEdgesChange = useCallback(
     (changes: any) => {
       setEdges((eds) => applyEdgeChanges(changes, eds));
       quickSaveToBrowser(canvasToObject()); // Save to browser storage
-      // if (userParam && canvasParam && loginStatus === "logged in") {
-      //   saveCanvas(canvasToObject(), canvasID, canvasName); // Save to database
-      // }
     },
-    [setEdges, quickSaveToBrowser, saveCanvas, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
+    [setEdges, quickSaveToBrowser, canvasToObject, userParam, canvasParam, loginStatus, canvasID, canvasName]
   );
 
 

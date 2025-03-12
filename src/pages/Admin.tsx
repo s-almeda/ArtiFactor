@@ -1,32 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 
-const PasswordEntry: React.FC<{ onSubmit: (password: string) => void }> = ({ onSubmit }) => {
-    const [password, setPassword] = useState('');
+// const PasswordEntry: React.FC<{ onSubmit: (password: string) => void }> = ({ onSubmit }) => {
+//     const [password, setPassword] = useState('');
 
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPassword(e.target.value);
-    };
+//     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//         setPassword(e.target.value);
+//     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        onSubmit(password);
-    };
+//     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+//         e.preventDefault();
+//         onSubmit(password);
+//     };
 
-    return (
-        <form onSubmit={handleSubmit}>
-            <label>
-                Password:
-                <input type="password" value={password} onChange={handlePasswordChange} />
-            </label>
-            <button type="submit">Submit</button>
-        </form>
-    );
-};
+//     return (
+//         <form onSubmit={handleSubmit}>
+//             <label>
+//                 Password:
+//                 <input type="password" value={password} onChange={handlePasswordChange} />
+//             </label>
+//             <button type="submit">Submit</button>
+//         </form>
+//     );
+// };
 
 const Admin: React.FC = () => {
     const { backend, addUser } = useAppContext();
-    const [isAuthenticated, setIsAuthenticated] = useState(true); //TODO, turn the password back on by setting this to false 
+    //const [isAuthenticated, setIsAuthenticated] = useState(true); //TODO, turn the password back on by setting this to false 
     const [data, setData] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [canvases, setCanvases] = useState<any[]>([]);
@@ -39,14 +39,13 @@ const Admin: React.FC = () => {
     const [enteredPassword, setEnteredPassword] = useState<string>('');
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
 
-    const handlePasswordSubmit = (password: string) => {
-        if (password === 'miku') {
-            setIsAuthenticated(true);
-        } else {
-            alert('Incorrect password');
-        }
-    };
-
+    // const handlePasswordSubmit = (password: string) => {
+    //     if (password === 'miku') {
+    //         setIsAuthenticated(true);
+    //     } else {
+    //         alert('Incorrect password');
+    //     }
+    // };
     const handleUserChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const userId = e.target.value;
         setSelectedUser(userId);
@@ -143,7 +142,7 @@ const Admin: React.FC = () => {
 
     return (
         <div className='flex flex-col mt-20 overflow-scroll px-10' style={{ height: 'calc(100vh - 100px)' }}>
-            {isAuthenticated ? (
+            {/* {isAuthenticated ? ( */}
                 <>
                     <div className='flex flex-wrap bg-stone-200 p-4'>
                         <div className='mr-4 mb-4'>
@@ -199,7 +198,7 @@ const Admin: React.FC = () => {
                                 <select id='canvas-select' value={selectedCanvas} onChange={handleCanvasChange} className="w-full p-2 border rounded text-black mb-2">
                                     <option value=''>Select a canvas</option>
                                     {canvases.map(canvas => (
-                                        <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
+                                        <option key={canvas.canvasId} value={canvas.canvasId}>{canvas.canvasName}</option>
                                     ))}
                                 </select>
                             </div>
@@ -229,6 +228,7 @@ const Admin: React.FC = () => {
                                 <div className='overflow-scroll bg-gray-100 p-4 mt-4 text-xs' style={{ height: '200px', width: '100%', whiteSpace: 'pre-wrap' }}>
                                     <pre>{rawData}</pre>
                                 </div>
+
                                 <button onClick={handleDeleteCanvas} className='bg-red-500 text-white px-4 py-2'>Delete Canvas</button>
                             </div>
                             <div className='overflow-scroll' style={{ height: 'calc(100vh - 100px)' }}>
@@ -257,9 +257,10 @@ const Admin: React.FC = () => {
                         </div>
                     )}
                 </>
-            ) : (
-                <PasswordEntry onSubmit={handlePasswordSubmit} />
-            )}
+            
+            {/* // ) : (
+            //    // <PasswordEntry onSubmit={handlePasswordSubmit} />
+            // )} */}
         </div>
     );
 };
