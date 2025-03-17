@@ -309,7 +309,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
   const [showDescription, setShowDescription] = useState(false);
   const [showFolder, setShowFolder] = useState(false);
 
-  const { backend, userID, admins } = useAppContext();
+  const { backend, userID, admins, condition} = useAppContext();
   const { addClippedNode, getNextPaletteIndex } = usePaletteContext();
 
   const [initialCheck, setInitialCheck] = useState(true);
@@ -497,7 +497,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
         if ((data.words && data.words.some((word: Word | Keyword) => 'id' in word)) || data.hasNoKeywords) {
           setWords(data.words);
         } 
-        else {
+        else if (condition === "experimental") { //only fetch for experimental condition
           //console.log(data.words, " has no keywords. let's find some");
           const updatedWords = await checkForKeywords(words);
           setWords(updatedWords);
@@ -507,7 +507,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
 
         if ((data.similarTexts && data.similarTexts.length > 0) && !data.hasNoSimilarTexts) {
           setSimilarTexts(data.similarTexts);
-        } else {
+        } else if (condition === "experimental") { //only fetch for experimental condition
           const result = await fetchSimilarTexts(wordsToString(words));
           data.similarTexts = result;
         }
@@ -516,7 +516,7 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
       }
       onCreate();
       if (data.similarTexts && data.similarTexts.length > 0) {
-      setSimilarTexts(data.similarTexts || []);
+        setSimilarTexts(data.similarTexts || []);
       }
 
     }
@@ -605,32 +605,34 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
         <>
 
         {/* --- FOLDER PANEL --- */}
-        <motion.div
-          initial={{ left: '-6px', transform: `scaleY(0.5)` }}
-          animate={{ 
-            left: showFolder ? `-${width}px` : '-6px',
-            transform: `scaleY(1)`,
-            opacity: showControls ? 1 : 0
-          }}
-          transition={{ duration: 0.2 }}
-          className="absolute"
-        >
-          <FolderPanel
-            parentNodeId={id}
-            width={width} 
-            height={height} 
-            showFolder={showFolder} 
-            toggleFolder={toggleFolder} 
-            similarTexts={similarTexts} 
-            isAIGenerated={isAIGenerated}
-          />
-        </motion.div>
+        {condition === "experimental" && (
+          <motion.div
+            initial={{ left: '-6px', transform: `scaleY(0.5)` }}
+            animate={{ 
+              left: showFolder ? `-${width}px` : '-6px',
+              transform: `scaleY(1)`,
+              opacity: showControls ? 1 : 0
+            }}
+            transition={{ duration: 0.2 }}
+            className="absolute"
+          >
+            <FolderPanel
+              parentNodeId={id}
+              width={width} 
+              height={height} 
+              showFolder={showFolder} 
+              toggleFolder={toggleFolder} 
+              similarTexts={similarTexts} 
+              isAIGenerated={isAIGenerated}
+            />
+          </motion.div>
+        )}
 
         {/* ---- NODE TOOLBAR ---- */}
 
         <NodeToolbar isVisible={selected} position={Position.Top}>
           <div className="flex items-center justify-center space-x-2">
-                      
+                
             <button
             className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
             type="button"
@@ -651,24 +653,24 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
             </button>
             {data.intersections && data.intersections.length > 1 && (
               <button
-                className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
-                type="button"
-                onClick={() => mergeNodes(data.intersections)}
-                aria-label="Merge"
-                style={{ marginRight: '0px' }}
+          className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+          type="button"
+          onClick={() => mergeNodes(data.intersections)}
+          aria-label="Merge"
+          style={{ marginRight: '0px' }}
               >
-                <BookCopy size={16} />
+          <BookCopy size={16} />
               </button>
             )}
             { (userID && admins.includes(userID)) && //only show if we're in admin mode
-                <button
-                    className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
-                    type="button"
-                    onClick={() => console.log(id, data)}
-                    aria-label="Print Node Data"
-                >
-                    <Bookmark size={16} />
-                </button>
+          <button
+              className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+              type="button"
+              onClick={() => console.log(id, data)}
+              aria-label="Print Node Data"
+          >
+              <Bookmark size={16} />
+          </button>
               }
             
           </div>
@@ -680,77 +682,78 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
         <div className={`${nodeStyles}`} style={{ zIndex: 10, height: `${height}px`, filter: "drop-shadow(3px 3px 3px rgba(0, 0, 0, 0.25))"}}>{/* Edit button */}
             
             {initialCheck ? (
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
-                  <div className="text-xs nowheel" style={{ position: 'relative', opacity: 0.7, color: 'gray', overflow: 'auto', height: '100%', width: '100%' }}>
-                    {content}
-                  </div>
-                  <div className="loader" style={{opacity: 0.7, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}></div>
-                </div>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", fontStyle: "italic" }}>
+            <div className="text-xs nowheel" style={{ position: 'relative', opacity: 0.7, color: 'gray', overflow: 'auto', height: '100%', width: '100%' }}>
+              {content}
+            </div>
+            <div className="loader" style={{opacity: 0.7, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}></div>
+          </div>
             ) : (
               <>
               {/* EDIT BUTTON */}
-                <button 
-                  onClick={handleEditClick}
-                  style={{ display: showControls ? 'block' : 'none' }}
-                  className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-                >
-                  <Edit2 size={16} />
-                </button>
+          <button 
+            onClick={handleEditClick}
+            style={{ display: showControls ? 'block' : 'none' }}
+            className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+          >
+            <Edit2 size={16} />
+          </button>
 
-                <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
-                  {words.map((word, index) => (
-                    <React.Fragment key={index}>
-                      {'id' in word ? ( // if its a keyword, render the keyword component
-                        <KeywordComponent keyword={word} handleKeywordClick={() => handleKeywordClick(word)} />
-                      ) : ( //otherwise, render a normal word
-                        <WordComponent word={word} />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
+          <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
+            {words.map((word, index) => (
+              <React.Fragment key={index}>
+                {'id' in word && condition === "experimental" ? ( // if its a keyword, AND we're in the experimental condition, render the keyword component
+            <KeywordComponent keyword={word} handleKeywordClick={() => handleKeywordClick(word)} />
+                ) : ( //otherwise, render a normal word
+            <WordComponent word={word} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
               </>
             )}
 
-                        <Handle
-                    type="source"
-                    position={Position.Bottom}
-                    id="a"
-                    isConnectable={false}
-                    onConnect={(params) => console.log('handle onConnect', params)}
-                  />
-                  <Handle
-                    type="target"
-                    position={Position.Top}
-                    id="b"
-                    isConnectable={false}
-                    onConnect={(params) => console.log('handle onConnect', params)}
-                  />
+            <Handle
+              type="source"
+              position={Position.Bottom}
+              id="a"
+              isConnectable={false}
+              onConnect={(params) => console.log('handle onConnect', params)}
+            />
+            <Handle
+              type="target"
+              position={Position.Top}
+              id="b"
+              isConnectable={false}
+              onConnect={(params) => console.log('handle onConnect', params)}
+            />
 
         </div>
 
-         {/* Description panel that appears below. motion.div animates it moving up and down.  */}
-        <motion.div
-          initial={{ top: 0 }}
-          animate={{ 
-            top: showDescription ? height : -(height)+40,
-            opacity: showControls ? 1 : 0
-          }}
-          transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
-          className="absolute mt-0"
-        >
-          <KeywordDescription 
-            keyword={selectedKeyword} 
-            containerHeight={height*2}
-            containerWidth={width}
-            showDescription={showDescription}
-            parentNodeId={id}
-            toggleDescription={toggleDescription} 
-            isAIGenerated={isAIGenerated}
-          />
-        </motion.div>
+        {condition === "experimental" && (
+          <motion.div
+            initial={{ top: 0 }}
+            animate={{ 
+              top: showDescription ? height : -(height)+40,
+              opacity: showControls ? 1 : 0
+            }}
+            transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
+            className="absolute mt-0"
+          >
+            <KeywordDescription 
+              keyword={selectedKeyword} 
+              containerHeight={height*2}
+              containerWidth={width}
+              showDescription={showDescription}
+              parentNodeId={id}
+              toggleDescription={toggleDescription} 
+              isAIGenerated={isAIGenerated}
+            />
+          </motion.div>
+        )}
 
 
-    </>
+          </>
   )}
 </div>
 </motion.div>

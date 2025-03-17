@@ -8,17 +8,19 @@ interface AppContextType {
     handleUserLogin: (enteredUserID: string, password: string) => void;
     addUser: (userID: string, password: string) => void;
     admins: string[];
+    condition: string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ backend: string; children: React.ReactNode }> = ({ backend, children }) => {
+export const AppProvider: React.FC<{ backend: string; condition: string; children: React.ReactNode }> = ({ backend, condition, children }) => {
     const [userID, setUserID] = useState<string | null>(null);
     const [loginStatus, setLoginStatus] = useState<"logged out" | "logging in" | "logged in">("logging in");
     const [attemptedQuickLogin, setAttemptedQuickLogin] = useState(false);
     const [searchParams] = useSearchParams();
     const userParam = searchParams.get('user');
     const canvasParam = searchParams.get('canvas');
+
 
     const admins = ["shm", "elaine", "ethan", "sophia", "bob"];
 
@@ -44,6 +46,7 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
 
     const handleUserLogin = async (enteredUserID: string, password?: string) => {
         //logs in the user in the url, or sends us to the url to log you in on the next load
+        
         password = password || "";
         if (enteredUserID === ""){
             setLoginStatus("logged out")
@@ -120,7 +123,7 @@ export const AppProvider: React.FC<{ backend: string; children: React.ReactNode 
     }, [backend, userID, userParam, canvasParam]);
 
     return (
-        <AppContext.Provider value={{ backend, userID, loginStatus, handleUserLogin, addUser, admins }}>
+        <AppContext.Provider value={{ backend, userID, loginStatus, handleUserLogin, addUser, admins, condition }}>
             {children}
         </AppContext.Provider>
     );

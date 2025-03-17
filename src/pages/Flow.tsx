@@ -220,6 +220,7 @@ useOnViewportChange({
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
 
+
     };
 
     setNodes((prevNodes) => {

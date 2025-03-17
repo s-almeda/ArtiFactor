@@ -21,15 +21,18 @@ const useClipboard = (
   const handlePaste = useCallback(() => {
     if (clipboard) {
       const offset = 10 * (nodes.length + 1);
-      const newNodes = clipboard.map((node) => ({
+      const newNodes = clipboard.map((node, index) => ({
         ...node,
-        id: `${nodes.length + 1}`,
+        id: `${nodes.length + index + 1}`,
         position: {
           x: node.position.x + offset,
           y: node.position.y + offset,
         },
+        selected: true,
       }));
-      setNodes((nodes) => [...nodes, ...newNodes]);
+      setNodes((nodes) =>
+        nodes.map((node) => ({ ...node, selected: false })).concat(newNodes)
+      );
     }
   }, [clipboard, nodes, setNodes]);
 

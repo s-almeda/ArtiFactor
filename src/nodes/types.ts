@@ -18,6 +18,7 @@ export type ImageWithLookupNodeData = ArtifactorNodeData & {
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
   parentNodeId?: string;
+  lookUpOn?: boolean;
 };
 
 export type TextWithKeywordsNodeData = ArtifactorNodeData & {

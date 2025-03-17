@@ -50,14 +50,16 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
 
 
   return (
-    <div className="w-full flex items-center justify-between bg-gray-900 text-white px-4 py-2 shadow-md">
+    <div className="w-full flex items-center justify-between bg-stone-900 text-white px-4 py-2 shadow-md">
       {/* Left: Hamburger Menu (Opens Sidebar) */}
       <button onClick={toggleSidebar} className="p-2">
-        <Menu size={24} />
+        <Menu size={16} />
       </button>
 
       {/* Center: App Title */}
-      <h1 className="text-lg font-semibold text-blue-400">ArtiFactor</h1>
+      {loginStatus !== "logged in" && (
+        <h1 className="text-lg font-semibold text-stone-400">ArtiFactor</h1>
+      )}
 
       {loginStatus === "logged in" && (
         <div className="flex items-center gap-4">
@@ -70,7 +72,7 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
             onBlur={handleBlur}
             onKeyDown={(e) => e.key === "Enter" && handleBlur()}
             autoFocus
-            className="bg-gray-800 text-white px-2 py-1 border border-gray-700 rounded"
+            className="bg-stone-800 text-white px-2 py-1 border border-gray-700 rounded"
           />
         ) : (
           <span className="text-white cursor-pointer" onClick={() => setIsEditing(true)}>
@@ -80,7 +82,7 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
         <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
           </div>
           {/* Last Saved Timestamp */}
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-stone-400">
         Last saved: {displayDate}
           </span>
         </div>

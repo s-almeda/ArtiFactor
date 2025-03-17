@@ -131,6 +131,13 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
         </>
     );
 };
+
+
+
+
+
+
+
 //TODO: if AIGenerated, use ai gen styles, and switch between saying "Prompt" or "Alt text" in the description panel
 const DescriptionPanel: React.FC<{ 
     content?: string 
@@ -267,7 +274,7 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
     
 
     const [similarArtworks, setSimilarArtworks] = useState<Artwork[]>(data.similarArtworks || defaultArtworks);
-    const { backend, userID, admins} = useAppContext();
+    const { backend, userID, admins, condition} = useAppContext();
 
     const fetchSimilarArtworks = async (imageUrl: string): Promise<Artwork[]> => {
         try {
@@ -332,11 +339,11 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
 
     
     useEffect(() => {
-        if (data.similarArtworks && data.similarArtworks.length > 0) {
+        if (data.similarArtworks && data.similarArtworks.length > 0 && condition === "experimental") {
             //console.log('setting new similar artworks data:', data.similarArtworks);
             setSimilarArtworks(data.similarArtworks);
         }
-    }, [JSON.stringify(data.similarArtworks)]);
+    }, [JSON.stringify(data.similarArtworks), condition],);
 
 
     //update isAIGenerated flag if data.provenance changes
@@ -352,10 +359,10 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
                 setSimilarArtworks(artworks);
                 setInitialCheck(false);
         };
-        if (initialCheck && (!data.similarArtworks || data.similarArtworks.length <= 0) && imageUrl !== "") {
+        if (condition === "experimental" && initialCheck && (!data.similarArtworks || data.similarArtworks.length <= 0) && imageUrl !== "") {
             fetchArtworks();
         }
-    }, [initialCheck, data.similarArtworks, imageUrl]);
+    }, [initialCheck, data.similarArtworks, imageUrl, condition]);
 
         
 
@@ -375,65 +382,64 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
             className="drag-handle__invisible bg-transparent"
         >
             {/*----folder panel----*/}
-
+            {condition === "experimental" && (
             <motion.div
-            initial={{ left: '-6px', transform: `scaleY(0.5)` }}
-            animate={{ 
+                initial={{ left: '-6px', transform: `scaleY(0.5)` }}
+                animate={{ 
                 left: showFolder ? `-${width*2 - 10}px` : '-6px',
                 transform: `scaleY(1)`,
                 opacity: showControls ? 1 : 0
-            }}
-            transition={{ duration: 0.2 }}
-            className="absolute"
+                }}
+                transition={{ duration: 0.2 }}
+                className="absolute"
             >
-            
-            <FolderPanel parentNodeId={id} similarArtworks={similarArtworks} width={width*2} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} isAIGenerated={isAIGenerated} />
+                <FolderPanel parentNodeId={id} similarArtworks={similarArtworks} width={width*2} height={height*2} showFolder={showFolder} toggleFolder={toggleFolder} isAIGenerated={isAIGenerated} />
             </motion.div>
+            )}
             {/* end folder panel */}
 
-
             <NodeToolbar isVisible={selected} position={Position.Top}>
-                <div className="flex items-center justify-center space-x-2">
-                <button
-                    className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
-                    type="button"
-                    onClick={() => addClippedNode(
-                    {
-                        id: getNextPaletteIndex(),
-                        type: 'image',
-                        content: imageUrl,
-                        prompt: data.prompt || "",
-                        provenance: data.provenance || "user",
-                        parentNodeId: data.parentNodeId || id,
-                        similarArtworks: similarArtworks
-                    }
-                    )}
-                    aria-label="Save to Palette"
-                    style={{  }}
-                >
-                 < Paperclip size={16}/>
-                </button>
-
-                <button
-                    className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
-                    type="button"
-                    onClick={toggleEnlargedImage}
-                    aria-label="Enlarge Image"
-                >
-                    <Expand size={16} />
-                </button>
-                </div>
-
-                { (userID && admins.includes(userID)) && //only show if we're in admin mode
-                    <button
-                        className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
-                        type="button"
-                        onClick={() => console.log(id, data)}
-                        aria-label="Print Node Data"
-                    >
-                        <Bookmark size={16} />
-                    </button>
+            <div className="flex items-center justify-center space-x-2">
+            <button
+                className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                type="button"
+                onClick={() => addClippedNode(
+                {
+                id: getNextPaletteIndex(),
+                type: 'image',
+                content: imageUrl,
+                prompt: data.prompt || "",
+                provenance: data.provenance || "user",
+                parentNodeId: data.parentNodeId || id,
+                similarArtworks: similarArtworks
                 }
+                )}
+                aria-label="Save to Palette"
+                style={{  }}
+            >
+             < Paperclip size={16}/>
+            </button>
+
+            <button
+                className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                type="button"
+                onClick={toggleEnlargedImage}
+                aria-label="Enlarge Image"
+            >
+                <Expand size={16} />
+            </button>
+            </div>
+
+            { (userID && admins.includes(userID)) && //only show if we're in admin mode
+                <button
+                className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
+                type="button"
+                onClick={() => console.log(id, data)}
+                aria-label="Print Node Data"
+                >
+                <Bookmark size={16} />
+                </button>
+            }
 
             </NodeToolbar>
             
@@ -442,18 +448,18 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
             <div
             className={`bg-transparent rounded-full ${isAIGenerated ? 'rounded-xl' : ''}`}
             style={{
-                width: `${width}px`,
-                height: `${height}px`,
-                position: "relative",
+            width: `${width}px`,
+            height: `${height}px`,
+            position: "relative",
             }}
             >
 
              {/* the main node image */}
             <img
-                className={`${nodeStyles}`}
-                src={imageUrl}
-                alt={data.prompt || "generated image"}
-                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+            className={`${nodeStyles}`}
+            src={imageUrl}
+            alt={data.prompt || "generated image"}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
             />
             </div>
 
@@ -464,49 +470,49 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
         id="a"
         isConnectable={false}
         onConnect={(params) => console.log('handle onConnect', params)}
-      />
-      <Handle
+          />
+          <Handle
         type="target"
         position={Position.Top}
         id="b"
         isConnectable={false}
         onConnect={(params) => console.log('handle onConnect', params)}
-      />
+          />
 
             <motion.div
-                initial={{ top: 0 }}
-                animate={{ 
-                top: showDescription ? height : 40,
-                opacity: showControls ? 1 : 0
-                
-                }}
-                transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
-                className="absolute mt-0"
+            initial={{ top: 0 }}
+            animate={{ 
+            top: showDescription ? height : 40,
+            opacity: showControls ? 1 : 0
+            
+            }}
+            transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
+            className="absolute mt-0"
             >
-                <DescriptionPanel 
-                containerHeight={height}
-                containerWidth={width}
-                showDescription={showDescription} 
-                toggleDescription={toggleDescription} 
-                parentNodeId={id}
-                content={data.prompt}
-                isAIGenerated={isAIGenerated} 
-                />
+            <DescriptionPanel 
+            containerHeight={height}
+            containerWidth={width}
+            showDescription={showDescription} 
+            toggleDescription={toggleDescription} 
+            parentNodeId={id}
+            content={data.prompt}
+            isAIGenerated={isAIGenerated} 
+            />
 
             </motion.div>
 
 
             {/* Enlarged Image Overlay */}
             {isImageEnlarged && (
-                <motion.div
-                    className="fixed top-0 left-0 w-screen-[45vw] h-screen-[45vw] bg-black/70 flex justify-center items-center z-50"
-                    onClick={() => setIsImageEnlarged(false)}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                >
-                    <img src={imageUrl} className="max-w-[45vw] max-h-[45vh] rounded-lg shadow-xl" />
-                </motion.div>
+            <motion.div
+                className="fixed top-0 left-0 w-screen-[45vw] h-screen-[45vw] bg-black/70 flex justify-center items-center z-50"
+                onClick={() => setIsImageEnlarged(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+                <img src={imageUrl} className="max-w-[45vw] max-h-[45vh] rounded-lg shadow-xl" />
+            </motion.div>
             )}
         </motion.div>
     );
