@@ -20,7 +20,7 @@ import { useSearchParams } from "react-router-dom";
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
 //USE THIS LOCAL ONE for local development...
-//const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
+// const backend_url = "http://localhost:3000"; // URL of the LOCAL backend server (use this if you're running server.js in a separate window!)
 
 // TURN THIS ONLINE ONE back on before you run "npm build" and deploy to Vercel!/
 const backend_url = "https://snailbunny.site"; // URL of the backend server hosted online! 
