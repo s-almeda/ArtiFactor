@@ -463,12 +463,13 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
             />
             </div>
 
-
+            
             <Handle
         type="source"
         position={Position.Bottom}
         id="a"
         isConnectable={false}
+        className="invisible"
         onConnect={(params) => console.log('handle onConnect', params)}
           />
           <Handle
@@ -476,6 +477,7 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
         position={Position.Top}
         id="b"
         isConnectable={false}
+        className="invisible"
         onConnect={(params) => console.log('handle onConnect', params)}
           />
 

@@ -166,33 +166,33 @@ app.post("/api/generate-image", async (req, res) => {
   try {
     // import fetch from 'node-fetch'; // for node.js
 
-    const response = await fetch(
-      'https://noggin.rea.gent/scientific-mammal-8442',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer rg_v1_a19uz85azi53qm4b3vpjg6zyoud51leu8q9h_ngk',
-        },
-        body: JSON.stringify({
-          // fill variables here.
-          "prompt": prompt,
-        }),
-      }
-    );
-    // const response = await fetch(
-    //   'https://noggin.rea.gent/peaceful-spoonbill-8088',
+    // const response = await fetch( //SDXL
+    //   'https://noggin.rea.gent/scientific-mammal-8442',
     //   {
     //     method: 'POST',
     //     headers: {
     //       'Content-Type': 'application/json',
-    //       Authorization: 'Bearer rg_v1_mc66rqibqakaslgktuy89n5lfjhdygcwvfj2_ngk',
+    //       Authorization: 'Bearer rg_v1_a19uz85azi53qm4b3vpjg6zyoud51leu8q9h_ngk',
     //     },
     //     body: JSON.stringify({
+    //       // fill variables here.
     //       "prompt": prompt,
     //     }),
     //   }
-    // );
+    // ); 
+    const response = await fetch( //BLACK FOREST SHNELL
+      'https://noggin.rea.gent/peaceful-spoonbill-8088',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer rg_v1_mc66rqibqakaslgktuy89n5lfjhdygcwvfj2_ngk',
+        },
+        body: JSON.stringify({
+          "prompt": prompt,
+        }),
+      }
+    );
 
     const redirectUrl = response.url;
     console.log("Redirect URL from API:", redirectUrl);

@@ -46,6 +46,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [canvasID]);
 
+
   const pullCanvas = useCallback(async (canvasID: string): Promise<{ canvasData: ReactFlowJsonObject, canvasName: string, timestamp: string } | null> => {
     try {
       const response = await axios.get(`${backend}/api/get-canvas/${canvasID}`);
@@ -114,6 +115,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
         timestamp
       });
       setLastSaved(timestamp);
+      //console.log("saved canvas:", canvasIDToSave, canvasNameToSave, " at ", timestamp);
     } catch (error) {
       console.error("Error saving canvas:", error);
     }

@@ -45,17 +45,28 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
     if (loginStatus !== "logged in") return;
     setNewName(canvasName);
   }, [canvasName]);
-
+  
   useEffect(() => {
-    setDisplayDate(
-      lastSaved
-        ? new Date(lastSaved).toLocaleString("en-US", {
-            timeZone: "PST",
-            dateStyle: "short",
-            timeStyle: "medium",
-          })
-        : "Never"
-    );
+    if (lastSaved) {
+      const now = new Date();
+      const savedTime = new Date(lastSaved);
+      const diffInSeconds = Math.floor((now.getTime() - savedTime.getTime()) / 1000);
+
+      if (diffInSeconds <= 3) {
+        setDisplayDate("just now");
+      } else {
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+
+        setDisplayDate(
+          minutes > 0
+            ? `${minutes} minute${minutes > 1 ? "s" : ""} and ${seconds} second${seconds !== 1 ? "s" : ""} ago`
+            : `${seconds} second${seconds !== 1 ? "s" : ""} ago`
+        );
+      }
+    } else {
+      setDisplayDate("Never");
+    }
   }, [lastSaved]);
 
   return (
@@ -88,7 +99,7 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
             )}
             <Pencil size={16} className="ml-2 cursor-pointer" onClick={() => setIsEditing(true)} />
           </div>
-          <span className="text-sm text-stone-400">Last saved: {displayDate}</span>
+          <span className="text-sm text-stone-400">Last saved... {displayDate}</span>
         </div>
       )}
 
@@ -96,11 +107,11 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
         <button
           onClick={handleSaveCanvas}
           className={`flex items-center gap-2 px-4 py-2 rounded ${
-            isSaving ? "bg-gray-600" : "bg-blue-500"
+            isSaving ? "bg-gray-600" : "bg-stone-500"
           } text-white`}
         >
-          <Save size={16} />
-          {isSaving ? "Saving..." : "Save"}
+
+          {isSaving ? "..." : <Save size={16} />}
         </button>
       )}
     </div>

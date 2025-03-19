@@ -38,9 +38,9 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { getIntersectingNodes, screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
-  const { draggableType, setDraggableType, draggableData, setDraggableData} = useDnD(); //dragStartPosition, setDragStartPosition
+  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById, onNodeDrag, onNodeDragStop } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
+  const { draggableType, draggableData} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
@@ -230,9 +230,6 @@ useOnViewportChange({
       }
       return updatedNodes;
     });
-    if (userID){
-      saveCanvas(canvasToObject(), canvasID, canvasName);
-    }
   };
 
 
@@ -309,74 +306,10 @@ useOnViewportChange({
   //keep track o fhte node dragging 
 
 
-  const onNodeDrag = useCallback(
-    (_: MouseEvent, draggedNode: Node) => {
-      setDraggableType(draggedNode.type as string);
-      setDraggableData(draggedNode.data);
-      if (draggedNode.type === "text") {
-        updateIntersections(draggedNode, nodes);
-      }
-    },
-      [setNodes, getIntersectingNodes]
-    );
-    
-
-  const onNodeDragStop = useCallback(
-    (_: MouseEvent, draggedNode: Node) => {
-      setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
-      if (userID){
-        saveCanvas(canvasToObject(), canvasID, canvasName);
-        }
-    },
-    [setNodes, userID]
-  );
 
 
 
   // ------------------- HELPER FUNCTIONS ------------------- //
-
-  const updateIntersections = (draggedNode: Node, currentNodes: AppNode[]) => {
-    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-    return currentNodes.map((node: AppNode) => {
-      if (node.id === draggedNode.id) {
-        const updatedIntersections = [
-          {
-            id: node.id,
-            position: node.position,
-            content: node.data.content,
-          },
-          ...intersections.map((id) => {
-            const intersectingNode = currentNodes.find((n) => n.id === id);
-            if (intersectingNode && intersectingNode.type === "text") {
-              //console.log(`${node.data.content} is overlapping with: ${intersectingNode.data.content}`);
-              return {
-                id: intersectingNode.id,
-                position: intersectingNode.position,
-                content: intersectingNode.data.content,
-              };
-            }
-            return null;
-          }).filter(Boolean),
-        ];
-        //console.log("updated intersections for node", node.data.content, ": ", updatedIntersections);
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            intersections: updatedIntersections,
-          },
-        };
-      }
-      return node;
-    });
-  };
-  const deleteNodeById = (nodeId: string) => {
-    setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-    if (userID){
-      saveCanvas(canvasToObject(), canvasID, canvasName);
-    }
-  };
 
 
 
@@ -451,7 +384,7 @@ useOnViewportChange({
     []
   );
 
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  //const [showDebugInfo, setShowDebugInfo] = useState(false);
 
 
   // ------------------------ LOAD UP THE PROPER NODES UPON LOGIN EFFECT ------------------------ //
@@ -541,7 +474,7 @@ useOnViewportChange({
 useEffect(() => {
   const interval = setInterval(() => {
     if (userID) {
-      saveCanvas(canvasToObject(), canvasID, canvasName);
+      saveCanvas(canvasToObject());
     }
     else{
       quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
@@ -567,6 +500,7 @@ return(
           onEdgesChange={handleOnEdgesChange}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
+          onNodesDelete={onNodesDelete}
           //onNodeDragStart={onNodeDragStart}
           onNodeClick={(event, node) => handleNodeClick(event, node)}
           onDrop={onDrop}
@@ -583,7 +517,7 @@ return(
 
       <Toolbar addTextWithKeywordsNode={() => addTextWithKeywordsNode()} addImageNode={addImageWithLookupNode} addSynthesizer={() => setSynthesisMode(true)} />
 
-      <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md overflow-scroll max-h-64">
+      {/* <div className="fixed bottom-0 left-0 bg-gray-900 text-white p-4 z-50 text-sm rounded-md shadow-md overflow-scroll max-h-64">
         <button
           onClick={() => setShowDebugInfo((prev) => !prev)}
           className="bg-blue-500 text-white p-2 rounded mb-2"
@@ -605,7 +539,7 @@ return(
             <p><strong>Login Status: </strong> {loginStatus}</p>
             </div>
         )}
-      </div>
+      </div> */}
 
 
       </>

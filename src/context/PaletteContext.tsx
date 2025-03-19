@@ -107,7 +107,7 @@ export const PaletteProvider: React.FC<{ children: ReactNode }> = ({
       if (!response.ok) {
         throw new Error(data.error || "Failed to load clippings");
       }
-      if (!data.clippings) {
+      if (!Array.isArray(data.clippings) || data.clippings.length === 0) {
         console.log("No clippings found in database");
         return;
       }
