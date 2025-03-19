@@ -69,16 +69,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [nodes, edges, currentViewport]);
 
 
-  const onNodeDrag = useCallback(
-    (_: React.MouseEvent, draggedNode: Node) => {
-      setDraggableType(draggedNode.type as string);
-      setDraggableData(draggedNode.data);
-      if (draggedNode.type === "text") {
-        updateIntersections(draggedNode, nodes);
-      }
-    },
-      [setNodes, getIntersectingNodes]
-    );
+
     
   const autoSaveCanvas = useCallback(
     debounce((canvasObject: { nodes: Node[]; edges: Edge[]; viewport: Viewport; }) => {
@@ -132,12 +123,23 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     };
 
-    const deleteNodeById = useCallback(
-    (nodeId: string) => {
-      setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-      setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-      autoSaveCanvas(canvasToObject());
-    },[]);
+  const deleteNodeById = useCallback(
+  (nodeId: string) => {
+    setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
+    autoSaveCanvas(canvasToObject());
+  },[]);
+
+  const onNodeDrag = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      setDraggableType(draggedNode.type as string);
+      setDraggableData(draggedNode.data);
+      if (draggedNode.type === "text" && draggedNode.width) {
+        updateIntersections(draggedNode, nodes);
+      }
+    },
+      [setNodes, getIntersectingNodes]
+    );
 
 
   
