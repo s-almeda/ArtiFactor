@@ -79,7 +79,7 @@ const Flow = () => {
     (_: MouseEvent, draggedNode: Node) => {
       setDraggableType(draggedNode.type as string);
       setDraggableData(draggedNode.data);
-      if (draggedNode.type === "text") {
+      if (draggedNode.type != "default") {
         updateIntersections(draggedNode, nodes);
       }
     },
@@ -90,9 +90,6 @@ const Flow = () => {
   const onNodeDragStop = useCallback(
     (_: MouseEvent, draggedNode: Node) => {
       setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
-      if (userID){
-        saveCanvas(canvasToObject());
-        }
     },
     [setNodes, userID]
   );
@@ -102,29 +99,30 @@ const Flow = () => {
   // ------------------- HELPER FUNCTIONS ------------------- //
 
   const updateIntersections = (draggedNode: Node, currentNodes: AppNode[]) => {
-    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
+    const intersections = getIntersectingNodes(draggedNode)
+      .filter((n) => n.type === draggedNode.type) // Only consider nodes of the same type
+      .map((n) => n.id);
+
     return currentNodes.map((node: AppNode) => {
       if (node.id === draggedNode.id) {
         const updatedIntersections = [
           {
             id: node.id,
             position: node.position,
-            content: node.data.content,
+            content: node.type === "image" ? (node.data as ImageWithLookupNodeData).prompt : node.data.content,
           },
           ...intersections.map((id) => {
             const intersectingNode = currentNodes.find((n) => n.id === id);
-            if (intersectingNode && intersectingNode.type === "text") {
-              //console.log(`${node.data.content} is overlapping with: ${intersectingNode.data.content}`);
+            if (intersectingNode) {
               return {
                 id: intersectingNode.id,
                 position: intersectingNode.position,
-                content: intersectingNode.data.content,
+                content: intersectingNode.type === "image" ? (intersectingNode.data as ImageWithLookupNodeData).prompt : intersectingNode.data.content,
               };
             }
             return null;
           }).filter(Boolean),
         ];
-        //console.log("updated intersections for node", node.data.content, ": ", updatedIntersections);
         return {
           ...node,
           data: {
@@ -163,7 +161,7 @@ useOnViewportChange({
 
   /* ---------------------------------------------------- */
   // TODO - move this to a KeyboardShortcut Provider Context situation so we cna also track Undos/Redos
-  const { handleCopy, handleCut, handlePaste } = useClipboard(nodes, setNodes); // Use the custom hook
+  const { handleCopy, handleCut, handlePaste } = useClipboard(nodes); // Use the custom hook
 
   // Keyboard Event Listener for Copy, Cut, Paste
   useEffect(() => {
@@ -189,7 +187,8 @@ useOnViewportChange({
     position?: { x: number; y: number },
     hasNoKeywords: boolean = false,
     parentNodeId?: string,
-    similarTexts?: any[]
+    similarTexts?: any[],
+    loadingNodeId?: string
   ) => {
     const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
       ? defaultTextWithKeywordsNodeData
@@ -212,6 +211,12 @@ useOnViewportChange({
       },
       data: data,
     };
+    if (loadingNodeId){
+      const loadingNode = nodes.find((node) => node.id === loadingNodeId);
+      if (loadingNode) {
+        newTextWithKeywordsNode.position = loadingNode.position;
+      }
+    }
 
     setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newTextWithKeywordsNode];
@@ -239,7 +244,7 @@ useOnViewportChange({
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string, similarArtworks?: any[]) => {
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string, similarArtworks?: any[], loadingNodeId?: string) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
@@ -262,11 +267,17 @@ useOnViewportChange({
       provenance: provenance,
       parentNodeId: parentNodeId,
       similarArtworks: similarArtworks,
+      intersections: [],
       } as ImageWithLookupNodeData,
       dragHandle: '.drag-handle__invisible',
 
-
     };
+    if (loadingNodeId){
+      const loadingNode = nodes.find((node) => node.id === loadingNodeId);
+      if (loadingNode) {
+        newImageNode.position = loadingNode.position;
+      }
+    }
 
     setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newImageNode];
@@ -388,7 +399,7 @@ useOnViewportChange({
           });
 
           if (response.status === 200) {
-            addTextWithKeywordsNode(response.data.text, "ai", loadingNode.position, false, parentNodeId);
+            addTextWithKeywordsNode(response.data.text, "ai", loadingNode.position, false, parentNodeId, [], loadingNodeId);
             deleteNodeById(loadingNodeId);
           } // response error
           else {
@@ -408,7 +419,7 @@ useOnViewportChange({
         
             if (response.status === 200) {
 
-              addImageWithLookupNode(response.data.imageUrl, loadingNode.position, prompt, "ai", parentNodeId);
+              addImageWithLookupNode(response.data.imageUrl, loadingNode.position, prompt, "ai", parentNodeId, [], loadingNodeId);
               deleteNodeById(loadingNodeId);
 
             } // response error

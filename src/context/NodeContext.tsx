@@ -9,7 +9,6 @@ import {
   getOutgoers,
   getConnectedEdges,
   applyEdgeChanges,
-  useReactFlow,
   addEdge
   } from '@xyflow/react';
 import { TextWithKeywordsNodeData, AppNode } from '../nodes/types';
@@ -53,7 +52,6 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [edges, setEdges] = useState<Edge<any>[]>([]); // Keep edges state generic
   const [currentViewport, setCurrentViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
 
-  const { getNodesBounds } = useReactFlow();
   
   const saveCurrentViewport = useCallback((viewport: Viewport) => {
     setCurrentViewport(viewport);

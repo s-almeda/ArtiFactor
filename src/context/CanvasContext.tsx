@@ -93,7 +93,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const saveCanvas = useCallback(async (canvasData: ReactFlowJsonObject, canvasIDToSave?: string, canvasNameToSave?: string) => {
-    canvasIDToSave = canvasIDToSave || canvasID;
+       canvasIDToSave = canvasIDToSave || canvasID;
     canvasNameToSave = canvasNameToSave || canvasName || "Untitled";
     if (loginStatus != "logged in"){
       console.error("You have to log in before you can create a new canvas. You are currently... ", loginStatus);
@@ -107,6 +107,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const timestamp = new Date().toISOString();
+      
       await axios.post(`${backend}/api/save-canvas`, {
         userID,
         canvasID: canvasIDToSave,
@@ -115,7 +116,7 @@ export const CanvasProvider = ({ children }: { children: React.ReactNode }) => {
         timestamp
       });
       setLastSaved(timestamp);
-      //console.log("saved canvas:", canvasIDToSave, canvasNameToSave, " at ", timestamp);
+      console.log("saved canvas:", canvasIDToSave, canvasNameToSave, " at ", timestamp);
     } catch (error) {
       console.error("Error saving canvas:", error);
     }

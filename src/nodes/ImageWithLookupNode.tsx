@@ -5,14 +5,16 @@ import type { ImageWithLookupNode, Artwork } from "./types";
 import { usePaletteContext } from "../context/PaletteContext";
 import { useDnD } from "../context/DnDContext";
 import { motion } from "framer-motion";
-import { Search, Bookmark, Paperclip, Expand } from 'lucide-react'; // Eye, EyeClosed
+import { Search, Bookmark, Paperclip, Expand, BookCopy } from 'lucide-react'; // Eye, EyeClosed
 import { useAppContext } from "../context/AppContext";
 import NavigationButtons from '../utils/commonComponents';
 import axios from "axios";
+import { useNodeContext } from "../context/NodeContext";
 
 const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; width: number; height: number; showFolder: boolean; toggleFolder: () => void; imageUrl?: string; isAIGenerated: boolean }> = ({ parentNodeId, similarArtworks, width, height, showFolder, toggleFolder, isAIGenerated }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const { setDraggableType, setDraggableData } = useDnD();
+
 
     
     const onDragStart = (
@@ -223,6 +225,7 @@ const DescriptionPanel: React.FC<{
 };
 
 export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<ImageWithLookupNode>) {
+    const { mergeNodes } = useNodeContext();
     const { addClippedNode, getNextPaletteIndex } = usePaletteContext(); 
     const [imageUrl, setImageUrl] = useState("");
     const [width, _] = useState(150);
@@ -420,6 +423,18 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
              < Paperclip size={16}/>
             </button>
 
+            {data.intersections && data.intersections.length > 1 && (
+                <button
+                className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+                type="button"
+                onClick={() => mergeNodes(data.intersections)}
+                aria-label="Merge"
+                style={{ marginRight: "0px" }}
+                >
+                <BookCopy size={16} />
+                </button>
+            )}
+
             <button
                 className="border-5 text-gray-800  bg-white border-gray-800 shadow-lg rounded-full hover:bg-[#dbcdb4]"
                 type="button"
@@ -507,7 +522,7 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
             {/* Enlarged Image Overlay */}
             {isImageEnlarged && (
             <motion.div
-                className="fixed top-0 left-0 w-screen-[45vw] h-screen-[45vw] bg-black/70 flex justify-center items-center z-50"
+                className="fixed top-0 left-0 w-screen-[50vw] h-screen-[50vw] bg-black/70 flex justify-center items-center z-50"
                 onClick={() => setIsImageEnlarged(false)}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

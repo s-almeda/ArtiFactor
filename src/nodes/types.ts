@@ -13,7 +13,8 @@ export type ArtifactorNodeData = { // all of our nodes will have these things!
 
 
 export type ImageWithLookupNodeData = ArtifactorNodeData & {
-  prompt?: string;
+  prompt: string;
+  intersections: Array<{ id: string; position: { x: number; y: number }; content: string; }>; //info on nodes that are overlapping with this node
   similarArtworks?: Artwork[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
   //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
