@@ -44,11 +44,33 @@ function AppContent() {
   };
 
   useEffect(() => {
+
+
+    // Handle Page Unload
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = ""; // This triggers the browser's default confirmation dialog
+    };
+
+    // Add event listeners
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup event listeners on unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+
+  
+
+  useEffect(() => {
     const handleWheel = (event: WheelEvent) => {
       const { ctrlKey } = event;
       if (ctrlKey) {
         event.preventDefault(); // Prevent the default zoom behavior
       }
+      
     };
 
     // Add the event listener
