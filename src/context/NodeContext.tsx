@@ -92,7 +92,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   
 
-  const mergeNodes = useCallback((nodesToMerge: { id: string; content: string; position: { x: number; y: number } }[]) => {
+  const mergeNodes = useCallback((nodesToMerge: { id: string; content: string; position: { x: number; y: number }; provenance?: string}[]) => {
     if (nodesToMerge.length === 0) return;
 
     // Combine the content of the nodes

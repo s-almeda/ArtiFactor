@@ -4,25 +4,25 @@ import { v4 as uuidv4 } from "uuid";
 import {useNodeContext } from "../context/NodeContext";
 
 const useClipboard = (
-  nodes: AppNode[],
+  clipboardNodes: AppNode[],
 ) => {
   const [clipboard, setClipboard] = useState<Array<AppNode> | null>(null);
   const { setNodes, setEdges } = useNodeContext();
 
   const handleCopy = useCallback(() => {
-    const selectedNodes = nodes.filter((node) => node.selected);
+    const selectedNodes = clipboardNodes.filter((node) => node.selected);
     setClipboard(selectedNodes);
-  }, [nodes]);
+  }, [clipboardNodes]);
 
   const handleCut = useCallback(() => {
-    const selectedNodes = nodes.filter((node) => node.selected);
+    const selectedNodes = clipboardNodes.filter((node) => node.selected);
     setClipboard(selectedNodes);
     setNodes((nodes) => nodes.filter((node) => !node.selected));
-  }, [nodes, setNodes]);
+  }, [clipboardNodes, setNodes]);
 
   const handlePaste = useCallback(() => {
     if (clipboard) {
-      const offset = 20 * (nodes.length + 1);
+      const offset = 10 * (clipboardNodes.length + 1);
       const newNodes = clipboard.map((node) => {
         const nodeType = node.type; // Assuming `type` is a property of AppNode that indicates the node type (e.g., "text" or "image")
         const newNode = {
@@ -50,7 +50,7 @@ const useClipboard = (
         nodes.map((node) => ({ ...node, selected: false })).concat(newNodes)
       );
     }
-  }, [clipboard, nodes, setNodes, setEdges]);
+  }, [clipboard, clipboardNodes, setNodes, setEdges]);
 
   return {
     handleCopy,

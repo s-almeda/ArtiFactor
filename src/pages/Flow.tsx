@@ -19,6 +19,7 @@ import {
 import {useSearchParams} from "react-router-dom";
 import { defaultTextWithKeywordsNodeData } from "../nodes";
 import { v4 as uuidv4 } from "uuid";
+import { useGesture } from 'react-use-gesture';
 
 
 
@@ -162,7 +163,11 @@ useOnViewportChange({
   /* ---------------------------------------------------- */
   // TODO - move this to a KeyboardShortcut Provider Context situation so we cna also track Undos/Redos
   const { handleCopy, handleCut, handlePaste } = useClipboard(nodes); // Use the custom hook
-
+  const bind = useGesture({
+    onPinch: ({ offset }) => {
+      console.log("Pinch offset:", offset);
+    },
+  });
   // Keyboard Event Listener for Copy, Cut, Paste
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {

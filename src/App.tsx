@@ -1,6 +1,6 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Flow from "./pages/Flow";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
@@ -16,6 +16,7 @@ import { AppProvider } from "./context/AppContext"; //useAppContext
 import TitleBar from "./TitleBar";
 import { NodeProvider } from "./context/NodeContext";
 import { useSearchParams } from "react-router-dom";
+import { useGesture } from "react-use-gesture";
 
 
 //--- ONLY UNCOMMENT ONE OF THESE (depending on which backend server you're running.).... ---//
@@ -41,6 +42,23 @@ function AppContent() {
   const toggleSidebar = () => {
     setShowSidebar((prev) => !prev);
   };
+
+  useEffect(() => {
+    const handleWheel = (event: WheelEvent) => {
+      const { ctrlKey } = event;
+      if (ctrlKey) {
+        event.preventDefault(); // Prevent the default zoom behavior
+      }
+    };
+
+    // Add the event listener
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Cleanup the event listener on unmount
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   return (
     <AppProvider backend={backend_url} condition={condition}>
