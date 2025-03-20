@@ -436,6 +436,7 @@ export function TextWithKeywordsNode({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState(data.content || "");
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // --  the array of words and keywords -- //
   const [words, setWords] = useState<(Word | Keyword)[]>(data.words || []);
@@ -558,7 +559,14 @@ export function TextWithKeywordsNode({
   const handleEditClick = () => {
     setContent(words.map((word: Word | Keyword) => word.value).join(" "));
     setIsEditing(true);
+    setIsExpanded(false);
   };
+
+  const openExpandedEditor = () => {
+    setIsEditing(true);
+    setIsExpanded(true);
+  }
+
 
   const handleKeyDown = async (
     event: React.KeyboardEvent<HTMLTextAreaElement>
@@ -774,26 +782,46 @@ export function TextWithKeywordsNode({
       <div className="relative" style={{ width: `${width}px` }}>
         {isEditing ? (
           <>
-            <div style={{ fontSize: "0.75rem", color: "gray", filter: "none" }}>
+            <div
+              style={{
+              fontSize: "0.75rem",
+              color: "gray",
+              filter: "none",
+              position: "absolute",
+              top: "-1.5rem",
+              left: "0",
+              }}
+            >
               ENTER TO CONFIRM
             </div>
+            {!isExpanded &&  data.content && (data.content.length > 100) && (
+              <NodeToolbar isVisible={selected} position={Position.Right}>
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+                    type="button"
+                    onClick={openExpandedEditor}
+                    aria-label="Expand Editor"
+                    style={{ marginRight: "0px" }}
+                  >
+                    <Expand size={16} />
+                  </button>
+                </div>
+              </NodeToolbar>
+            )}
             <div
-              className="text-xs p-2 border border-gray-700 rounded bg-white nowheel"
-              style={{ width: `${width}px`, height: `${height}px` }}
+              className={`text-xs border border-gray-700 rounded bg-white nowheel ${
+                isExpanded ? "p-5 w-[400px] h-[500px] text-lg" : "p-2 w-[200px] h-[150px]"
+              }`}
             >
               <textarea
-                className="nowheel nodrag resize-none border  overflow-auto text-inherit font-inherit  p-2 w-full h-full"
+                className={`nowheel nodrag resize-none border overflow-auto font-inherit p-2 w-full h-full ${
+                  isExpanded ? "text-lg" : "text-xs"
+                }`}
                 ref={textareaRef}
                 value={content}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                style={{
-                  fontSize: "inherit",
-                  width: "100%",
-                  height: "100%",
-                  fontStyle: "italic",
-                  color: "#333",
-                }}
               />
             </div>
           </>
@@ -846,6 +874,17 @@ export function TextWithKeywordsNode({
                 >
                   <Paperclip size={16} />
                 </button>
+                {data.content && data.content.length > 100 && (
+                  <button
+                  className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
+                  type="button"
+                  onClick={openExpandedEditor}
+                  aria-label="Expand Editor"
+                  style={{ marginRight: "0px" }}
+                  >
+                  <Expand size={16} />
+                  </button>
+                )}
                 
                 {data.intersections && data.intersections.length > 1 && (
                   <button
