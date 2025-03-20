@@ -9,13 +9,15 @@ import {
   getOutgoers,
   getConnectedEdges,
   applyEdgeChanges,
+  useReactFlow,
+  addEdge
   } from '@xyflow/react';
 import { TextWithKeywordsNodeData, AppNode } from '../nodes/types';
 import { stringToWords } from '../utils/utilityFunctions';
 import {useSearchParams} from "react-router-dom";
 import { useAppContext } from './AppContext';
 import { useCanvasContext } from './CanvasContext';
-import { useDnD } from './DnDContext';
+
 import { debounce } from 'lodash';
 import {v4 as uuidv4} from 'uuid';
 
@@ -28,6 +30,7 @@ interface NodeContextProps {
   handleOnEdgesChange: (changes: any) => void;
   onNodesDelete: (deleted: any[]) => void;
   deleteNodeById: (nodeId: string) => void;
+  drawEdge: (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => void;
   setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
   setEdges: React.Dispatch<React.SetStateAction<Edge<any>[]>>; // Keep setEdges generic
   canvasToObject: () => ReactFlowJsonObject;
@@ -50,7 +53,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [edges, setEdges] = useState<Edge<any>[]>([]); // Keep edges state generic
   const [currentViewport, setCurrentViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
 
-  
+  const { getNodesBounds } = useReactFlow();
   
   const saveCurrentViewport = useCallback((viewport: Viewport) => {
     setCurrentViewport(viewport);
@@ -97,7 +100,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Combine the content of the nodes
     const combinedContent = nodesToMerge.map(node => node.content).join(' ');
 
-    // Calculate the average position
+    // Calculate the position below the two parent nodes
     const averagePosition = nodesToMerge.reduce(
       (acc, node) => {
         acc.x += node.position.x;
@@ -108,21 +111,54 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     averagePosition.x /= nodesToMerge.length;
     averagePosition.y /= nodesToMerge.length;
+    const newPosition = { x: averagePosition.x, y: averagePosition.y +210 }; // Position below the parents
 
     const newNode: Node<TextWithKeywordsNodeData> = {
       id: `text-${uuidv4()}`,
-      type: 'text', 
-      position: averagePosition,
+      type: 'text',
+      position: newPosition,
       data: { content: combinedContent, words: stringToWords(combinedContent), provenance: "user", intersections: [] },
     };
-
-    // Update the nodes state
-    setNodes((prevNodes) =>
-      prevNodes.filter((node) => !nodesToMerge.some(mergeNode => mergeNode.id === node.id)).concat(newNode)
-    );
+    // Create new edges for each node in nodesToMerge with the new node as the target
+    nodesToMerge.forEach((node) => {
+      const newEdge: Edge = {
+        id: `edge-${node.id}-${newNode.id}`,
+        source: node.id,
+        target: newNode.id,
+        type: 'default',
+      };
+      setEdges((prevEdges) => addEdge(newEdge, prevEdges));
+    });
+    
+    // Add the new node to the nodes state
+    setNodes((prevNodes) => prevNodes.concat(newNode));
 
     autoSaveCanvas(canvasToObject());
   }, []);
+
+  const drawEdge = (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => {
+    //console.log("Parent Node ID:", parentNodeId, "new node id: ", newNodeId);
+
+    const parentNode = updatedNodes.find((node) => node.id === parentNodeId);
+    const newNode = updatedNodes.find((node) => node.id === newNodeId);
+
+    if (parentNode && newNode) {
+      //console.log("Parent Node Content:", parentNode.data.content);
+      //console.log("New Node Content:", newNode.data.content);
+
+      const newEdge: Edge = {
+        id: `edge-${parentNodeId}-${newNodeId}`,
+        source: parentNodeId,
+        target: newNodeId,
+        type: 'default',
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    }
+  };
+
+
+
 
   const handleOnNodesChange = useCallback(
     (changes: any) => {
@@ -179,7 +215,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, onNodesDelete, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, deleteNodeById }}>
+    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, drawEdge, mergeNodes, onNodesDelete, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, deleteNodeById }}>
       {children}
     </NodeContext.Provider>
   );

@@ -9,9 +9,9 @@ import {
   //MiniMap,
   ReactFlowJsonObject,
   Node,
-  // useNodesState,
-  Edge,
-  addEdge,
+  // // useNodesState,
+  // Edge,
+  // addEdge,
   useOnViewportChange,
   useReactFlow,
 
@@ -39,7 +39,7 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { nodes, setNodes, edges, setEdges, drawEdge, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { screenToFlowPosition, setViewport, getViewport, getNodesBounds, getIntersectingNodes } = useReactFlow();
   const { draggableType, draggableData, setDraggableData, setDraggableType} = useDnD(); //dragStartPosition, setDragStartPosition
 
@@ -223,26 +223,6 @@ useOnViewportChange({
   };
 
 
-  const drawEdge = (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => {
-    //console.log("Parent Node ID:", parentNodeId, "new node id: ", newNodeId);
-
-    const parentNode = updatedNodes.find((node) => node.id === parentNodeId);
-    const newNode = updatedNodes.find((node) => node.id === newNodeId);
-
-    if (parentNode && newNode) {
-      //console.log("Parent Node Content:", parentNode.data.content);
-      //console.log("New Node Content:", newNode.data.content);
-
-      const newEdge: Edge = {
-        id: `edge-${parentNodeId}-${newNodeId}`,
-        source: parentNodeId,
-        target: newNodeId,
-        type: 'default',
-      };
-
-      setEdges((eds) => addEdge(newEdge, eds));
-    }
-  };
 
   // // Placeholder function to create an edge between two specific nodes
   // const createPlaceholderEdge = () => {
