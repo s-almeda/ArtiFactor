@@ -4,7 +4,7 @@ import { type Word, type Keyword, type TextWithKeywordsNode } from "./types";
 import { stringToWords, wordsToString } from "../utils/utilityFunctions";
 import React, { useRef, useState, useEffect } from "react";
 import { useDnD } from "../context/DnDContext";
-import { Bookmark, Search, Edit2, Paperclip, BookCopy } from "lucide-react"; // Eye, EyeClosed
+import { Bookmark, Search, Edit2, Paperclip, BookCopy, Expand } from "lucide-react"; // Eye, EyeClosed
 import { motion } from "framer-motion";
 import { usePaletteContext } from "../context/PaletteContext";
 import NavigationButtons from "../utils/commonComponents";
@@ -458,6 +458,8 @@ export function TextWithKeywordsNode({
   const [initialCheck, setInitialCheck] = useState(true);
   const [isAIGenerated, setIsAIGenerated] = useState(data.provenance === "ai");
 
+
+
   const fetchSimilarTexts = async (query: string) => {
     console.log("fetching texts for:", query);
     try {
@@ -753,8 +755,22 @@ export function TextWithKeywordsNode({
       transition={{ duration: 0.15, type: "spring", bounce: 0.1 }}
       className={``}
     >
-      {" "}
-      {/*TODO: implement combinability `${data.combinable ? 'bg-yellow-50' : ''} */}
+
+        <Handle
+        type="source"
+        position={Position.Bottom}
+        id="a"
+        isConnectable={false}
+        onConnect={(params) => console.log("handle onConnect", params)}
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="b"
+        isConnectable={false}
+        onConnect={(params) => console.log("handle onConnect", params)}
+      />
+      {/* edit area! */}
       <div className="relative" style={{ width: `${width}px` }}>
         {isEditing ? (
           <>
@@ -830,6 +846,7 @@ export function TextWithKeywordsNode({
                 >
                   <Paperclip size={16} />
                 </button>
+                
                 {data.intersections && data.intersections.length > 1 && (
                   <button
                     className="border-5 text-gray-800 bg-white border-gray-800 shadow-lg rounded-full hover:bg-gray-400 dark:hover:bg-gray-400"
@@ -840,6 +857,7 @@ export function TextWithKeywordsNode({
                   >
                     <BookCopy size={16} />
                   </button>
+                  
                 )}
                 {userID &&
                   admins.includes(userID) && ( //only show if we're in admin mode
@@ -930,20 +948,6 @@ export function TextWithKeywordsNode({
                 </>
               )}
 
-              <Handle
-                type="source"
-                position={Position.Bottom}
-                id="a"
-                isConnectable={false}
-                onConnect={(params) => console.log("handle onConnect", params)}
-              />
-              <Handle
-                type="target"
-                position={Position.Top}
-                id="b"
-                isConnectable={false}
-                onConnect={(params) => console.log("handle onConnect", params)}
-              />
             </div>
 
             {condition === "experimental" && (
