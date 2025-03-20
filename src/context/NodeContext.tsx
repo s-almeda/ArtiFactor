@@ -9,7 +9,7 @@ import {
   getOutgoers,
   getConnectedEdges,
   applyEdgeChanges,
-  useReactFlow} from '@xyflow/react';
+  } from '@xyflow/react';
 import { TextWithKeywordsNodeData, AppNode } from '../nodes/types';
 import { stringToWords } from '../utils/utilityFunctions';
 import {useSearchParams} from "react-router-dom";
@@ -17,6 +17,7 @@ import { useAppContext } from './AppContext';
 import { useCanvasContext } from './CanvasContext';
 import { useDnD } from './DnDContext';
 import { debounce } from 'lodash';
+import {v4 as uuidv4} from 'uuid';
 
 
 interface NodeContextProps {
@@ -27,8 +28,6 @@ interface NodeContextProps {
   handleOnEdgesChange: (changes: any) => void;
   onNodesDelete: (deleted: any[]) => void;
   deleteNodeById: (nodeId: string) => void;
-  onNodeDrag: (event: React.MouseEvent, node: Node) => void;
-  onNodeDragStop: (event: React.MouseEvent, node: Node) => void;
   setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
   setEdges: React.Dispatch<React.SetStateAction<Edge<any>[]>>; // Keep setEdges generic
   canvasToObject: () => ReactFlowJsonObject;
@@ -41,13 +40,11 @@ const NodeContext = createContext<NodeContextProps | undefined>(undefined);
 export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  
   const { loginStatus } = useAppContext(); //userID, backend
-  const { setDraggableType, setDraggableData } = useDnD();
   const { canvasName, canvasID, quickSaveToBrowser, saveCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
   const [searchParams] = useSearchParams();
 
   const userParam = searchParams.get('user');
   const canvasParam = searchParams.get('canvas');
-  const {getIntersectingNodes} = useReactFlow();
   
   const [nodes, setNodes] = useState<Node<any>[]>([]); // Keep nodes state generic
   const [edges, setEdges] = useState<Edge<any>[]>([]); // Keep edges state generic
@@ -83,63 +80,12 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
 
-
-    const updateIntersections = (draggedNode: Node, currentNodes: AppNode[]) => {
-      if (!draggedNode.width){
-        return currentNodes;
-      }
-      const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
-      return currentNodes.map((node: AppNode) => {
-        if (node.id === draggedNode.id) {
-          const updatedIntersections = [
-            {
-              id: node.id,
-              position: node.position,
-              content: node.data.content,
-            },
-            ...intersections.map((id) => {
-              const intersectingNode = currentNodes.find((n) => n.id === id);
-              if (intersectingNode && intersectingNode.type === "text") {
-                //console.log(`${node.data.content} is overlapping with: ${intersectingNode.data.content}`);
-                return {
-                  id: intersectingNode.id,
-                  position: intersectingNode.position,
-                  content: intersectingNode.data.content,
-                };
-              }
-              return null;
-            }).filter(Boolean),
-          ];
-          //console.log("updated intersections for node", node.data.content, ": ", updatedIntersections);
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              intersections: updatedIntersections,
-            },
-          };
-        }
-        return node;
-      });
-    };
-
   const deleteNodeById = useCallback(
   (nodeId: string) => {
     setEdges((currentEdges) => currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
     autoSaveCanvas(canvasToObject());
   },[]);
-
-  const onNodeDrag = useCallback(
-    (_: React.MouseEvent, draggedNode: Node) => {
-      setDraggableType(draggedNode.type as string);
-      setDraggableData(draggedNode.data);
-      if (draggedNode.type === "text" && draggedNode.width) {
-        updateIntersections(draggedNode, nodes);
-      }
-    },
-      [setNodes, getIntersectingNodes]
-    );
 
 
   
@@ -164,8 +110,8 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     averagePosition.y /= nodesToMerge.length;
 
     const newNode: Node<TextWithKeywordsNodeData> = {
-      id: `text-${Date.now()}`,
-      type: 'text',
+      id: `text-${uuidv4()}`,
+      type: 'text', 
       position: averagePosition,
       data: { content: combinedContent, words: stringToWords(combinedContent), provenance: "user", intersections: [] },
     };
@@ -225,14 +171,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [nodes, edges, canvasID, canvasName, saveCanvas, canvasToObject],
   );
 
-  // Use autoSaveCanvas instead of saveCanvas
-  const onNodeDragStop = useCallback(
-    (_: React.MouseEvent, draggedNode: Node) => {
-      setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
-      //autoSaveCanvas(canvasToObject());
-    },
-    [setNodes, updateIntersections, autoSaveCanvas, canvasToObject]
-  );
+
 
   useEffect(() => {
     autoSaveCanvas(canvasToObject());
@@ -240,7 +179,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, onNodesDelete, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, onNodeDragStop, onNodeDrag, deleteNodeById }}>
+    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, mergeNodes, onNodesDelete, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, deleteNodeById }}>
       {children}
     </NodeContext.Provider>
   );

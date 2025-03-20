@@ -18,6 +18,7 @@ import {
 } from "@xyflow/react";
 import {useSearchParams} from "react-router-dom";
 import { defaultTextWithKeywordsNodeData } from "../nodes";
+import { v4 as uuidv4 } from "uuid";
 
 
 
@@ -38,9 +39,9 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById, onNodeDrag, onNodeDragStop } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { screenToFlowPosition, setViewport, getViewport, getNodesBounds } = useReactFlow();
-  const { draggableType, draggableData} = useDnD(); //dragStartPosition, setDragStartPosition
+  const { nodes, setNodes, edges, setEdges, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { screenToFlowPosition, setViewport, getViewport, getNodesBounds, getIntersectingNodes } = useReactFlow();
+  const { draggableType, draggableData, setDraggableData, setDraggableType} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
 
@@ -72,6 +73,70 @@ const Flow = () => {
     //ok we're good
     return true;
   };
+
+
+  const onNodeDrag = useCallback(
+    (_: MouseEvent, draggedNode: Node) => {
+      setDraggableType(draggedNode.type as string);
+      setDraggableData(draggedNode.data);
+      if (draggedNode.type === "text") {
+        updateIntersections(draggedNode, nodes);
+      }
+    },
+      [setNodes, getIntersectingNodes]
+    );
+    
+
+  const onNodeDragStop = useCallback(
+    (_: MouseEvent, draggedNode: Node) => {
+      setNodes((currentNodes: AppNode[]) => updateIntersections(draggedNode, currentNodes));
+      if (userID){
+        saveCanvas(canvasToObject());
+        }
+    },
+    [setNodes, userID]
+  );
+
+
+
+  // ------------------- HELPER FUNCTIONS ------------------- //
+
+  const updateIntersections = (draggedNode: Node, currentNodes: AppNode[]) => {
+    const intersections = getIntersectingNodes(draggedNode).map((n) => n.id);
+    return currentNodes.map((node: AppNode) => {
+      if (node.id === draggedNode.id) {
+        const updatedIntersections = [
+          {
+            id: node.id,
+            position: node.position,
+            content: node.data.content,
+          },
+          ...intersections.map((id) => {
+            const intersectingNode = currentNodes.find((n) => n.id === id);
+            if (intersectingNode && intersectingNode.type === "text") {
+              //console.log(`${node.data.content} is overlapping with: ${intersectingNode.data.content}`);
+              return {
+                id: intersectingNode.id,
+                position: intersectingNode.position,
+                content: intersectingNode.data.content,
+              };
+            }
+            return null;
+          }).filter(Boolean),
+        ];
+        //console.log("updated intersections for node", node.data.content, ": ", updatedIntersections);
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            intersections: updatedIntersections,
+          },
+        };
+      }
+      return node;
+    });
+  };
+
 
 
   const handleNodeClick = useCallback(
@@ -138,7 +203,7 @@ useOnViewportChange({
         };
 
     const newTextWithKeywordsNode: AppNode = {
-      id: `text-${Date.now()}`,
+      id: `text-${uuidv4()}`,
       type: "text",
       zIndex: 1000,
       position: position ?? {
@@ -204,10 +269,10 @@ useOnViewportChange({
       x: Math.random() * 250,
       y: Math.random() * 250,
     };
-    const newNodeId = `image-${Date.now()}`
+    const newImageNodeId = `image-${uuidv4()}`
     
-    const newNode: AppNode = {
-      id: newNodeId,
+    const newImageNode: AppNode = {
+      id: newImageNodeId,
       type: "image",
       position: position,
       zIndex: 1000,
@@ -224,9 +289,9 @@ useOnViewportChange({
     };
 
     setNodes((prevNodes) => {
-      const updatedNodes = [...prevNodes, newNode];
+      const updatedNodes = [...prevNodes, newImageNode];
       if (parentNodeId){
-      drawEdge(parentNodeId, newNodeId, updatedNodes);
+      drawEdge(parentNodeId, newImageNodeId, updatedNodes);
       }
       return updatedNodes;
     });
