@@ -441,6 +441,27 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
     }
   };
 
+  const submitEdits = async () => {
+    const updatedWords = stringToWords(content);
+    setWords(updatedWords);
+    data.words = updatedWords;
+    data.hasNoKeywords = false;
+    data.hasNoSimilarTexts = false;
+    setIsEditing(false);
+    setShowDescription(false);
+    setShowFolder(false);
+    setSelectedKeyword(null);
+  
+    const checkedWords = await checkForKeywords(updatedWords);
+    setWords(checkedWords);
+    data.words = checkedWords;
+  
+    const result = await fetchSimilarTexts(wordsToString(checkedWords));
+    setSimilarTexts(result);
+    data.similarTexts = result;
+  };
+  
+
   const handleKeywordClick = (keyword: Keyword) => {
     setSelectedKeyword(keyword);
     setShowDescription(!showDescription);
@@ -544,6 +565,9 @@ export function TextWithKeywordsNode({ id, data, selected }: NodeProps<TextWithK
     }
 
     if (!selected) {
+      if (isEditing) {
+        submitEdits();
+      }
       setShowDescription(false);
       setShowFolder(false);
       setSelectedKeyword(null);

@@ -8,9 +8,9 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "postbuild": "cp vercel.json dist/"
-
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "@xyflow/react": "^12.4.3",
     "axios": "^1.7.7",
     "cors": "^2.8.5",
