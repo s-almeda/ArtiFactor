@@ -70,7 +70,6 @@ function AppContent() {
       if (ctrlKey) {
         event.preventDefault(); // Prevent the default zoom behavior
       }
-      
     };
 
     // Add the event listener

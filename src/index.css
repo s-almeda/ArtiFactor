@@ -72,6 +72,7 @@
   color: #333333; /* Dark grey */
   text-shadow: 0 5px #555555, 0 10px #555555, 5px 0 #555555, 5px 5px #555555, 5px 10px #555555, 10px 0 #555555, 10px 5px #333333, 10px 10px #333333;
 }
+
 .drag-handle__invisible{
   background: white;
 }

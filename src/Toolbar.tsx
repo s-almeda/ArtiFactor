@@ -1,4 +1,5 @@
 import React, { useState, MouseEvent } from 'react';
+import { Plus } from 'lucide-react';
 
 interface ToolbarProps {
     addTextWithKeywordsNode: () => void;
@@ -6,7 +7,7 @@ interface ToolbarProps {
     addSynthesizer: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode, addImageNode, addSynthesizer }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode }) => { //addImageNode, addSynthesizer
     const [toolbarPosition, setToolbarPosition] = useState({ x: 20, y: 100 });
     const [dragging, setDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -50,20 +51,38 @@ const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode, addImageNode
                 onMouseDown={handleDragStart}
                 style={{
                     cursor: 'grab',
-                    padding: '5px',
+                    padding: '-10px',
+                    margin: '-5px',
                     textAlign: 'center',
-                    background: '#444',
-                    color: 'white',
-                    borderRadius: '5px',
-                    fontSize: '16px',
+                    color: '#AAA',
+                    fontSize: '14px',
                     fontWeight: 'bold'
                 }}
             >
                 ☰
             </div>
-            <button onClick={() => addTextWithKeywordsNode()}>T</button>
-            <button onClick={() => addImageNode()}>🌄</button>
-            <button onClick={() => addSynthesizer()}>✨</button>
+            <button
+                onClick={() => addTextWithKeywordsNode()}
+                className={'text-white, bg-stone-800'}
+                style={{
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'gray 1.5px solid',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    transition: 'background 0.3s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#777')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#555')}
+            >
+                
+                <Plus size={28} />
+            </button>
+            {/* <button onClick={() => addImageNode()}>🌄</button>
+            <button onClick={() => addSynthesizer()}>✨</button> */}
             
         </div>
     );
