@@ -36,7 +36,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode }) => { //add
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                background: 'rgba(0,0,0,0.8)',
+                background: 'rgba(35, 30, 24, 0.8)',
                 padding: '10px',
                 borderRadius: '10px',
                 zIndex: 10,
@@ -63,22 +63,8 @@ const Toolbar: React.FC<ToolbarProps> = ({ addTextWithKeywordsNode }) => { //add
             </div>
             <button
                 onClick={() => addTextWithKeywordsNode()}
-                className={'text-white, bg-stone-800'}
-                style={{
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'gray 1.5px solid',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    transition: 'background 0.3s',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#777')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#555')}
+                className="text-white bg-stone-800 w-8 h-8 flex items-center justify-center border border-gray-500 rounded hover:bg-stone-600 active:bg-stone-700 transition duration-300 cursor-pointer"
             >
-                
                 <Plus size={28} />
             </button>
             {/* <button onClick={() => addImageNode()}>🌄</button>
