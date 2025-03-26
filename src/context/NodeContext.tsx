@@ -29,6 +29,7 @@ interface NodeContextProps {
   handleOnEdgesChange: (changes: any) => void;
   onNodesDelete: (deleted: any[]) => void;
   deleteNodeById: (nodeId: string) => void;
+  getNodePositionById: (nodeId: string) => { x: number; y: number } | undefined;
   drawEdge: (parentNodeId: string, newNodeId: string, updatedNodes: AppNode[]) => void;
   setNodes: React.Dispatch<React.SetStateAction<Node<any>[]>>; // Keep setNodes generic
   setEdges: React.Dispatch<React.SetStateAction<Edge<any>[]>>; // Keep setEdges generic
@@ -89,7 +90,13 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   },[]);
 
 
-  
+  const getNodePositionById = useCallback(
+    (nodeId: string): { x: number; y: number } | undefined => {
+      const node = nodes.find((node) => node.id === nodeId);
+      return node ? node.position : undefined;
+    },
+    [nodes]
+  );
   
 
   const mergeNodes = useCallback((nodesToMerge: { id: string; content: string; position: { x: number; y: number }; provenance?: string}[]) => {
@@ -213,7 +220,7 @@ export const NodeProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, drawEdge, mergeNodes, onNodesDelete, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, deleteNodeById }}>
+    <NodeContext.Provider value={{ nodes, edges, currentViewport, setNodes, setEdges, drawEdge, mergeNodes, onNodesDelete, getNodePositionById, handleOnEdgesChange, handleOnNodesChange, canvasToObject, saveCurrentViewport, deleteNodeById }}>
       {children}
     </NodeContext.Provider>
   );

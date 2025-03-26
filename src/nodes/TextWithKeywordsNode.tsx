@@ -97,6 +97,7 @@ export const KeywordDescription: React.FC<{
 }> = ({
   keyword,
   containerHeight = 100,
+  containerWidth = 100,
   showDescription = false,
   parentNodeId,
   toggleDescription,
@@ -129,6 +130,7 @@ export const KeywordDescription: React.FC<{
       className="relative"
       style={{
         height: `${containerHeight}px`,
+        width: `${containerWidth}px`,
         overflow: "visible",
       }}
     >
@@ -369,6 +371,7 @@ const FolderPanel: React.FC<{
                     >
                       {currentText.value}
                     </p>
+                    
                     <p
                       draggable
                       onDragStart={(event) =>

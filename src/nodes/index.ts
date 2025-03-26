@@ -10,7 +10,7 @@ import { TextWithKeywordsNodeData } from "./types"; //TextNodeData, SynthesizerN
 export const defaultTextWithKeywordsNodeData: TextWithKeywordsNodeData = {
   words: [
     "your", "text", "here.", "click", "the", "pencil", "icon", "in", "the", "top", "right", "to", "edit.",
-    "Use", "Option+Click", "to", "generate", "new", "nodes."
+    "Use", "Alt+Click", "to", "generate", "new", "nodes."
   ].map(value => ({ value })),
   intersections: [],
   similarTexts: [],

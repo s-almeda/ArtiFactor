@@ -39,8 +39,8 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, drawEdge, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
-  const { screenToFlowPosition, setViewport, getViewport, getNodesBounds, getIntersectingNodes } = useReactFlow();
+  const { nodes, setNodes, edges, setEdges, drawEdge, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById, getNodePositionById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { screenToFlowPosition, setViewport, getViewport, getNodesBounds, getIntersectingNodes, getNode } = useReactFlow();
   const { draggableType, draggableData, setDraggableData, setDraggableType} = useDnD(); //dragStartPosition, setDragStartPosition
 
   const [attemptedQuickLoad, setattemptedQuickLoad] = useState(false);
@@ -136,9 +136,30 @@ const Flow = () => {
   };
 
 
+  const onNodeContextMenu = useCallback(
+    (event: MouseEvent, node: Node) => {
+      event.preventDefault();
+      if (node.data.type === "default"){ //don't generate the loading node
+        return
+      }
+      else if (node.data.content && node.data.content!= "loading ") {
+        generateNode(node.id, node.data.content as string, calcNearbyPosition(getNodesBounds([node])));
+      } 
+      else if (Array.isArray(node.data.words)) {
+        const content = wordsToString(node.data.words);
+        generateNode(node.id, content, calcNearbyPosition(getNodesBounds([node])));
+      }  
+      console.log("you right clicked this node:", node.data);
+    
+    },[]);
+  
+
+
 
   const handleNodeClick = useCallback(
   (event: MouseEvent, node: Node) => {
+    //console.log(event.button)
+    
     if (event.altKey) { 
       if (node.data.type === "default"){ //don't generate the loading node
         return
@@ -188,7 +209,6 @@ useOnViewportChange({
     hasNoKeywords: boolean = false,
     parentNodeId?: string,
     similarTexts?: any[],
-    loadingNodeId?: string
   ) => {
     const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
       ? defaultTextWithKeywordsNodeData
@@ -211,13 +231,6 @@ useOnViewportChange({
       },
       data: data,
     };
-    if (loadingNodeId){
-      const loadingNode = nodes.find((node) => node.id === loadingNodeId);
-      if (loadingNode) {
-        newTextWithKeywordsNode.position = loadingNode.position;
-      }
-    }
-
     setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newTextWithKeywordsNode];
       if (parentNodeId) {
@@ -244,7 +257,7 @@ useOnViewportChange({
 
 
 
-  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string, similarArtworks?: any[], loadingNodeId?: string) => {
+  const addImageWithLookupNode = (content?: string, position?: { x: number; y: number }, prompt?:string, provenance?: string, parentNodeId?: string, similarArtworks?: any[]) => {
     content = content ?? "https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png";
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
@@ -272,12 +285,7 @@ useOnViewportChange({
       dragHandle: '.drag-handle__invisible',
 
     };
-    if (loadingNodeId){
-      const loadingNode = nodes.find((node) => node.id === loadingNodeId);
-      if (loadingNode) {
-        newImageNode.position = loadingNode.position;
-      }
-    }
+
 
     setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newImageNode];
@@ -374,11 +382,11 @@ useOnViewportChange({
     //todo, add parentnodeid for edges
     // Requests through reagent, generates an image node with a prompt and optional position
     async (parentNodeId: string, prompt: string = "bunny on the moon", position: { x: number; y: number } = { x: 250, y: 250 }) => {
-
+      
       // True if the "prompt" is actually an image
       const isValidImage = /\.(jpeg|jpg|gif|png|webp)$/.test(prompt);
 
-      const loadingNodeId = `loading-${Date.now()}`;
+      const loadingNodeId = `loading-${uuidv4()}`;
       const loadingNode: LoadingNode = {
         id: loadingNodeId,
         type: "default",
@@ -399,7 +407,8 @@ useOnViewportChange({
           });
 
           if (response.status === 200) {
-            addTextWithKeywordsNode(response.data.text, "ai", loadingNode.position, false, parentNodeId, [], loadingNodeId);
+            const updatedPosition = getNode(loadingNodeId)?.position;
+            addTextWithKeywordsNode(response.data.text, "ai", updatedPosition, false, parentNodeId, []);  
             deleteNodeById(loadingNodeId);
           } // response error
           else {
@@ -418,8 +427,8 @@ useOnViewportChange({
             });
         
             if (response.status === 200) {
-
-              addImageWithLookupNode(response.data.imageUrl, loadingNode.position, prompt, "ai", parentNodeId, [], loadingNodeId);
+              const updatedPosition = getNode(loadingNodeId)?.position;
+              addImageWithLookupNode(response.data.imageUrl, updatedPosition||loadingNode.position, prompt, "ai", parentNodeId, [], loadingNodeId);
               deleteNodeById(loadingNodeId);
 
             } // response error
@@ -557,6 +566,7 @@ return(
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           onNodesDelete={onNodesDelete}
+          onNodeContextMenu={onNodeContextMenu}
           //onNodeDragStart={onNodeDragStart}
           onNodeClick={(event, node) => handleNodeClick(event, node)}
           onDrop={onDrop}
