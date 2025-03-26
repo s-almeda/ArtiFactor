@@ -174,3 +174,28 @@ button:hover {
 .xy-background-pattern-cross-color-default {
   background-color: var(--color-secondary); /* Assuming --color-secondary is #2563eb */
 }
+
+.-webkit-scrollbar-track {
+  background-color: transparent; /* Transparent scrollbar track */
+}
+
+/* For WebKit browsers (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 0; /* Hide scrollbar */
+  height: 0; /* Hide horizontal scrollbar */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent scrollbar thumb */
+  border-radius: 4px; /* Rounded scrollbar thumb */
+  visibility: hidden; /* Initially hidden */
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5); /* Darker on hover */
+}
+
+*::-webkit-scrollbar-track {
+  background-color: transparent; /* Transparent scrollbar track */
+}
+

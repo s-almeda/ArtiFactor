@@ -160,27 +160,32 @@ export const KeywordDescription: React.FC<{
           {/* ----- TITLE of keyword ----- */}
           <div className="flex flex-col justify-between">
             {keyword.databaseValue && (
-              <div
+                <div
                 draggable
                 onDragStart={(event) =>
                   onDragStart(event, "text", keyword.databaseValue)
                 }
-                className={`nodrag text-sm font-bold text-gray-800 mb-2 cursor-pointer ${
+                className={`nodrag nowheel text-sm font-bold text-gray-800 mb-2 cursor-pointer ${
                   isAIGenerated
-                    ? " bg-blue-100 hover:bg-blue-300"
-                    : "hover:bg-[#D1BC97]"
+                  ? " bg-blue-100 hover:bg-blue-300"
+                  : "hover:bg-[#D1BC97]"
                 }`}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "8px 12px",
+                  marginTop: "5px",
+                  marginLeft: "-1px",
                   backgroundColor: isAIGenerated ? "#f5f5dc" : "#dbcdb4",
-                  borderBottom: "1px solidrgba(0, 0, 0, 0.34)",
+                  borderBottom: "1px solid rgba(0, 0, 0, 0.34)",
+                  overflow: "visible",
+                  width: "90%",
+                  borderRadius: "0 8px 8px 0", // Only right borders rounded
                 }}
-              >
+                >
                 {keyword.databaseValue}
-              </div>
+                </div>
             )}
             {keyword.description && (
               <div
@@ -379,24 +384,36 @@ const FolderPanel: React.FC<{
                     </p>
 
                     {/* DESCRIPTION */}
-                    <p
+                    {/* <div
+                      style={{
+                      height: "170px",
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      background: isAIGenerated ? "#fdfdf4" : "#f4f0e4",
+                      borderRadius: "8px",
+                      padding: "2px",
+                      margin: "2px",
+                      }}
+                    > */}
+                      <p
                       draggable
                       onDragStart={(event) =>
                         onDragStart(
-                          event,
-                          "text",
-                          currentText.description,
-                          "human"
+                        event,
+                        "text",
+                        currentText.description,
+                        "human"
                         )
                       }
-                      className={`text-sm/5 mt-2 p-0.5 rounded-sm ${
+                      className={`text-xs/4 mt-2 p-0.5 rounded-sm ${
                         isAIGenerated
-                          ? "hover:bg-blue-200"
-                          : "hover:bg-[#dbcdb4]"
+                        ? "hover:bg-blue-200"
+                        : "hover:bg-[#dbcdb4]"
                       }`}
-                    >
+                      >
                       {currentText.description}
-                    </p>
+                      </p>
+                    {/* </div> */}
 
                     {/* RELATED KEYWORDS */}
                     {currentText.relatedKeywordStrings &&
@@ -764,6 +781,7 @@ export function TextWithKeywordsNode({
       className={``}
     >
 
+
         <Handle
         type="source"
         position={Position.Bottom}
@@ -827,12 +845,27 @@ export function TextWithKeywordsNode({
           </>
         ) : (
           <>
+                                  {/* EDIT BUTTON */}
+                                  <button
+                  onClick={handleEditClick}
+                  style={{
+                    display: showControls ? "block" : "none",
+                    position: "absolute",
+                    top: "2px",
+                    right: "-10px",
+                    zIndex: 1000, // Ensure it appears above other elements
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+                  >
+                  <Edit2 size={16} />
+                  </button>
+
             {/* --- FOLDER PANEL --- */}
             {condition === "experimental" && (
               <motion.div
                 initial={{ left: "-6px", transform: `scaleY(0.5)` }}
                 animate={{
-                  left: showFolder ? `-${width}px` : "-6px",
+                  left: showFolder ? `-${width+15}px` : "-6px",
                   transform: `scaleY(1)`,
                   opacity: showControls ? 1 : 0,
                 }}
@@ -841,7 +874,7 @@ export function TextWithKeywordsNode({
               >
                 <FolderPanel
                   parentNodeId={id}
-                  width={width}
+                  width={showFolder? width+15 : width}
                   height={height}
                   showFolder={showFolder}
                   toggleFolder={toggleFolder}
@@ -960,14 +993,7 @@ export function TextWithKeywordsNode({
                 </div>
               ) : (
                 <>
-                  {/* EDIT BUTTON */}
-                  <button
-                    onClick={handleEditClick}
-                    style={{ display: showControls ? "block" : "none" }}
-                    className="absolute top-2 -right-3 p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-                  >
-                    <Edit2 size={16} />
-                  </button>
+                  {/* TEXT AREA */}
 
                   <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
                     {words.map((word, index) => (
