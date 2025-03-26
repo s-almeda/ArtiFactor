@@ -39,7 +39,7 @@ import Toolbar from "../Toolbar";
 const Flow = () => {
   const { userID, backend, loginStatus } = useAppContext();
   const { saveCanvas, canvasName, canvasID, setCanvasId, pullCanvas, quickSaveToBrowser, pullCanvasFromBrowser, setCanvasName, setLastSaved, createNewCanvas } = useCanvasContext();  //setCanvasName//the nodes as saved to the context and database
-  const { nodes, setNodes, edges, setEdges, drawEdge, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById, getNodePositionById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
+  const { nodes, setNodes, edges, setEdges, drawEdge, saveCurrentViewport, canvasToObject, handleOnEdgesChange, handleOnNodesChange, onNodesDelete, deleteNodeById } = useNodeContext(); //useNodesState(initialNodes);   //the nodes as being rendered in the Flow Canvas
   const { screenToFlowPosition, setViewport, getViewport, getNodesBounds, getIntersectingNodes, getNode } = useReactFlow();
   const { draggableType, draggableData, setDraggableData, setDraggableType} = useDnD(); //dragStartPosition, setDragStartPosition
 
@@ -428,7 +428,7 @@ useOnViewportChange({
         
             if (response.status === 200) {
               const updatedPosition = getNode(loadingNodeId)?.position;
-              addImageWithLookupNode(response.data.imageUrl, updatedPosition||loadingNode.position, prompt, "ai", parentNodeId, [], loadingNodeId);
+              addImageWithLookupNode(response.data.imageUrl, updatedPosition||loadingNode.position, prompt, "ai", parentNodeId, []);
               deleteNodeById(loadingNodeId);
 
             } // response error

@@ -433,7 +433,7 @@ const FolderPanel: React.FC<{
           ) : (
             <div className="p-3 ml-0 h-full overflow-y-auto flex flex-col items-center justify-center">
               <h2 className="text-xs font-medium text-gray-900 italic font-bold text-center mb-5">
-                ...We haven't found anything relevant to this prompt in our
+                ...We haven't found anything relevant to this in our
                 database yet...
               </h2>
               <div className="loader"></div>

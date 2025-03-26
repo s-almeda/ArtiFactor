@@ -72,12 +72,12 @@ function AppContent() {
       }
     };
 
-    // dsable right-click context menu
-    window.oncontextmenu = function(event) {
-      event.preventDefault();
-      return false;
-    };
-    
+    // // dsable right-click context menu
+    // window.oncontextmenu = function(event) {
+    //   event.preventDefault();
+    //   return false;
+    // };
+
 
     // Add the event listener
     window.addEventListener("wheel", handleWheel, { passive: false });
