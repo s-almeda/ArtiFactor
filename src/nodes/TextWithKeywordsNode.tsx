@@ -502,7 +502,7 @@ export function TextWithKeywordsNode({
         const keywords = data.map((item: any) => ({
           id: item.id,
           value: item.database_value,
-          description: item.description || item.full_description,
+          description: extractValueFromJsonString(item.description || item.full_description),
           relatedKeywordStrings: item.relatedKeywordStrings,
           type: item.type,
         }));
@@ -518,6 +518,18 @@ export function TextWithKeywordsNode({
         type: "none",
       };
     }
+  };
+
+  const extractValueFromJsonString = (input: string): string => {
+    try {
+      const parsed = JSON.parse(input);
+      if (typeof parsed === "object" && parsed !== null) {
+        return parsed.short_description || parsed.value || input;
+      }
+    } catch {
+
+    }
+    return input;
   };
 
   const checkForKeywords = async (

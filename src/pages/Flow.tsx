@@ -47,6 +47,8 @@ const Flow = () => {
 
   const [___, setSynthesisMode] = useState(false);
 
+  const [ repeatedCreationOffset, setRepeatedCreationOffset] = useState(0);
+
 
   //const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -176,7 +178,11 @@ const Flow = () => {
   },[]);
 
 useOnViewportChange({
-  onEnd: () => saveCurrentViewport(getViewport()),
+  onStart: () => setRepeatedCreationOffset(0),
+  onEnd: () => {
+    const viewport = getViewport();
+    saveCurrentViewport(viewport);
+  },
 });
 
 
@@ -221,17 +227,34 @@ useOnViewportChange({
           hasNoKeywords,
         };
 
+      // Get the center of the top left quadrent of the screen
+        const boundingRect = {
+          x: window.innerWidth / 4,
+          y: window.innerHeight / 4,
+        };
+
+        if (boundingRect) {
+          const center = screenToFlowPosition({
+            x: boundingRect.x,
+            y: boundingRect.y
+          });
+          position = {
+            x: center.x + repeatedCreationOffset * 15 + Math.random() * 50 - 25,
+            y: center.y + repeatedCreationOffset * 20,
+          };
+          setRepeatedCreationOffset(repeatedCreationOffset+1);
+        
+        
+      }
+        
+    
     const newTextWithKeywordsNode: AppNode = {
       id: `text-${uuidv4()}`,
       type: "text",
       zIndex: 1000,
-      position: position ?? {
-        x: Math.random() * 250,
-        y: Math.random() * 250,
-      },
+      position: position ?? { x: 250, y: 250},
       data: data,
-    };
-    setNodes((prevNodes) => {
+    };  setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newTextWithKeywordsNode];
       if (parentNodeId) {
         drawEdge(parentNodeId, newTextWithKeywordsNode.id, updatedNodes);
