@@ -95,7 +95,7 @@ const FolderPanel: React.FC<{ parentNodeId: string, similarArtworks: Artwork[]; 
                                     draggable
                                     onDragStart={(event) => onDragStart(event, "text", currentArtwork.title)}
                                     className={`artwork-title nodrag rounded-md p-1 ${isAIGenerated ? 'hover:bg-blue-300' : 'hover:bg-[#dbcdb4]'} text-md font-medium text-gray-900 italic font-bold text-center`}>
-                                        {currentArtwork.title} ({currentArtwork.date})
+                                        {currentArtwork.title} ({currentArtwork.date}) by {currentArtwork.artist}
                                     </h2>
                                     {/* artwork's representative image */}
                                     <img
@@ -289,24 +289,19 @@ export function ImageWithLookupNode({ id, data, selected, dragging }: NodeProps<
                 "Content-Type": "application/json",
               },
             });
-            const responseData = await JSON.parse(response.data);
+            
+            const responseData = await JSON.parse(response.data); //TODO , redo!
+            console.log("RESPONSE DATA: ", responseData);
             const artworks: Artwork[] = responseData.map((item: any) => ({
                 title: item.title || "Unknown",
-                date: item.date || "Unknown",
-                artist: item.artist || "Unknown",
-                keywords: [
-                    {
-                        id: `genre-${Date.now()}`, // todo, this should be replaced with the actual genre ids from Artsy!
-                        type: "genre",
-                        value: item.genre || "Unknown",
-                    },
-                    {
-                        id: `style-${Date.now()}`,
-                        type: "style",
-                        value: item.style || "Unknown",
-                    },
-                ],
-                description: item.description || "Unknown",
+                date: item.descriptions?.[0]?.artsy?.split('/')[0]?.trim() || "Unknown",
+                artist: item.artists?.[0] || "Unknown",
+                keywords: item.related_keywords?.map((keyword: string, index: number) => ({
+                    id: `keyword-${index}`,
+                    type: "keyword",
+                    value: keyword.trim(),
+                })) || [],
+                description: item.short_description?.artsy || "Unknown",
                 image: item.image || "Unknown",
             }));
             console.log('fetched similar artworks from backend:', artworks);

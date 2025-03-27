@@ -2,11 +2,18 @@ import express from "express";
 import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs"; // Import fs for file operations
+import path from "path"; // Import path for file paths
 import dbPromise from "./database.js"; // Import the database module
-import fetch from 'node-fetch'; // Ensure you have node-fetch installed
+import fetch from "node-fetch"; // Ensure you have node-fetch installed
+import { fileURLToPath } from "url";
 
-const flask_server = "https://data.snailbunny.site";
-//const flask_server = "http://localhost:8080";
+// Define __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+//const flask_server = "https://data.snailbunny.site";
+const flask_server = "http://localhost:8080";
 
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
@@ -27,6 +34,58 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase the JSON payload limit 
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Increase the URL-encoded payload limit 
 
+// Global log file
+let logFilePath = path.join(__dirname, `log-${new Date().toISOString()}.txt`);
+
+// Function to log data to the global log file
+const logToFile = (message) => {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}\n`;
+  fs.appendFileSync(logFilePath, logEntry, (err) => {
+    if (err) {
+      console.error("Error writing to log file:", err);
+    }
+  });
+};
+
+// Middleware to log every API call
+app.use((req, res, next) => {
+  const { method, url, body, query, params } = req;
+  const logMessage = `API Call: ${method} ${url} | Body: ${JSON.stringify(
+    body
+  )} | Query: ${JSON.stringify(query)} | Params: ${JSON.stringify(params)}`;
+  logToFile(logMessage);
+  next();
+});
+
+// New /overview route to display the current log file
+app.get("/overview", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+    const logContents = fs.readFileSync(logFilePath, "utf-8");
+    res.send(`<pre>${logContents}</pre>`);
+  } catch (error) {
+    console.error("Error reading log file:", error);
+    res.status(500).send("Error reading log file");
+  }
+});
+
+// New /fresh route to start a new log file
+app.get("/fresh", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+    const oldLogFilePath = logFilePath;
+    logFilePath = path.join(__dirname, `log-${new Date().toISOString()}.txt`);
+    logToFile(`Started new log file: ${logFilePath}`);
+    res.json({
+      success: true,
+      message: `New log file started. Old log file: ${oldLogFilePath}`,
+    });
+  } catch (error) {
+    console.error("Error starting new log file:", error);
+    res.status(500).json({ error: "Error starting new log file" });
+  }
+});
 
 // New /overview route
 app.get("/", (req, res) => {
@@ -146,6 +205,7 @@ app.post("/api/generate-text", async (req, res) => {
     const truncatedOutput = output.split(',').slice(0, 5).join(', ');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ text: truncatedOutput });
+    logToFile(`IMAGE for text generation: ${imageUrl} | Successful generated text: ${truncatedOutput}`);
   } catch (error) {
     console.error("Error in generate-text:", error);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -198,8 +258,7 @@ app.post("/api/generate-image", async (req, res) => {
     console.log("Redirect URL from API:", redirectUrl);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ imageUrl: redirectUrl });
-
-
+    logToFile(`PROMPT for image generation: ${prompt} | Successful image generation : ${redirectUrl}`);
 
   } catch (error) {
     console.error("Error in generate-image:", error);
@@ -466,6 +525,7 @@ app.delete("/api/delete-canvas/:userID/:canvasID", async (req, res) => {
     );
 
     console.log(`Canvas ${canvasID} and its versions deleted successfully for user ${userID}.`);
+    logToFile(`Canvas ${canvasID} and its versions deleted successfully for user ${userID}.`);
     res.json({ success: true, message: "Canvas and its versions deleted successfully" });
   } catch (error) {
     console.error("Error deleting canvas:", error);
@@ -498,6 +558,7 @@ app.get("/api/get-canvas/:canvasID", async (req, res) => {
     const { nodes, edges, viewport } = canvasData;
 
     console.log(`✅ Canvas ${canvasID} loaded with ${nodes.length} nodes and ${edges.length} edges from time: ${version.timestamp}`);
+    logToFile(`Canvas ${canvasID} loaded with ${nodes.length} nodes and ${edges.length} edges from time: ${version.timestamp}`);
     res.json({ success: true, canvas: { canvasID, canvasName: canvas.canvasName, nodes, edges, viewport }, timestamp: version.timestamp });
   } catch (error) {
     console.error("Error loading canvas:", error);

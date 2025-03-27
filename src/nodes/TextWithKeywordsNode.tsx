@@ -343,11 +343,10 @@ const FolderPanel: React.FC<{
           {similarTexts.length > 0 ? (
             <>
               {/* LEFT AND RIGHT BUTTONS */}
-              <div className="p-3 ml-0 h-full overflow-y-auto">
-                <h2 className="text-xs font-medium text-gray-900 italic font-bold">
+              <div className="p-3 pt-0 ml-0 h-full overflow-y-auto">
+                {/* <h2 className="text-xs font-medium text-gray-900 italic font-bold">
                   This could be related...
-                </h2>
-
+                </h2> */}
                 <NavigationButtons
                   currentIndex={currentIndex}
                   totalItems={similarTexts.length}

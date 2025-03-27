@@ -89,6 +89,56 @@ const Admin: React.FC = () => {
         }
     };
 
+    const getVersion = async (versionId: string) => {
+        try {
+            const response = await fetch(`${backend}/api/get-version/${versionId}`);
+            const result = await response.json();
+            if (result.success) {
+                return result.version.jsonBlob;
+            } else {
+                console.error("Failed to fetch version:", result.error);
+                return null;
+            }
+        } catch (error) {
+            console.error("Error fetching version:", error);
+            return null;
+        }
+    };
+
+    const getAllVersionsOfCanvas = async (canvasId: string) => {
+        console.log(`Fetching all versions for canvas ID: ${canvasId}`);
+        try {
+            const response = await fetch(`${backend}/api/list-versions/${canvasId}`);
+            const result = await response.json();
+            if (result.success) {
+                console.log(`Successfully fetched versions for canvas ID: ${canvasId}`, result.versions);
+                const versions = result.versions;
+                const compiledVersions: Record<string, any> = {};
+
+                for (let i = 0; i < versions.length; i++) {
+                    const version = versions[i];
+                    console.log(`Fetching data for version ${i + 1} of ${versions.length}: ${version.versionId}`);
+                    const versionData = await getVersion(version.versionId);
+                    if (versionData) {
+                        console.log(`Successfully fetched data for version ID: ${version.versionId}`);
+                        compiledVersions[version.versionId] = versionData;
+                    } else {
+                        console.warn(`No data found for version ID: ${version.versionId}`);
+                    }
+                }
+
+                console.log("Compiled versions:", compiledVersions);
+                return compiledVersions;
+            } else {
+                console.error(`Failed to fetch versions for canvas ID: ${canvasId}`, result.error);
+                return null;
+            }
+        } catch (error) {
+            console.error(`Error fetching all versions of canvas ID: ${canvasId}`, error);
+            return null;
+        }
+    };
+
 
 
     const handleVersionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -218,7 +268,28 @@ const Admin: React.FC = () => {
                         </div>
                     )}
                     {selectedCanvas && (
+                
+
                         <div className='mr-4 mb-4'>
+
+                            {/* <button to download all canvas data with all versions */}
+                            <button 
+                                onClick={async () => {
+                                    const allVersions = await getAllVersionsOfCanvas(selectedCanvas);
+                                    const blob = new Blob([JSON.stringify(allVersions, null, 2)], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${selectedUser}-${selectedCanvas}.json`;
+                                    a.click();
+                                }} 
+                                className='bg-green-500 text-white px-4 py-2 mb-4'
+                            >
+                                Download All Versions as JSON data dump
+                            </button>
+                            <br></br>
+
+
                             <label htmlFor='version-select'>Select Version: </label>
                             <select id='version-select' value={selectedVersion} onChange={handleVersionChange} className="w-full p-2 border rounded text-black mb-2">
                                 <option value=''>Select a version</option>
