@@ -1,3 +1,7 @@
+// Main backend server (not the knowledgebase + retrieval models flask server, which is in Python, and run in docker)
+// this JS server forwards request to the flask knowledgebase+model server,
+// as well as requests to the user data base (for user account and canvas version history data)
+// and requests to other APIs, e.g. for Replicate based generation
 import express from "express";
 import axios from "axios";
 import cors from "cors";

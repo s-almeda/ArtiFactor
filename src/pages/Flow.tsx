@@ -216,10 +216,40 @@ useOnViewportChange({
     parentNodeId?: string,
     similarTexts?: any[],
   ) => {
-    const data: TextWithKeywordsNodeData = content === "your text here" && provenance === "user" && !position && !hasNoKeywords
+    let finalPosition = position;
+
+    // Check if this is a default text node and no position is provided
+    const isDefaultNode =
+      content === "your text here" &&
+      provenance === "user" &&
+      !position &&
+      !hasNoKeywords;
+
+    if (isDefaultNode) {
+      // Get the center of the top-left quadrant of the screen
+      const boundingRect = {
+        x: window.innerWidth / 4,
+        y: window.innerHeight / 4,
+      };
+
+      const center = screenToFlowPosition({
+        x: boundingRect.x,
+        y: boundingRect.y,
+      });
+
+      finalPosition = {
+        x: center.x + repeatedCreationOffset * 15 + Math.random() * 50 - 25,
+        y: center.y + repeatedCreationOffset * 20,
+      };
+
+      setRepeatedCreationOffset(repeatedCreationOffset + 1);
+      console.log("making a default text node");
+    }
+
+    const data: TextWithKeywordsNodeData = isDefaultNode
       ? defaultTextWithKeywordsNodeData
       : {
-          words: content.split(' ').map((word) => ({ value: word })),
+          words: content.split(" ").map((word) => ({ value: word })),
           provenance,
           content,
           intersections: [],
@@ -227,34 +257,17 @@ useOnViewportChange({
           hasNoKeywords,
         };
 
-      // Get the center of the top left quadrent of the screen
-        const boundingRect = {
-          x: window.innerWidth / 4,
-          y: window.innerHeight / 4,
-        };
-
-        if (boundingRect) {
-          const center = screenToFlowPosition({
-            x: boundingRect.x,
-            y: boundingRect.y
-          });
-          position = {
-            x: center.x + repeatedCreationOffset * 15 + Math.random() * 50 - 25,
-            y: center.y + repeatedCreationOffset * 20,
-          };
-          setRepeatedCreationOffset(repeatedCreationOffset+1);
-        
-        
-      }
-        
-    
     const newTextWithKeywordsNode: AppNode = {
       id: `text-${uuidv4()}`,
       type: "text",
       zIndex: 1000,
-      position: position ?? { x: 250, y: 250},
+      position: finalPosition ?? { x: 250, y: 250 },
       data: data,
-    };  setNodes((prevNodes) => {
+    };
+
+    console.log("put the new text node at: ", finalPosition);
+
+    setNodes((prevNodes) => {
       const updatedNodes = [...prevNodes, newTextWithKeywordsNode];
       if (parentNodeId) {
         drawEdge(parentNodeId, newTextWithKeywordsNode.id, updatedNodes);
@@ -325,9 +338,11 @@ useOnViewportChange({
 
 
   /* -- when something else is dragged over the canvas -- */
-  const onDragOver = useCallback((event: { preventDefault: () => void; dataTransfer: { dropEffect: string; }; }) => {
+  const onDragOver = useCallback((event: { preventDefault: () => void; clientX: any; clientY: any; dataTransfer: { dropEffect: string; }; }) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+    //console.log("dragging over the canvas at: ", position);
+
   }, []);
 
   
@@ -335,8 +350,7 @@ useOnViewportChange({
   const onDrop = useCallback(
     (event: { preventDefault: () => void; clientX: any; clientY: any; }) => {
       event.preventDefault();
-      console.log(`you just dropped a: ${JSON.stringify(draggableType)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
-      //console.log("the parent for the node you just dropped has this id: ", parentNodeId);
+            //console.log("the parent for the node you just dropped has this id: ", parentNodeId);
       if (!draggableType) {
         return;
       }
@@ -344,6 +358,9 @@ useOnViewportChange({
         x: event.clientX - 60,
         y: event.clientY - 60,
       });
+
+      console.log(`you just dropped a: ${JSON.stringify(draggableType)} in this location: ${JSON.stringify(position)} with this content: ${JSON.stringify(draggableData)}`);  // check if the dropped element is valid
+
 
       if (draggableType === "image") {
         const content = "content" in draggableData ? draggableData["content"] as string : "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/660px-No-Image-Placeholder.svg.png?20200912122019";

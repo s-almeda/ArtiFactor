@@ -1,3 +1,9 @@
+/*
+sets up the...:
+the user database (list of users and their sidebar clippings)
+canvas database (list of canvas names/ids)
+and version history database (timestamped versions of each canvas, with json blob of the canvas data at that time)
+*/
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fs from 'fs';
