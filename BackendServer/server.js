@@ -91,7 +91,7 @@ app.get("/fresh", (req, res) => {
   }
 });
 
-// New /overview route
+// New / route
 app.get("/", (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.end('Hello World! if you can see this, that means the backend server is working!');
@@ -99,7 +99,7 @@ app.get("/", (req, res) => {
 // New /overview route
 app.get("/overview", (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.end('if you can see this, that means the backend server is working!');
+  res.end('/overview : if you can see this, that means the backend server is working!');
 });
 
 app.post("/api/check-for-keywords", async (req, res) => {
