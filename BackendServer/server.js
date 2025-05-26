@@ -96,11 +96,74 @@ app.get("/", (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.end('Hello World! if you can see this, that means the backend server is working!');
 });
-// New /overview route
-app.get("/overview", (req, res) => {
+
+app.get("/health_check", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.end('/overview : if you can see this, that means the backend server is working!');
+  
+  const tests = [
+    { 
+      name: 'keywordCheck',
+      endpoint: '/keyword_check',
+      payload: { text: "dog eating a sandwich abstract expressionism portraiture cezanne", threshold: 0.3 }
+    },
+    { 
+      name: 'textLookup',
+      endpoint: '/lookup_text',
+      payload: { query: "dogs", top_k: 5 }
+    },
+    { 
+      name: 'imageLookup',
+      endpoint: '/image',
+      payload: { image: "https://d32dm0rphc51dk.cloudfront.net/gTPexURCjkBek6MrG7g1bg/small.jpg", top_k: 3 }
+    }
+  ];
+
+  const results = await Promise.allSettled(
+    tests.map(test => 
+      axios.post(`${flask_server}${test.endpoint}`, test.payload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000
+      })
+      .then(response => ({ 
+        [test.name]: {
+          request: test.payload,
+          response: response.data,
+          status: 'success'
+        }
+      }))
+      .catch(error => ({ 
+        [test.name]: { 
+          request: test.payload,
+          error: error.message,
+          status: 'error'
+        }
+      }))
+    )
+  );
+
+  const healthData = Object.assign({}, ...results.map(r => r.value));
+  
+  let html = '<html><body><h1>ML Server Health Check</h1>';
+  html += `<p>Checked at: ${new Date().toISOString()}</p>`;
+  
+  for (const [name, data] of Object.entries(healthData)) {
+    html += `<h2>${name} - ${data.status === 'success' ? '✅' : '❌'}</h2>`;
+    html += '<pre>' + JSON.stringify(data.request, null, 2) + '</pre>';
+    
+    if (data.status === 'success') {
+      html += '<pre>' + JSON.stringify(data.response, null, 2) + '</pre>';
+    } else {
+      html += `<p style="color:red">Error: ${data.error}</p>`;
+    }
+    html += '<hr>';
+  }
+  
+  html += '</body></html>';
+  
+  res.send(html);
 });
+
+// -------- Start of flask ML/Data server API calls ---------- //
 
 app.post("/api/check-for-keywords", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -117,7 +180,12 @@ app.post("/api/check-for-keywords", async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
     res.setHeader('Access-Control-Allow-Origin', '*');
+    console.log("Received response from flask server:", response.data);
+
+    
     res.json(response.data);
+
+
   } catch (error) {
     console.error("Error checking for keywords:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -143,6 +211,7 @@ app.post("/api/get-similar-texts", async (req, res) => {
 
     res.json(response.data);
     console.log("got response from flask server:", response.data);
+    
   } catch (error) {
     console.error("Error getting similar texts:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -161,18 +230,6 @@ app.post("/api/get-similar-images", async (req, res) => {
 
   let imageData = image;
 
-  // Check if the image is a URL
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    try {
-      const response = await fetch(image);
-      const buffer = await response.buffer();
-      imageData = buffer.toString('base64');
-    } catch (error) {
-      console.error("Error converting image URL to base64:", error);
-      return res.status(500).json({ error: "Error processing image URL" });
-    }
-  }
-
   try {
     console.log(`Sending image to ml/data server... ${flask_server}/image`);
     const response = await axios.post(
@@ -189,6 +246,8 @@ app.post("/api/get-similar-images", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// -------- End of flask ML/Data server API calls ---------- //
 
 app.post("/api/generate-text", async (req, res) => {
   const { imageUrl = "https://uploads3.wikiart.org/images/pierre-tal-coat/en-grimpant-1962.jpg" } = req.body;
@@ -228,28 +287,17 @@ app.post("/api/generate-image", async (req, res) => {
   console.log("MESSAGING REAGENT... with prompt:", prompt);
 
   try {
-    // import fetch from 'node-fetch'; // for node.js
-
-    // const response = await fetch( //SDXL
-    //   'https://noggin.rea.gent/scientific-mammal-8442',
-    //   {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       Authorization: 'Bearer rg_v1_a19uz85azi53qm4b3vpjg6zyoud51leu8q9h_ngk',
-    //     },
-    //     body: JSON.stringify({
-    //       // fill variables here.
-    //       "prompt": prompt,
-    //     }),
-    //   }
-    // ); 
-    const response = await fetch( //BLACK FOREST SHNELL
+    // Send POST request to the Reagent API
+    const response = await fetch( 
+      //FOR BLACK FOREST SHNELL MODEL:
       'https://noggin.rea.gent/peaceful-spoonbill-8088',
+      //FOR SDXL MODEL:
+      //   'https://noggin.rea.gent/scientific-mammal-8442',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          //for sdxl:  Authorization: 'Bearer rg_v1_a19uz85azi53qm4b3vpjg6zyoud51leu8q9h_ngk',          
           Authorization: 'Bearer rg_v1_mc66rqibqakaslgktuy89n5lfjhdygcwvfj2_ngk',
         },
         body: JSON.stringify({
@@ -299,65 +347,9 @@ app.post("/api/add-user", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-//check a user's password -- no encryption for now lol, super simple, 
-// app.post("/api/authenticate-user", async (req, res) => {
-//   const { userID, password } = req.body;
-//   res.setHeader('Access-Control-Allow-Origin', '*');
-//   if (!userID) {
-//     return res.status(400).json({ error: "Missing required field: userID" });
-//   }
-//   try {
-//     const db = await dbPromise;
-//     // Fetch the user
-//     const user = await db.get(`SELECT * FROM users WHERE id = ?`, [userID]);
-//     if (!user) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
-//     // Check password (blank is allowed)
-//     if (user.password !== password) {
-//       return res.status(401).json({ error: "Incorrect password" });
-//     }
-//     res.json({ success: true, userID, message: "User authenticated!" });
-//   } catch (error) {
-//     console.error("Error authenticating user:", error);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
-
-
 
 
 // --------- GETTING USER DATA - list users, list a user's canvasses -------------- //
-
-app.get("/api/list-canvases/:userID", async (req, res) => {
-  const { userID } = req.params;
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  console.log("Attempting to list canvases for user:", userID);
-  try {
-    const db = await dbPromise;
-
-    // Check if user exists
-    const user = await db.get(`SELECT userId FROM users WHERE userId = ?`, [userID]);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    // Get all canvases for the user
-    const canvases = await db.all(`SELECT canvasId, canvasName FROM canvases WHERE userId = ?`, [userID]);
-
-    // Format the canvases
-    const formattedCanvases = canvases.map(canvas => ({
-      canvasId: canvas.canvasId,
-      canvasName: canvas.canvasName
-    }));
-    console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}: ${formattedCanvases.map(c => c.name).join(", ")}`);
-
-    res.json({ success: true, canvases: formattedCanvases });
-  } catch (error) {
-    console.error("Error getting canvases:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 // list users and their canvases
 app.get("/api/list-users", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -385,6 +377,36 @@ app.get("/api/list-users", async (req, res) => {
     res.json({ success: true, users: usersWithCanvases });
   } catch (error) {
     console.error("Error listing users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+app.get("/api/list-canvases/:userID", async (req, res) => {
+  const { userID } = req.params;
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  console.log("Attempting to list canvases for user:", userID);
+  try {
+    const db = await dbPromise;
+
+    // Check if user exists
+    const user = await db.get(`SELECT userId FROM users WHERE userId = ?`, [userID]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    // Get all canvases for the user
+    const canvases = await db.all(`SELECT canvasId, canvasName FROM canvases WHERE userId = ?`, [userID]);
+
+    // Format the canvases
+    const formattedCanvases = canvases.map(canvas => ({
+      canvasId: canvas.canvasId,
+      canvasName: canvas.canvasName
+    }));
+    console.log(`Listed ${formattedCanvases.length} canvases for user ${userID}: ${formattedCanvases.map(c => c.name).join(", ")}`);
+
+    res.json({ success: true, canvases: formattedCanvases });
+  } catch (error) {
+    console.error("Error getting canvases:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

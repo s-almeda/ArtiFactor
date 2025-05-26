@@ -33,7 +33,7 @@ def initialize_knowledgebase():
 
     with sqlite3.connect(db_path) as conn:
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS images (
+            CREATE TABLE IF NOT EXISTS image_entries (
                 image_id                TEXT PRIMARY KEY,
                 value                   TEXT,
                 artist_names            TEXT,  -- JSON string array
@@ -50,7 +50,7 @@ def initialize_knowledgebase():
             CREATE TABLE IF NOT EXISTS text_entries (
                 entry_id                TEXT PRIMARY KEY,
                 value                   TEXT,
-                images                  TEXT,  -- JSON string array of images.image_id
+                images                  TEXT,  -- JSON string array of image_entries.image_id
                 isArtist                INTEGER,
                 type                    TEXT,
                 artist_aliases          TEXT,  -- JSON string array (only if isArtist == 1)
@@ -82,8 +82,22 @@ def get_images(url="https://api.artsy.net/api/artworks", max_depth=0):
     if user_input_url:
         url = user_input_url
         print(f"Starting at user-provided URL: {url}")
+        try:
+            page_number = int(input("Enter the page number to start from (leave blank for 0): ").strip() or 0)
+            if page_number < 0:
+                print("Page number cannot be negative. Assuming we are starting from page 0.")
+                page_number = 0
+        except ValueError:
+            print("Invalid input for page number. Assuming we are starting from page 0.")
+            page_number = 0
+
+        depth_counter = page_number
+        if max_depth != 0:
+            max_depth += depth_counter
     else:
         print(f"Using default URL: {url}")
+        depth_counter = 0
+    
 
     db_path = "LOCALDB/knowledgebase.db"
 
@@ -92,7 +106,7 @@ def get_images(url="https://api.artsy.net/api/artworks", max_depth=0):
         return
 
     headers = {"X-Xapp-Token": xapp_token}  # using global variable here
-    depth_counter = 0
+
 
     try:
         with sqlite3.connect(db_path) as conn:
@@ -133,18 +147,18 @@ def put_artwork_in_images_db(conn, artwork_data):
         print(f"|-- processing artwork data: {image_id}")
 
         image_rights = artwork_data.get("image_rights", "")
-        if not image_rights or not any(keyword in image_rights.lower() for keyword in ["public", "cc", "domain", "national", "open", "museum"]):
+        if not image_rights or not any(keyword in image_rights.lower() for keyword in ["public", "cc", "domain", "open"]): # museum, national
             print(f"Invalid or missing image rights for {image_id}: Rights: {image_rights}")
             return '-1'
 
         cursor = conn.cursor()
 
-        cursor.execute("SELECT image_id FROM images WHERE image_id = ?", (image_id,))
+        cursor.execute("SELECT image_id FROM image_entries WHERE image_id = ?", (image_id,))
         if cursor.fetchone():
             print(f"Artwork {image_id} already exists in the database.")
             return image_id
 
-        print(f"Artwork {image_id} not found in the database. Inserting...")
+        print(f"Artwork {image_id} not found in the database. Attempting to insert...")
 
         value = artwork_data.get("title", "")
         
@@ -153,6 +167,10 @@ def put_artwork_in_images_db(conn, artwork_data):
         artist_data = get_artists_for_artwork(image_id, conn)
         artist_names = [artist_name for artist_name, _ in artist_data]
         artist_ids = [artist_id for _, artist_id in artist_data]
+        if not artist_names or len(artist_names) < 1:
+            print(f"Skipping artwork {image_id} as it has no associated artists.")
+            return '-1'
+        print(f"Found artists for {image_id}: {artist_names}")
 
         descriptions = {}
         if any(key in artwork_data for key in ["date", "category", "medium", "collecting_institution", "blurb", "additional_information"]):
@@ -161,7 +179,7 @@ def put_artwork_in_images_db(conn, artwork_data):
                 "category": artwork_data.get("category", ""),
                 "medium": artwork_data.get("medium", ""),
                 "collecting_institution": artwork_data.get("collecting_institution", ""),
-                "blurb": artwork_data.get("blurb", ""),
+                "description": artwork_data.get("blurb", ""),
                 "additional_information": artwork_data.get("additional_information", "")
             }
 
@@ -191,8 +209,8 @@ def put_artwork_in_images_db(conn, artwork_data):
                         with open(local_path, "wb") as f:
                             for chunk in response.iter_content(1024):
                                 f.write(chunk)
-                        print(f"✅ Downloaded image for {image_id} as {filename} ✅ ")
                         filename = f"{image_id}_{version}.jpg"
+                        print(f"✅ Downloaded image for {image_id} as {filename} ✅ ")
                         break
                     else:
                         print(f"Failed to download {version} image for {image_id}. Status code: {response.status_code}")
@@ -216,7 +234,7 @@ def put_artwork_in_images_db(conn, artwork_data):
         related_keyword_strings_json = json.dumps([kw_str for _, kw_str in related_keywords])
 
         cursor.execute("""
-            INSERT INTO images (
+            INSERT INTO image_entries (
                 image_id, value, artist_names, image_urls, filename, rights, descriptions,
                 relatedKeywordIds, relatedKeywordStrings
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -287,12 +305,17 @@ def get_artists_for_artwork(artwork_id, conn):
                             "slug": artist.get("slug", "")
                         }
                     ]
-                    description = [
-                        f'artsy: "born: {artist.get("birthday", "")}, death: {artist.get("deathday", "")}, '
-                        f'from {artist.get("hometown", "")} / {artist.get("location", "")}, '
-                        f'{artist.get("nationality", "")}, {artist.get("gender", "")}, {artist.get("biography", "")}"'
-                    ]
-                    
+                    description = {
+                        "artsy": {
+                            "birth": artist.get("birthday", "").strip() if artist.get("birthday") else "",
+                            "death": artist.get("deathday", "").strip() if artist.get("deathday") else "",
+                            "hometown": artist.get("hometown", "").strip() if artist.get("hometown") else "",
+                            "location": artist.get("location", "").strip() if artist.get("location") else "",
+                            "nationality": artist.get("nationality", "").strip() if artist.get("nationality") else "",
+                            "gender": artist.get("gender", "").strip() if artist.get("gender") else "",
+                            "description": artist.get("biography", "").strip() if artist.get("biography") else ""
+                        }
+                    }
                     # Fetch related keywords using the same connection
                     related_keywords = get_related_keywords_for_artist(artist_id, artist_name, conn)
                     related_keyword_ids = [entry_id for entry_id, _ in related_keywords]
@@ -307,8 +330,8 @@ def get_artists_for_artwork(artwork_id, conn):
                             relatedKeywordIds, relatedKeywordStrings
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
-                        artist_id, artist_name, str([artwork_id]), 1, "artist", 
-                        str(artist_aliases), str(description), str(related_keyword_ids), ""
+                        artist_id, artist_name, json.dumps([artwork_id]), 1, "artist", 
+                        json.dumps(artist_aliases), json.dumps(description), json.dumps(related_keyword_ids), ""
                     ))
                     conn.commit()
                     print(f"|----- |----- Inserted artist {artist_name} (ID: {artist_id}) into the text database.")
@@ -325,7 +348,7 @@ def get_artists_for_artwork(artwork_id, conn):
 
 # Function to get related keywords for an artist and update the text_entries table
 def get_related_keywords_for_artist(artist_id, artist_name, conn):
-    print(f"|-----|-----  Fetching related keywords for artist_id: {artist_id}, name: {artist_name}")
+    print(f"|-----|-----  Fetching related keywords for artist_id: {artist_id}, name: {artist_name}...", end= " ")
     result_list = []
     url = f"https://api.artsy.net/api/genes?artist_id={artist_id}"
     headers = {"X-Xapp-Token": xapp_token}
@@ -335,18 +358,21 @@ def get_related_keywords_for_artist(artist_id, artist_name, conn):
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.json()
+                # get the genes that artsy says is related to this artist
                 genes = data.get("_embedded", {}).get("genes", [])
 
                 cursor = conn.cursor()
 
-                for gene in genes:
+                for gene in genes: # for each of those genes, get its id...
                     gene_id = gene.get("id")
                     if not gene_id:
                         continue
 
+                    # find it in the database
                     cursor.execute("SELECT value, relatedKeywordIds FROM text_entries WHERE entry_id = ?", (gene_id,))
                     row = cursor.fetchone()
 
+                    # if it exists, we should record that this artist_id is related to it
                     if row:
                         value, existing_ids_json = row
                         try:
@@ -361,8 +387,8 @@ def get_related_keywords_for_artist(artist_id, artist_name, conn):
                                 (json.dumps(existing_ids_list), gene_id)
                             )
                             conn.commit()
-                            print(" Added keywords to text_entries ✅", end="\r")
-
+                        # and add this gene to the list of keywords that we'll add to the artist's row in text_entries,
+                        # to record that this artist is related to this gene/keyword
                         result_list.append((gene_id, value))
                     else:
                         print(f"Gene {gene_id} not found in database.")
@@ -450,7 +476,7 @@ def check_if_valid_image_url(url):
 def populate_textdb_with_genes():
     print("Step: Populating Text Database with Genes CSV...")
     db_path = "LOCALDB/knowledgebase.db"
-    csv_path = "genes.csv"
+    csv_path = "genes_cleaned.csv"
 
     if not os.path.exists(db_path):
         print(f"Error: '{db_path}' does not exist. Please initialize the Text Database first.")
@@ -478,7 +504,7 @@ def populate_textdb_with_genes():
                 entry_id = row["id"]
                 value = row["gene name"]
                 type_ = row["gene family"]
-                descriptions = json.dumps({"artsy": row["description"]})
+                descriptions = json.dumps({"artsy": {"description": row["description"]}})
                 cursor.execute("""
                     INSERT INTO text_entries (
                         entry_id, value, images, isArtist, type, artist_aliases,
@@ -486,7 +512,7 @@ def populate_textdb_with_genes():
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (entry_id, value, "", 0, type_, "", descriptions, "", ""))
             conn.commit()
-        print("Text Database populated from genes.csv successfully.")
+        print("Text Database populated from genes_cleaned.csv successfully.")
     except Exception as e:
         print(f"Error inserting text data into knowledgebase.db: {e}")
 

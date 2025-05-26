@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Flow from "./pages/Flow";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
+import TestPage from "./pages/TestPage";
 import Sidebar from "./Sidebar";
 import Palette from "./Palette";
 
@@ -123,6 +124,7 @@ function AppContent() {
                   <About /> 
                   </div>
                 }/>
+                <Route path="/test" element={<TestPage />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route
                   path="/"

@@ -7,7 +7,7 @@ import { useDnD } from "../context/DnDContext";
 import { motion } from "framer-motion";
 import { Search, Bookmark, Paperclip, Expand, BookCopy } from 'lucide-react'; // Eye, EyeClosed
 import { useAppContext } from "../context/AppContext";
-import NavigationButtons from '../utils/commonComponents';
+import NavigationButtons from '../components/NavigationButtons';
 import axios from "axios";
 import { useNodeContext } from "../context/NodeContext";
 

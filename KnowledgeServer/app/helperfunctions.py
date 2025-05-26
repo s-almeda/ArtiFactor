@@ -8,9 +8,7 @@ import os
 import base64
 import json
 import requests
-# print("Loading spaCy text processing model...")
-# nlp = spacy.load("en_core_web_sm")
-# print("loaded spaCy!")
+
 # The database paths inside the container will always be:
 MODEL_CACHE_DIR = "/root/.cache/torch/hub"
 
@@ -39,28 +37,28 @@ def compute_cosine_similarity(vec1, vec2):
     """Compute cosine similarity between two vectors."""
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
-def preprocess_text(text, max_length=5):
+def preprocess_text(text, max_length=3):
     """
-    Preprocesses text and extracts candidate keyword phrases along with their positions.
+    Preprocesses text and extracts candidate phrases along with their positions.
     - Splits text into words
-    - Generates n-grams (1-word to max_length-1 words)
+    - Generates n-grams (1-word to max_length words, up to 3-grams)
     
     Returns:
     - List of tuples [(phrase, start_index, end_index)]
     """
     words = text.lower().split()  # Split text into words
-    candidates = []
+    candidate_phrases = []
 
-    # Generate n-grams (1-word to max_length-1 words)
-    for n in range(1, max_length):
+    # Generate n-grams (1-word to max_length words, up to 3-grams)
+    for n in range(1, max_length + 1):
         for i in range(len(words) - n + 1):
             ngram_words = words[i:i + n]
             ngram = ' '.join(ngram_words)
             start_index = i  # Start index of first word
             end_index = i + n - 1  # End index of last word
-            candidates.append((ngram, start_index, end_index))
+            candidate_phrases.append((ngram, start_index, end_index))
 
-    return candidates
+    return candidate_phrases
 
 
 
@@ -68,19 +66,18 @@ def serialize_f32(vector):
     """Serializes a list of floats into a compact 'raw bytes' format for SQLite vector search."""
     return struct.pack("%sf" % len(vector), *vector)
 
-def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=5):
-    """Finds the most semantically similar keywords using SQLite's `vec0` extension."""
+def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=3):
+    """
+    Given a series of phrases, which are n-grams of the input text,
+    Finds the most semantically similar keywords using SQLite's `vec0` extension.
+    Returns:
+    list: A list of dictionaries containing:
+        - "phrase" (str): The phrase (an n-gram of the input text).
+        - "id" (int): The ID of the matched entry in the database.
+        - "similarity" (float): The similarity score of the match.
+    """
     matches = []
-    #text_db.row_factory = sqlite3.Row  # Enable dictionary-like row access
-    # Print the schema of the database for debugging purposes
-    # cursor = text_db.execute("SELECT sql FROM sqlite_master WHERE type='table'")
-    # for row in cursor.fetchall():
-    #     print(row["sql"])
-    # Print the number of rows in the database for debugging purposes
-    #cursor = text_db.execute("SELECT COUNT(*) AS row_count FROM vec_value_features")
-    #row_count = cursor.fetchone()["row_count"]
-    #print(f"Number of rows in vec_value_features: {row_count}")
-    #print ("Finding semantic keyword matches for: ", ngrams)
+
     for phrase, _, _ in ngrams:  # Extract only the phrase
         phrase_embedding = extract_text_features(phrase)  # Convert phrase to embedding
         serialized_embedding = serialize_f32(phrase_embedding)  # Convert embedding to binary format
@@ -94,9 +91,7 @@ def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=5):
         cursor = text_db.execute(query, [serialized_embedding, top_k])  # Correct parameterized query
 
         rows = cursor.fetchall()
-        #print(f"Number of rows fetched: {len(rows)}")
         for row in rows:
-            #print("found:", row)
             similarity = 1 - row["distance"]  # Convert distance to similarity
             if similarity >= threshold:
                 matches.append({
@@ -108,17 +103,16 @@ def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=5):
     return matches
 
 
-
 def find_most_similar_texts(text_features, conn, top_k=3):
     """
     given a vector of text embeddings
     Find the top-k most similar texts by cosine similarity.
     Takes in the text features and a database connection.
-    Returns a pandas.DataFrame containing the ids and distances of the top-k most similar texts.
+    Returns a pandas.DataFrame containing the entry_ids and distances of the top-k most similar texts.
     """
     print("Finding similar texts...")
 
-    # Query the database for the most similar texts
+    # Query the vector database (on the text descriptions for each entry) for the most similar texts
     query = """
         SELECT
             id,
@@ -131,7 +125,7 @@ def find_most_similar_texts(text_features, conn, top_k=3):
     rows = conn.execute(query, [text_features, top_k]).fetchall()
 
     # Convert the results to a DataFrame
-    similar_texts = pd.DataFrame(rows, columns=["id", "distance"])
+    similar_texts = pd.DataFrame(rows, columns=["entry_id", "distance"])
     return similar_texts
 
 
@@ -143,7 +137,7 @@ def retrieve_text_details(similar_texts, conn):
 
     for row in similar_texts.itertuples():  # similar_texts comes from the previous function, is a pd DataFrame
         query = "SELECT * FROM text_entries WHERE entry_id = ?"
-        cursor = conn.execute(query, (row.id,))
+        cursor = conn.execute(query, (row.entry_id,))
         matched_entry = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
         if not matched_entry.empty:
             entry = matched_entry.iloc[0].to_dict()
@@ -166,7 +160,7 @@ def retrieve_text_details(similar_texts, conn):
             images = get_images_from_image_ids(image_ids, conn)
 
             result.append({
-                "id": entry["entry_id"],
+                "entry_id": entry["entry_id"],
                 "database_value": entry["value"],
                 "type": entry["type"],
                 "isArtist": bool(entry.get("isArtist", 0)),
@@ -208,6 +202,7 @@ def get_images_from_image_ids(image_ids, conn, max=3):
             for size in ['large', 'medium', 'larger', 'small', 'square', 'tall']:
                 image_url = image_urls.get(size)
                 if image_url and check_image_url(image_url):
+                    print("✅")
                     image_data = image_url
                     break
 
@@ -236,12 +231,12 @@ def check_image_url(url):
     Returns True if the image exists, False if it returns 404.
     """
     try:
-        print("checking image url...", url)
+        print("checking image url...", url, end="")
         response = requests.head(url, allow_redirects=True, timeout=5)  # Use HEAD to save bandwidth
         #print(response.status_code == 200)
         return response.status_code == 200  # Returns True if the URL is valid
     except requests.RequestException:
-        print("Error checking image URL:", url)
+        print("❌ Error checking image URL:", url)
         return False  # Return False if there's a connection error
     
 def find_exact_matches(query, conn):
@@ -270,7 +265,11 @@ def find_exact_matches(query, conn):
 
     return matches
 
-
+def safe_json_loads(json_string, default=None):
+    try:
+        return json.loads(json_string)
+    except (json.JSONDecodeError, TypeError):
+        return default if default is not None else {}
 
 def match_input_text_to_keywords(original_words, candidate_keywords, all_matches, keyword_details):
     final_results = []

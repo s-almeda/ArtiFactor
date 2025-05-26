@@ -77,7 +77,7 @@ const dbPromise = open({
   }
 
   await stmt.finalize();
-  console.log("Database initialized!");
+  console.log("User/canvas database initialized with database.js!");
 })();
 
 export default dbPromise;

@@ -6,11 +6,16 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+log*
+
 
 /KnowledgeServer/app/LOCALDB/*
 KnowledgeServer/app/LOCALDB/*
 LOCALDB/*
 LOCALDB
+
+*.db
+*/images/*
 
 node_modules
 

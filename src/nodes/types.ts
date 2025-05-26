@@ -17,7 +17,6 @@ export type ImageWithLookupNodeData = ArtifactorNodeData & {
   intersections: Array<{ id: string; position: { x: number; y: number }; content: string; }>; //info on nodes that are overlapping with this node
   similarArtworks?: Artwork[];
   provenance?: "history" | "user" | "ai"; // history = straight from the database, user = user added/edited, ai = generated
-  //activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
   parentNodeId?: string;
   lookUpOn?: boolean;
 };
@@ -32,28 +31,6 @@ export type TextWithKeywordsNodeData = ArtifactorNodeData & {
   parentNodeId?: string;
 };
 
-/* --------------- DEPRECATED --------------- */
-
-
-// export type TextNodeData = ArtifactorNodeData & {
-//   loading?: boolean;
-//   combinable?: boolean;
-// };
-
-// export type LookupNodeData = ArtifactorNodeData & {
-//   artworks: Artwork[];
-// };
-
-// export type SynthesizerNodeData = ArtifactorNodeData & {
-//   mode: "ready" | "generating-image" | "dragging" | "generating-text";
-//   inputNodeContent?: string;
-//   //updateNode: (content: string, mode: "ready" | "generating" | "dragging" | "check") => boolean;
-// };
-// export type ImageNodeData = ArtifactorNodeData & {
-//   prompt?: string;
-//   activateLookUp?: (position: { x: number; y: number }, imageUrl: string) => void;
-// };
-
 
 /** Generalized AppNode Type */
 export type AppNode<T extends ArtifactorNodeData = ArtifactorNodeData> = Node<T>;
@@ -63,10 +40,6 @@ export type LoadingNode = AppNode<ArtifactorNodeData>;
 export type TextWithKeywordsNode = AppNode<TextWithKeywordsNodeData>;
 export type ImageWithLookupNode = AppNode<ImageWithLookupNodeData>;
 
-// export type TextNode = AppNode<TextNodeData>;
-// export type ImageNode = AppNode<ImageNodeData>;
-// export type LookupNode = AppNode<LookupNodeData>;
-// export type SynthesizerNode = AppNode<SynthesizerNodeData>;
 
 /** Node Props for Custom Components */
 export type AppNodeProps = NodeProps<AppNode>;
@@ -76,28 +49,27 @@ export type Word = {
   value: string;
 }
 
-export type Keyword = Word & {
-  id: string;
-  databaseValue: string;
-  isArtist?: boolean;
-  isArtwork?: boolean;
-  aliases?: string[];
-  type: string;
-  description: string;
-  shortDescription?: string;
-  relatedKeywordStrings: string[];
-  relatedKeywordIds: string[];
+export type Keyword = Word & { // a keyword is a word (with a value) and possibly a bunch of additional properties
+  entryId: string;
+  databaseValue: string; // Corresponds to text_entries.value, may be the same as value, is likely different when doing a keyword lookup task
+  images: string[]; // JSON string array of image_entries.image_ids relevant to this keyword
+  isArtist?: boolean; // Corresponds to text_entries.isArtist (converted from INTEGER to boolean)
+  type: string; // Corresponds to text_entries.type
+  aliases?: string[]; // JSON string array (only if isArtist == 1, corresponds to text_entries.artist_aliases)
+  descriptions: Entry[]; // Can be a series of Entry objects
+  relatedKeywordIds: string[]; // JSON string array of text_entries.entry_id
+  relatedKeywordStrings: string[]; // JSON string array of related keyword labels
 }
-// id TEXT PRIMARY KEY,
-// value TEXT NOT NULL,
-// isArtist BOOLEAN,
-// isArtwork BOOLEAN,
-// type TEXT NOT NULL,
-// aliases TEXT,
-// description TEXT,
-// relatedKeywordIds TEXT
 
-// export type TextWithKeywords = Array<Word | Keyword>;
+
+export type Entry = {
+  source: string; // The source of the description, e.g., "synth", "user", etc.
+  description: string; // A description for the entry, can be an empty string
+  [key: string]: any; // Allows any additional key-value pairs
+};
+
+
+
 
 export interface Artwork {
   title: string;
@@ -107,11 +79,3 @@ export interface Artwork {
   description: string;
   image: string;
 }
-
-// export interface Artist {
-//   id: string;
-//   name: string;
-//   aliases?: string[];
-//   relatedArtists: string[];
-//   relatedKeywords: Keyword[];
-// }

@@ -1,36 +1,12 @@
-import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Entry } from '../nodes/types'; // Adjust the import path as necessary
 import { useDnD } from '../context/DnDContext'; // Adjust the import path as necessary
-
-export const NavigationButtons: React.FC<{
-    currentIndex: number;
-    totalItems: number;
-    handlePrev: () => void;
-    handleNext: () => void;
-}> = ({ currentIndex, totalItems, handlePrev, handleNext }) => {
-    return (
-        <div className="text-xs/6 flex mt-2 items-center mx-auto" style={{ width: '80%' }}>
-            <div
-                onClick={handlePrev}
-                className="flex-1 flex items-center justify-end p-2 rounded-full text-gray-500 hover:text-amber-800 cursor-pointer"
-            >
-                <ArrowLeft size="18" />
-            </div>
-            <span className="text-gray-600 mx-2">{currentIndex + 1}/{totalItems}</span>
-            <div
-                onClick={handleNext}
-                className="flex-1 flex items-center justify-start p-2 rounded-full text-gray-500 hover:text-amber-800 cursor-pointer"
-            >
-                <ArrowRight size="18" />
-            </div>
-        </div>
-    );
-};
 
 export const DynamicDescription: React.FC<{
     descriptions: Entry[];
     isAIGenerated: boolean;
+    // Add prop to control wrapper element type
     as?: 'div' | 'span';
 }> = ({ descriptions, isAIGenerated, as = 'div' }) => {
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -64,12 +40,16 @@ export const DynamicDescription: React.FC<{
             provenance: selectedSource === "synth" ? "ai-description" : "description"
         });
     };
+    
 
     const selectedDescription = getSelectedDescription();
+    
+    // Choose wrapper based on 'as' prop
     const Wrapper = as;
 
     return (
         <Wrapper className="mb-4">
+            {/* Description content - this is the draggable part */}
             {selectedDescription ? (
                 <span
                     className={`cursor-move inline-block p-1 text-xs 
@@ -86,6 +66,7 @@ export const DynamicDescription: React.FC<{
                 <span className="text-gray-500 italic inline-block p-2">No description available.</span>
             )}
             
+            {/* Source selector - NOT draggable */}
             <span className="italic text-gray-500 text-xs mt-1 block" style={{ userSelect: 'none' }}>
                 Source:{" "}
                 {descriptions
@@ -110,7 +91,29 @@ export const DynamicDescription: React.FC<{
     );
 };
 
+
+export const NavigationButtons: React.FC<{ currentIndex: number; totalItems: number; handlePrev: () => void; handleNext: () => void }> = ({ currentIndex, totalItems, handlePrev, handleNext }) => {
+    return (
+        <div className="text-xs/6 flex mt-2 items-center mx-auto" style={{ width: '80%' }}>
+            <div
+                onClick={handlePrev}
+                className="flex-1 flex items-center justify-end p-2 rounded-full text-gray-500 hover:text-amber-800 cursor-pointer"
+            >
+                <ArrowLeft size="18" />
+            </div>
+            <span className="text-gray-600 mx-2">{currentIndex + 1}/{totalItems}</span>
+            <div
+                onClick={handleNext}
+                className="flex-1 flex items-center justify-start p-2 rounded-full text-gray-500 hover:text-amber-800 cursor-pointer"
+            >
+                <ArrowRight size="18" />
+            </div>
+        </div>
+    );
+};
+
+
 export default {
-    NavigationButtons,
-    DynamicDescription
+    DynamicDescription,
+    NavigationButtons
 }

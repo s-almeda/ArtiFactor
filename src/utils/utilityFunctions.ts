@@ -1,4 +1,4 @@
-import type { Word } from "../nodes/types";
+import type { Word, Keyword } from "../nodes/types";
 
 export const stringToWords = (str: string): Word[] => {
   return str.split(' ').map((word) => ({ value: word } as Word));
@@ -6,6 +6,29 @@ export const stringToWords = (str: string): Word[] => {
 export const wordsToString = (words: Word[]): string => {
   return words.map((word) => word.value).join(' ');
 }
+
+export const keywordJSONtoKeyword = (json: any): Keyword => {
+  const details = json.details || json;
+
+  return {
+    value: json.value,
+    entryId: details.entry_id,
+    databaseValue: details.databaseValue,
+    images: details.images || [],
+    isArtist: details.isArtist === 1,
+    type: details.type,
+    aliases: details.isArtist === 1 ? (details.artist_aliases || []).map((alias: any) => alias.value) : undefined,
+    descriptions: details.descriptions
+      ? Object.entries(details.descriptions).map(([source, desc]: [string, any]) => ({
+          source,
+          description: desc.description,
+          ...desc,
+        }))
+      : [],
+    relatedKeywordIds: details.relatedKeywordIds || [],
+    relatedKeywordStrings: details.relatedKeywordStrings || [],
+  };
+};
 
 export const calcNearbyPosition = (
     inputBounds: { x: number; y: number; width: number; height: number }

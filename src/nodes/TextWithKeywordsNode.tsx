@@ -1,13 +1,14 @@
 import { useAppContext } from "../context/AppContext";
 import { NodeToolbar, Position, Handle, NodeProps } from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from "./types";
-import { stringToWords, wordsToString } from "../utils/utilityFunctions";
+import { stringToWords, wordsToString, keywordJSONtoKeyword } from "../utils/utilityFunctions";
 import React, { useRef, useState, useEffect } from "react";
 import { useDnD } from "../context/DnDContext";
 import { Bookmark, Search, Edit2, Paperclip, BookCopy, Expand } from "lucide-react"; // Eye, EyeClosed
 import { motion } from "framer-motion";
 import { usePaletteContext } from "../context/PaletteContext";
-import NavigationButtons from "../utils/commonComponents";
+import {NavigationButtons, DynamicDescription} from "../utils/commonComponents";
+
 
 import { useNodeContext } from "../context/NodeContext";
 
@@ -85,6 +86,7 @@ export const RelatedKeywords: React.FC<{
     </div>
   );
 };
+
 
 export const KeywordDescription: React.FC<{
   keyword: Keyword | null;
@@ -165,7 +167,7 @@ export const KeywordDescription: React.FC<{
                 <div
                 draggable
                 onDragStart={(event) =>
-                  onDragStart(event, "text", keyword.databaseValue)
+                  onDragStart(event, "text", keyword.databaseValue || keyword.value)
                 }
                 className={`nodrag nowheel text-sm font-bold text-gray-800 mb-2 cursor-pointer ${
                   isAIGenerated
@@ -186,22 +188,19 @@ export const KeywordDescription: React.FC<{
                   borderRadius: "0 8px 8px 0", // Only right borders rounded
                 }}
                 >
-                {keyword.databaseValue}
+                {keyword.databaseValue || keyword.value}
                 </div>
             )}
-            {keyword.description && (
-              <div
-                draggable
-                onDragStart={(event) =>
-                  onDragStart(event, "text", keyword.description)
-                }
-                className={`p-1 m-2 flex flex-col gap-3 overflow-y-auto text-xs flex-grow ${
-                  isAIGenerated ? "hover:bg-blue-300" : "hover:bg-[#dbcdb4]"
-                }`}
-              >
-                {keyword.description}
-              </div>
+            {/* ----- DESCRIPTION of keywordCard ----- */}
+            <div className={`text-xs/4 m-2 p-0.5 rounded-sm`} >
+            {keyword.descriptions && (
+              <DynamicDescription
+                descriptions={keyword.descriptions}
+                isAIGenerated={isAIGenerated}
+              />
             )}
+            </div>
+
 
             {/* RELATED KEYWORDS */}
             {keyword.relatedKeywordStrings &&
@@ -385,37 +384,17 @@ const FolderPanel: React.FC<{
                       {currentText.type}
                     </p>
 
-                    {/* DESCRIPTION */}
-                    {/* <div
-                      style={{
-                      height: "170px",
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      background: isAIGenerated ? "#fdfdf4" : "#f4f0e4",
-                      borderRadius: "8px",
-                      padding: "2px",
-                      margin: "2px",
-                      }}
-                    > */}
-                      <p
-                      draggable
-                      onDragStart={(event) =>
-                        onDragStart(
-                        event,
-                        "text",
-                        currentText.description,
-                        "human"
-                        )
-                      }
-                      className={`text-xs/4 mt-2 p-0.5 rounded-sm ${
-                        isAIGenerated
-                        ? "hover:bg-blue-200"
-                        : "hover:bg-[#dbcdb4]"
-                      }`}
+                      {/* FOLDER PANEL DESCRIPTION */}
+                      <div
+                        className={`text-xs/4 mt-2 p-0.5 rounded-sm`}
                       >
-                      {currentText.description}
-                      </p>
-                    {/* </div> */}
+                        {currentText.descriptions && (
+                          <DynamicDescription
+                            descriptions={currentText.descriptions}
+                            isAIGenerated={isAIGenerated}
+                          />
+                        )}
+                      </div>
 
                     {/* RELATED KEYWORDS */}
                     {currentText.relatedKeywordStrings &&
@@ -499,18 +478,14 @@ export function TextWithKeywordsNode({
       if (data.length === 0) {
         return [];
       } else {
-        const keywords = data.map((item: any) => ({
-          id: item.id,
-          value: item.database_value,
-          description: extractValueFromJsonString(item.description || item.full_description),
-          relatedKeywordStrings: item.relatedKeywordStrings,
-          type: item.type,
-        }));
-        return keywords;
+          //turn each item in the json response into a Keyword object
+          const keywords = data.map((item: any) => keywordJSONtoKeyword(item)); 
+          return keywords;
       }
     } catch (error) {
       console.error("Error fetching similar texts:", error);
       return {
+
         id: "0",
         value: "none",
         description:
@@ -520,17 +495,17 @@ export function TextWithKeywordsNode({
     }
   };
 
-  const extractValueFromJsonString = (input: string): string => {
-    try {
-      const parsed = JSON.parse(input);
-      if (typeof parsed === "object" && parsed !== null) {
-        return parsed.short_description || parsed.value || input;
-      }
-    } catch {
+  // const extractValueFromJsonString = (input: string): string => {
+  //   try {
+  //     const parsed = JSON.parse(input);
+  //     if (typeof parsed === "object" && parsed !== null) {
+  //       return parsed.short_description || parsed.value || input;
+  //     }
+  //   } catch {
 
-    }
-    return input;
-  };
+  //   }
+  //   return input;
+  // };
 
   const checkForKeywords = async (
     queryWords: Word[]
@@ -558,16 +533,8 @@ export function TextWithKeywordsNode({
 
       const data = await response.json();
       const result = data.words.map((item: any) => {
-        if (item.id) {
-          return {
-            id: item.id,
-            value: item.value,
-            databaseValue: item.database_value,
-            description: item.description,
-            relatedKeywordIds: item.relatedKeywordIds,
-            relatedKeywordStrings: item.relatedKeywordStrings,
-            type: item.type,
-          } as Keyword;
+        if (item.details) {
+          return keywordJSONtoKeyword(item) as Keyword;
         } else {
           return { value: item.value } as Word;
         }
@@ -1012,7 +979,7 @@ export function TextWithKeywordsNode({
                   <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
                     {words.map((word, index) => (
                       <React.Fragment key={index}>
-                        {"id" in word && condition === "experimental" ? ( // if its a keyword, AND we're in the experimental condition, render the keyword component
+                        {"entryId" in word && condition === "experimental" ? ( // if its a keyword, AND we're in the experimental condition, render the keyword component
                           <KeywordComponent
                             keyword={word}
                             handleKeywordClick={() => handleKeywordClick(word)}
