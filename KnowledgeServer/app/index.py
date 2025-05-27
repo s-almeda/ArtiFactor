@@ -3,7 +3,6 @@
 import json
 from flask import Flask, jsonify, request, g
 from difflib import SequenceMatcher
-from admin import admin_bp
 
 
 
@@ -122,11 +121,17 @@ def get_db():
 
 print("Done! Time to run the app...")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
-
-# Register the admin blueprint
+# Register blueprints for other pages
+from admin import admin_bp
 app.register_blueprint(admin_bp)
+from artist_lookup import artist_lookup_bp
+app.register_blueprint(artist_lookup_bp)
+from health_check import health_check_bp
+app.register_blueprint(health_check_bp)
+from data_cleaner import data_cleaner_bp
+app.register_blueprint(data_cleaner_bp)
 
 @app.route("/")
 def hello_world():

@@ -128,7 +128,8 @@ def get_images(url="https://api.artsy.net/api/artworks", max_depth=0):
                             print(f"Reached depth limit of {max_depth}. Stopping pagination.")
                             break
                         else:
-                            print(f"PROCESSING PAGE #{depth_counter+1} URL: {url}")
+                            print(f"------------------------------------------------------")
+                            print(f">> PROCESSING PAGE #{depth_counter+1} URL: {url}")
                     else:
                         url = None
                 else:
@@ -147,7 +148,7 @@ def put_artwork_in_images_db(conn, artwork_data):
         print(f"|-- processing artwork data: {image_id}")
 
         image_rights = artwork_data.get("image_rights", "")
-        if not image_rights or not any(keyword in image_rights.lower() for keyword in ["public", "cc", "domain", "open"]): # museum, national
+        if not image_rights or not any(keyword in image_rights.lower() for keyword in ["public", "commons", "cc", "domain", "open"]): # museum, national
             print(f"Invalid or missing image rights for {image_id}: Rights: {image_rights}")
             return '-1'
 
@@ -168,9 +169,9 @@ def put_artwork_in_images_db(conn, artwork_data):
         artist_names = [artist_name for artist_name, _ in artist_data]
         artist_ids = [artist_id for _, artist_id in artist_data]
         if not artist_names or len(artist_names) < 1:
-            print(f"Skipping artwork {image_id} as it has no associated artists.")
+            print(f"❌ Skipping artwork {image_id} as it has no associated artists.")
             return '-1'
-        print(f"Found artists for {image_id}: {artist_names}")
+        print(f"✅ Found artists for {image_id}: {artist_names}")
 
         descriptions = {}
         if any(key in artwork_data for key in ["date", "category", "medium", "collecting_institution", "blurb", "additional_information"]):
@@ -183,6 +184,14 @@ def put_artwork_in_images_db(conn, artwork_data):
                 "additional_information": artwork_data.get("additional_information", "")
             }
 
+        # get_related_keywords_for_artwork !
+        related_keywords = get_related_keywords_for_artwork(image_id, conn)
+        related_keyword_ids = artist_ids + [entry_id for entry_id, _ in related_keywords]
+        if not related_keyword_ids:
+            print(f"❌ Skipping artwork {image_id} as it has no related keywords.")
+            return '-1'
+
+        # get image urls
         image_urls = {}
         image_template = artwork_data.get("_links", {}).get("image", {}).get("href", "")
         image_versions = artwork_data.get("image_versions", [])
@@ -190,42 +199,42 @@ def put_artwork_in_images_db(conn, artwork_data):
         if image_template and image_versions:
             for version in image_versions:
                 url = image_template.replace("{image_version}", version)
-                if check_if_valid_image_url(url):
-                    image_urls[version] = url
+            if check_if_valid_image_url(url):
+                image_urls[version] = url
 
         filename = ""
-        for version in ["small", "square", "medium"]:
-            if version in image_urls:
-                local_path = f"LOCALDB/images/{image_id}_{version}.jpg"
-                if os.path.exists(local_path):
-                    print(f"<< Image file for this artwork already exists as {image_id}_{version}.jpg >> ")
-                    filename = f"{image_id}_{version}.jpg"
-                    break
-                print(f" << Attempting to download {version} image for {image_id} from URL: {image_urls[version]} >> ")
-                try:
-                    response = requests.get(image_urls[version], stream=True, timeout=10)
-                    if response.status_code == 200:
-                        os.makedirs("LOCALDB/images", exist_ok=True)
-                        with open(local_path, "wb") as f:
-                            for chunk in response.iter_content(1024):
-                                f.write(chunk)
+        if image_urls:
+            for version in ["small", "square", "medium", "normalized", "medium_rectangle", "large"]:
+                if version in image_urls:
+                    local_path = f"LOCALDB/images/{image_id}_{version}.jpg"
+                    if os.path.exists(local_path):
+                        print(f"<< Image file for this artwork already exists as {image_id}_{version}.jpg >> ")
                         filename = f"{image_id}_{version}.jpg"
-                        print(f"✅ Downloaded image for {image_id} as {filename} ✅ ")
                         break
-                    else:
-                        print(f"Failed to download {version} image for {image_id}. Status code: {response.status_code}")
-                except Exception as e:
-                    print(f"Failed to download {version} image for {image_id}: {e}")
+                    
+                    print(f" << Attempting to download {version} image for {image_id} from URL: {image_urls[version]} >> ")
+                    try:
+                        response = requests.get(image_urls[version], stream=True, timeout=10)
+                        if response.status_code == 200:
+                            os.makedirs("LOCALDB/images", exist_ok=True)
+                            with open(local_path, "wb") as f:
+                                for chunk in response.iter_content(1024):
+                                    f.write(chunk)
+                            filename = f"{image_id}_{version}.jpg"
+                            print(f"✅✅ Downloaded image for {image_id} as {filename} ")
+                            break
+                        else:
+                            print(f"Failed to download {version} image for {image_id}. Status code: {response.status_code}")
+                    except Exception as e:
+                        print(f"Failed to download {version} image for {image_id}: {e}")
         else:
-            print(f"No valid image could be downloaded for {image_id}.")
+            print(f"❌ No valid image URLs found for artwork {image_id}. Skipping this artwork.")
             return '-1'
 
-        # get_related_keywords_for_artwork !
-        related_keywords = get_related_keywords_for_artwork(image_id, conn)
-        related_keyword_ids = artist_ids + [entry_id for entry_id, _ in related_keywords]
-        if not related_keyword_ids:
-            print(f"Skipping artwork {image_id} as it has no related keywords.")
+        if not filename:
+            print(f"❌ Skipping artwork {image_id} as no valid image could be downloaded.")
             return '-1'
+
 
         artist_names_json = json.dumps(artist_names)
         image_urls_json = json.dumps(image_urls)
@@ -250,7 +259,7 @@ def put_artwork_in_images_db(conn, artwork_data):
             related_keyword_strings_json
         ))
         conn.commit()
-        print(f"Inserted new artwork into the database: {image_id}")
+        print(f"✅✅✅ * ---- Inserted new artwork into the database: {image_id} ---- * ✅✅✅" )
         return image_id
 
     except Exception as e:
@@ -282,6 +291,7 @@ def get_artists_for_artwork(artwork_id, conn):
 
                 if result:
                     # Artist exists, update the images column
+                    print(f"|----- |----- ☑️ Artist {artist_name} (ID: {artist_id}) already exists! updating their entry...")
                     existing_images = result[0]
                     images_list = eval(existing_images) if existing_images else []
                     if artwork_id not in images_list:
@@ -291,6 +301,8 @@ def get_artists_for_artwork(artwork_id, conn):
                             (str(images_list), artist_id)
                         )
                         conn.commit()
+                    # print how many artworks this artist now has
+                    print(f"|----- |----- Artist {artist_name} (ID: {artist_id}) now has {len(images_list)} artworks.")
                     artist_tuples.append((artist_name, artist_id))
                 else:
                     # Artist does not exist, add them to the text database
@@ -317,11 +329,11 @@ def get_artists_for_artwork(artwork_id, conn):
                         }
                     }
                     # Fetch related keywords using the same connection
-                    related_keywords = get_related_keywords_for_artist(artist_id, artist_name, conn)
+                    related_keywords = get_related_keywords_for_artist(artist_id, artist_name, conn) #this also adds the artist's id to the genes 
                     related_keyword_ids = [entry_id for entry_id, _ in related_keywords]
 
                     if not related_keyword_ids:
-                        print(f"Skipping artist {artist_name} (ID: {artist_id}) as it has no related keywords.")
+                        print(f"❌ Skipping artist {artist_name} (ID: {artist_id}) as it has no related keywords.")
                         continue
 
                     cursor.execute("""
@@ -336,7 +348,6 @@ def get_artists_for_artwork(artwork_id, conn):
                     conn.commit()
                     print(f"|----- |----- Inserted artist {artist_name} (ID: {artist_id}) into the text database.")
                     artist_tuples.append((artist_name, artist_id))
-            print("✅", end="\r")
             return artist_tuples
         else:
             print(f"Failed to fetch artists for artwork_id {artwork_id}. Status code: {response.status_code}")

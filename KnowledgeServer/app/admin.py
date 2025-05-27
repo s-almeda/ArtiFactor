@@ -171,91 +171,103 @@ def admin_page():
         </style>
     </head>
     <body>
-        <div class="container">
-            <h1>Knowledge Base Admin</h1>
-            
-            <div class="form-section">
-                <h2>Add Text Entry</h2>
-                <form id="textForm">
-                    <div class="input-group">
-                        <input type="text" name="entry_id" id="text_entry_id" placeholder="Entry ID (unique identifier)" required>
-                        <button type="button" class="generate-btn" onclick="generateUID('text_entry_id')">Generate UID</button>
-                    </div>
-                    
-                    <input type="text" name="value" placeholder="Value/Name" required>
-                    
-                    <textarea name="images" placeholder='["image_id_1", "image_id_2"]'></textarea>
-                    <div class="field-hint">JSON array of image IDs</div>
-                    
-                    <select name="isArtist">
-                        <option value="0">Not an Artist</option>
-                        <option value="1">Is an Artist</option>
-                    </select>
-                    
-                    <input type="text" name="type" placeholder="Type (e.g., artist, movement, technique)">
-                    
-                    <textarea name="artist_aliases" placeholder='["Alias 1", "Alias 2"]'></textarea>
-                    <div class="field-hint">JSON array (only for artists)</div>
-                    
-                    <textarea name="descriptions" placeholder='{"artsy": {"description": "Main description", "category": "Painting"}}'></textarea>
-                    <div class="field-hint">JSON object with source keys, each containing a description field</div>
-                    
-                    <div class="input-group">
-                        <textarea name="relatedKeywordIds" id="text_relatedKeywordIds" placeholder='["entry_id_1", "entry_id_2"]'></textarea>
-                        <button type="button" class="generate-btn" onclick="findRelatedKeywords('text')">Find Related</button>
-                    </div>
-                    <div class="field-hint">JSON array of related entry IDs</div>
-
-                    <div class="input-group">
-                        <textarea name="relatedKeywordStrings" id="text_relatedKeywordStrings" placeholder='["keyword 1", "keyword 2"]'></textarea>
-                    </div>
-                   
-                    <div class="field-hint">JSON array of related keyword strings (auto-filled with IDs)</div>
-                    
-                    <button type="submit">Add Text Entry</button>
-                </form>
-                <div id="textResult"></div>
-            </div>
-            
-            <div class="form-section">
-                <h2>Add Image Entry</h2>
-                <form id="imageForm">
-                    <div class="input-group">
-                        <input type="text" name="image_id" id="image_id" placeholder="Image ID (unique identifier)" required>
-                        <button type="button" class="generate-btn" onclick="generateUID('image_id')">Generate UID</button>
-                    </div>
-                    
-                    <input type="text" name="value" placeholder="Title" required>
-                    
-                    <input type="text" name="artist_names" placeholder="Artist Names (comma separated)">
-                    
-                    <textarea name="image_urls" placeholder='{"large": "https://...", "medium": "https://..."}' required></textarea>
-                    <div class="field-hint">JSON object with size keys (large, medium, small, etc.) and URL values</div>
-                    
-                    <input type="text" name="filename" placeholder="Filename (optional)">
-                    
-                    <input type="text" name="rights" placeholder="Rights/Copyright (required)" required>
-                    
-                    <textarea name="descriptions" placeholder='{"artsy": {"description": "Artwork description", "medium": "Oil on canvas"}}'></textarea>
-                    <div class="field-hint">JSON object with source keys</div>
-                    
-                    <div class="input-group">
-                        <textarea name="relatedKeywordIds" id="text_relatedKeywordIds" placeholder='["entry_id_1", "entry_id_2"]'></textarea>
-                        <button type="button" class="generate-btn" onclick="findRelatedKeywords('text')">Find Related</button>
-                    </div>
-                    <div class="field-hint">JSON array of related entry IDs</div>
-
-                    <div class="input-group">
-                        <textarea name="relatedKeywordStrings" id="text_relatedKeywordStrings" placeholder='["keyword 1", "keyword 2"]'></textarea>
-                    </div>
-
-                    <div class="field-hint">JSON array of related keyword strings (auto-filled with IDs)</div>
-
-                    <button type="submit">Add Image Entry</button>
-                </form>
-                <div id="imageResult"></div>
-            </div>
+    <div class="container">
+        <h1>Knowledge Base Admin</h1>
+        
+        <!-- Artwork Entry Form -->
+        <div class="form-section">
+            <h2>Input Artwork</h2>
+            <form id="imageForm">
+                <!-- Wikipedia lookup at the top -->
+                <div class="input-group">
+                    <input type="text" id="wikipedia_artwork_title" placeholder="Wikipedia article title (e.g., 'The Starry Night')">
+                    <button type="button" class="generate-btn" onclick="lookupWikipediaArtwork()">Fill from Wikipedia</button>
+                </div>
+                <div class="field-hint">Enter a Wikipedia article title to auto-fill artwork information</div>
+                <hr style="margin: 20px 0;">
+                
+                <div class="input-group">
+                    <input type="text" name="image_id" id="image_id" placeholder="Image ID (unique identifier)" required>
+                    <button type="button" class="generate-btn" onclick="generateUID('image_id')">Generate UID</button>
+                </div>
+                
+                <input type="text" name="value" id="artwork_title" placeholder="Artwork Title" required>
+                
+                <div class="input-group">
+                    <input type="text" name="artist_names" id="artwork_artist_names" placeholder="Artist Names (comma separated)">
+                    <button type="button" class="generate-btn" onclick="copyArtistToForm()">Copy to Artist Form</button>
+                </div>
+                
+                <textarea name="image_urls" placeholder='{"large": "https://...", "medium": "https://..."}' required></textarea>
+                <div class="field-hint">JSON object with size keys (large, medium, small, etc.) and URL values</div>
+                
+                <input type="text" name="filename" placeholder="Filename (optional)">
+                
+                <input type="text" name="rights" placeholder="Rights/Copyright (required)" required>
+                
+                <textarea name="descriptions" placeholder='{"artsy": {"description": "Artwork description", "medium": "Oil on canvas"}}'></textarea>
+                <div class="field-hint">JSON object with source keys</div>
+                
+                <div class="input-group">
+                    <textarea name="relatedKeywordIds" id="image_relatedKeywordIds" placeholder='["entry_id_1", "entry_id_2"]'></textarea>
+                    <button type="button" class="generate-btn" onclick="findRelatedKeywords('image')">Find Related</button>
+                </div>
+                <div class="field-hint">JSON array of related text entry IDs</div>
+                
+                <textarea name="relatedKeywordStrings" id="image_relatedKeywordStrings" placeholder='["keyword 1", "keyword 2"]'></textarea>
+                <div class="field-hint">JSON array of related keywords (auto-filled with IDs)</div>
+                
+                <button type="submit">Add Artwork Entry</button>
+            </form>
+            <div id="imageResult"></div>
         </div>
+        
+        <!-- Artist Entry Form -->
+        <div class="form-section">
+            <h2>Input Artist</h2>
+            <form id="textForm">
+                <div class="input-group">
+                    <input type="text" name="entry_id" id="text_entry_id" placeholder="Entry ID (unique identifier)" required>
+                    <button type="button" class="generate-btn" onclick="generateUID('text_entry_id')">Generate UID</button>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" name="value" id="artist_name" placeholder="Artist Name" required>
+                    <button type="button" class="generate-btn" onclick="lookupWikipediaArtist()">Fill from Wikipedia</button>
+                </div>
+                
+                <textarea name="images" placeholder='["image_id_1", "image_id_2"]'></textarea>
+                <div class="field-hint">JSON array of image IDs</div>
+                
+                <select name="isArtist">
+                    <option value="1" selected>Is an Artist</option>
+                    <option value="0">Not an Artist</option>
+                </select>
+                
+                <input type="text" name="type" placeholder="Type (e.g., painter, sculptor)" value="artist">
+                
+                <textarea name="artist_aliases" placeholder='["Alias 1", "Alias 2"]'></textarea>
+                <div class="field-hint">JSON array of alternative names</div>
+                
+                <textarea name="descriptions" placeholder='{"artsy": {"description": "Artist biography", "nationality": "Dutch"}}'></textarea>
+                <div class="field-hint">JSON object with source keys, each containing a description field</div>
+                
+                <div class="input-group">
+                    <textarea name="relatedKeywordIds" id="text_relatedKeywordIds" placeholder='["entry_id_1", "entry_id_2"]'></textarea>
+                    <button type="button" class="generate-btn" onclick="findRelatedKeywords('text')">Find Related</button>
+                </div>
+                <div class="field-hint">JSON array of related entry IDs</div>
+                
+                <textarea name="relatedKeywordStrings" id="text_relatedKeywordStrings" placeholder='["keyword 1", "keyword 2"]'></textarea>
+                <div class="field-hint">JSON array of related keyword strings (auto-filled with IDs)</div>
+                
+                <button type="submit">Add Artist Entry</button>
+            </form>
+            <div id="textResult"></div>
+        </div>
+    </div>
+    
+
         
         <script>
 
