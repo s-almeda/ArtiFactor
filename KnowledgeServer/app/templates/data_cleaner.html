@@ -129,6 +129,46 @@
             <div id="fix-success" class="success-message" style="display: none;"></div>
         </div>
 
+
+        <!-- Invalid Image URLs Section -->
+        <div class="cleaner-section">
+            <h3>🖼️ Invalid Image URLs</h3>
+            <p>Find and fix broken or invalid image URLs in the image_urls column</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkInvalidImageUrls()" id="urls-check-btn">
+                    🔍 Check Image URLs
+                </button>
+                <div class="loading" id="urls-check-loading">Checking image URLs... (this may take a while)</div>
+            </div>
+
+            <!-- URLs Results Section -->
+            <div id="urls-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="urls-results-title"></h4>
+                    <div id="urls-results-summary"></div>
+                </div>
+
+                <!-- URLs Fix Buttons -->
+                <div id="urls-fix-section" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="fixInvalidImageUrls('clean')" id="urls-clean-btn">
+                        🧹 Clean URLs (Keep Valid Only)
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="fixInvalidImageUrls('remove')" id="urls-remove-btn">
+                        🗑️ Remove Entire Entries
+                    </button>
+                    <div class="loading" id="urls-fix-loading">Processing...</div>
+                    <p class="warning-text">⚠️ Clean: removes broken URLs but keeps entries. Remove: deletes entire image entries.</p>
+                </div>
+
+                <!-- URLs List -->
+                <div id="urls-list"></div>
+            </div>
+
+            <!-- URLs Success Message -->
+            <div id="urls-success" class="success-message" style="display: none;"></div>
+        </div>
+
         <!-- Future Cleaning Options -->
         <div class="cleaner-section">
             <h3>🚀 More Cleaning Options</h3>
@@ -290,6 +330,185 @@
             }
             
             resultsDiv.style.display = 'block';
+        }
+
+
+        let currentInvalidUrls = [];
+
+        function checkInvalidImageUrls() {
+            console.log("DEBUG: Starting invalid image URLs check...");
+            const checkBtn = document.getElementById('urls-check-btn');
+            const loading = document.getElementById('urls-check-loading');
+            const resultsDiv = document.getElementById('urls-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_invalid_image_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("DEBUG: Got response from URLs check:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: URLs check data:", data);
+                if (data.success) {
+                    currentInvalidUrls = data.invalid_entries;
+                    console.log("DEBUG: Found", data.total_invalid, "images with invalid URLs");
+                    displayUrlsResults(data);
+                } else {
+                    console.error("DEBUG: Error in URLs check:", data.error);
+                    alert('Error checking image URLs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in URLs check:', error);
+                alert('Failed to check image URLs');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayUrlsResults(data) {
+            console.log("DEBUG: Displaying URLs results:", data);
+            const resultsDiv = document.getElementById('urls-results');
+            const titleEl = document.getElementById('urls-results-title');
+            const summaryEl = document.getElementById('urls-results-summary');
+            const fixSection = document.getElementById('urls-fix-section');
+            const urlsList = document.getElementById('urls-list');
+            
+            if (data.total_invalid === 0) {
+                titleEl.textContent = '✅ All Image URLs Are Valid';
+                summaryEl.innerHTML = '<div class="success">No invalid image URLs found!</div>';
+                fixSection.style.display = 'none';
+                urlsList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_invalid} Images with Invalid URLs`;
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_invalid}</strong> images have invalid or broken URLs<br>
+                        <small>Checked ${data.total_checked} total images</small>
+                    </div>
+                `;
+                fixSection.style.display = 'block';
+                
+                // Display invalid entries
+                let urlsHtml = '<div class="invalid-urls-list">';
+                data.invalid_entries.forEach(entry => {
+                    let statusClass = entry.type === 'json_error' ? 'json-error' : 'broken-urls';
+                    let invalidUrlsHtml = '';
+                    
+                    if (entry.invalid_urls && entry.invalid_urls.length > 0) {
+                        invalidUrlsHtml = '<strong>Invalid URLs:</strong><ul>';
+                        entry.invalid_urls.forEach(invalid => {
+                            invalidUrlsHtml += `<li><strong>${invalid.size}:</strong> ${invalid.error} - <code>${invalid.url}</code></li>`;
+                        });
+                        invalidUrlsHtml += '</ul>';
+                    }
+                    
+                    let validUrlsHtml = '';
+                    if (entry.valid_urls && Object.keys(entry.valid_urls).length > 0) {
+                        validUrlsHtml = `<br><strong>Valid URLs:</strong> ${Object.keys(entry.valid_urls).join(', ')}`;
+                    }
+                    
+                    urlsHtml += `
+                        <div class="invalid-url-entry ${statusClass}">
+                            <div class="entry-header">
+                                <strong>Image ID:</strong> ${entry.image_id}<br>
+                                <strong>Value:</strong> ${entry.value || 'N/A'}
+                            </div>
+                            <div class="entry-details">
+                                ${entry.error ? `<strong>Error:</strong> ${entry.error}<br>` : ''}
+                                ${invalidUrlsHtml}
+                                ${validUrlsHtml}
+                                ${entry.total_urls ? `<br><strong>Total URLs:</strong> ${entry.total_urls}` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                urlsHtml += '</div>';
+                urlsList.innerHTML = urlsHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function fixInvalidImageUrls(action) {
+            console.log("DEBUG: Starting fix invalid URLs with action:", action);
+            if (currentInvalidUrls.length === 0) {
+                alert('No invalid URLs to fix');
+                return;
+            }
+            
+            const actionText = action === 'remove' ? 'permanently delete' : 'clean URLs for';
+            if (!confirm(`Are you sure you want to ${actionText} ${currentInvalidUrls.length} image entries?`)) {
+                console.log("DEBUG: User cancelled fix operation");
+                return;
+            }
+            
+            const cleanBtn = document.getElementById('urls-clean-btn');
+            const removeBtn = document.getElementById('urls-remove-btn');
+            const loading = document.getElementById('urls-fix-loading');
+            const successDiv = document.getElementById('urls-success');
+            
+            cleanBtn.disabled = true;
+            removeBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/fix_invalid_image_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    invalid_entries: currentInvalidUrls,
+                    action: action
+                })
+            })
+            .then(response => {
+                console.log("DEBUG: Fix URLs response status:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Fix URLs response data:", data);
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>Database has been updated.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    document.getElementById('urls-fix-section').style.display = 'none';
+                    currentInvalidUrls = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('urls-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in fix response:", data.error);
+                    alert('Error fixing URLs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in fix URLs:', error);
+                alert('Failed to fix URLs');
+            })
+            .finally(() => {
+                cleanBtn.disabled = false;
+                removeBtn.disabled = false;
+                loading.style.display = 'none';
+            });
         }
 
         function fixMalformedJson() {

@@ -582,24 +582,23 @@ def parse_artwork_details(html_content, artwork_title):
                                 print(f"  {thumb['Name']}: {thumb['Width']}x{thumb['Height']} = {thumb['pixels']} pixels")
                             
                             if thumbnails:
-                                # Assign small, medium, large
+                                # Always assign small (smallest available)
                                 artwork_data['image_urls']['small'] = thumbnails[0]['Url']
                                 print(f"Assigned SMALL: {thumbnails[0]['Name']} - {thumbnails[0]['Url']}")
                                 
-                                if len(thumbnails) == 1:
-                                    artwork_data['image_urls']['medium'] = thumbnails[0]['Url']
-                                    artwork_data['image_urls']['large'] = thumbnails[0]['Url']
-                                    print("Only 1 thumbnail - using for all sizes")
-                                elif len(thumbnails) == 2:
-                                    artwork_data['image_urls']['medium'] = thumbnails[0]['Url']
-                                    artwork_data['image_urls']['large'] = thumbnails[1]['Url']
-                                    print(f"2 thumbnails - MEDIUM: same as small, LARGE: {thumbnails[1]['Name']}")
-                                else:
-                                    # Three or more thumbnails available
+                                if len(thumbnails) >= 3:
+                                    # Three or more thumbnails available - assign all three
                                     artwork_data['image_urls']['large'] = thumbnails[-1]['Url']
                                     mid_index = len(thumbnails) // 2
                                     artwork_data['image_urls']['medium'] = thumbnails[mid_index]['Url']
                                     print(f"3+ thumbnails - MEDIUM: {thumbnails[mid_index]['Name']}, LARGE: {thumbnails[-1]['Name']}")
+                                elif len(thumbnails) == 2:
+                                    # Two thumbnails available - assign small and large only
+                                    artwork_data['image_urls']['large'] = thumbnails[1]['Url']
+                                    print(f"2 thumbnails - LARGE: {thumbnails[1]['Name']} (no medium assigned)")
+                                else:
+                                    # Only 1 thumbnail - just small
+                                    print("Only 1 thumbnail - assigned to small only (no medium/large)")
                             else:
                                 print("❌ No thumbnails found in data")
                         else:
@@ -631,7 +630,7 @@ def parse_artwork_details(html_content, artwork_title):
             if not file_ext or file_ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
                 file_ext = '.jpg'
             
-            filename = f"{image_id}{file_ext}"
+            filename = f"{image_id}_small{file_ext}"
             artwork_data['filename'] = filename
             print(f"Generated filename: {filename}")
         else:
@@ -810,7 +809,7 @@ def validate_data():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
-        
+
 @artist_lookup_bp.route('/submit_all_data', methods=['POST'])
 def submit_all_data():
     """Submit both artist and artwork data to database"""
@@ -915,7 +914,7 @@ def download_image(image_url, image_id):
         file_ext = os.path.splitext(parsed_url.path)[1] or '.jpg'
         
         # Create filename
-        filename = f"{image_id}{file_ext}"
+        filename = f"{image_id}_small{file_ext}"
         filepath = os.path.join(images_dir, filename)
         
         # Download the image
