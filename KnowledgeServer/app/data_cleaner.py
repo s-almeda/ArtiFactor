@@ -169,83 +169,51 @@ def get_database_stats():
 
 @data_cleaner_bp.route('/check_malformed_json', methods=['POST'])
 def check_malformed_json():
-    """Check for Python-style lists/strings that should be JSON in images column"""
+    """Check for Python-style lists/strings that should be JSON in ALL JSON columns"""
     try:
+        print("=== DEBUG: Starting comprehensive malformed JSON check ===")
         from index import get_db
         import ast
         
         db = get_db()
         
         malformed_entries = []
-        cursor = db.execute("SELECT entry_id, value, images FROM text_entries WHERE images IS NOT NULL AND images != ''")
         
-        for row in cursor.fetchall():
+        # Define JSON columns for each table
+        text_json_columns = ['images', 'artist_aliases', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+        image_json_columns = ['artist_names', 'image_urls', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+        
+        # Check text_entries table
+        print("DEBUG: Checking text_entries table...")
+        text_cursor = db.execute("SELECT entry_id, value, images, artist_aliases, descriptions, relatedKeywordIds, relatedKeywordStrings FROM text_entries")
+        
+        for row in text_cursor.fetchall():
             entry_id = row['entry_id']
             value = row['value']
-            images_text = row['images']
             
-            if not images_text:
-                continue
-                
-            # Try to parse as JSON first
-            try:
-                json.loads(images_text)
-                # If it parses as JSON, it's fine
-                continue
-            except json.JSONDecodeError:
-                # JSON parsing failed, now check if it's a Python-style list/string
-                try:
-                    # Try to evaluate as Python literal (safe evaluation)
-                    python_obj = ast.literal_eval(images_text)
-                    
-                    # Check if it's a list (which is what we expect for images)
-                    if isinstance(python_obj, list):
-                        # Convert to proper JSON
-                        proper_json = json.dumps(python_obj)
-                        
-                        malformed_entries.append({
-                            'entry_id': entry_id,
-                            'value': value,
-                            'current_text': images_text,
-                            'converted_json': proper_json,
-                            'python_object': python_obj,
-                            'type': 'python_list'
-                        })
-                    elif isinstance(python_obj, str):
-                        # Single string that should be in an array
-                        proper_json = json.dumps([python_obj])
-                        
-                        malformed_entries.append({
-                            'entry_id': entry_id,
-                            'value': value,
-                            'current_text': images_text,
-                            'converted_json': proper_json,
-                            'python_object': [python_obj],
-                            'type': 'python_string'
-                        })
-                    else:
-                        # Some other Python object
-                        malformed_entries.append({
-                            'entry_id': entry_id,
-                            'value': value,
-                            'current_text': images_text,
-                            'converted_json': None,
-                            'python_object': python_obj,
-                            'type': 'unknown_python_object',
-                            'error': f'Unexpected type: {type(python_obj)}'
-                        })
-                        
-                except (ValueError, SyntaxError):
-                    # Not valid Python either - truly malformed
-                    malformed_entries.append({
-                        'entry_id': entry_id,
-                        'value': value,
-                        'current_text': images_text,
-                        'converted_json': None,
-                        'python_object': None,
-                        'type': 'truly_malformed',
-                        'error': 'Cannot parse as JSON or Python'
-                    })
+            for column in text_json_columns:
+                json_text = row[column]
+                if json_text:
+                    result = check_json_column(entry_id, value, column, json_text, 'text_entries')
+                    if result:
+                        malformed_entries.append(result)
+        
+        # Check image_entries table
+        print("DEBUG: Checking image_entries table...")
+        image_cursor = db.execute("SELECT image_id, value, artist_names, image_urls, descriptions, relatedKeywordIds, relatedKeywordStrings FROM image_entries")
+        
+        for row in image_cursor.fetchall():
+            image_id = row['image_id']
+            value = row['value']
+            
+            for column in image_json_columns:
+                json_text = row[column]
+                if json_text:
+                    result = check_json_column(image_id, value, column, json_text, 'image_entries')
+                    if result:
+                        malformed_entries.append(result)
+        
+        print(f"DEBUG: Total malformed entries found: {len(malformed_entries)}")
         
         return jsonify({
             'success': True,
@@ -254,15 +222,96 @@ def check_malformed_json():
         })
         
     except Exception as e:
+        print(f"ERROR in check_malformed_json: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
         })
 
+def check_json_column(entry_id, value, column_name, json_text, table_name):
+    """Helper function to check a single JSON column"""
+    try:
+        # Try to parse as JSON first
+        json.loads(json_text)
+        # If it parses as JSON, it's fine
+        return None
+    except json.JSONDecodeError:
+        print(f"DEBUG: {table_name}.{column_name} - JSON parse failed for {entry_id}")
+        # JSON parsing failed, now check if it's a Python-style list/string
+        try:
+            import ast
+            # Try to evaluate as Python literal (safe evaluation)
+            python_obj = ast.literal_eval(json_text)
+            
+            # Check if it's a list or dict (which we expect for JSON columns)
+            if isinstance(python_obj, (list, dict)):
+                # Convert to proper JSON
+                proper_json = json.dumps(python_obj)
+                
+                return {
+                    'entry_id': entry_id,
+                    'table': table_name,
+                    'column': column_name,
+                    'value': value,
+                    'current_text': json_text,
+                    'converted_json': proper_json,
+                    'python_object': python_obj,
+                    'type': f'python_{type(python_obj).__name__}'
+                }
+            elif isinstance(python_obj, str):
+                # Single string that should be in an array (for array columns)
+                if column_name in ['images', 'artist_names', 'artist_aliases', 'relatedKeywordIds', 'relatedKeywordStrings']:
+                    proper_json = json.dumps([python_obj])
+                    python_obj = [python_obj]
+                else:
+                    # For dict columns, wrap in quotes
+                    proper_json = json.dumps(python_obj)
+                
+                return {
+                    'entry_id': entry_id,
+                    'table': table_name,
+                    'column': column_name,
+                    'value': value,
+                    'current_text': json_text,
+                    'converted_json': proper_json,
+                    'python_object': python_obj,
+                    'type': 'python_string'
+                }
+            else:
+                # Some other Python object
+                return {
+                    'entry_id': entry_id,
+                    'table': table_name,
+                    'column': column_name,
+                    'value': value,
+                    'current_text': json_text,
+                    'converted_json': None,
+                    'python_object': python_obj,
+                    'type': 'unknown_python_object',
+                    'error': f'Unexpected type: {type(python_obj)}'
+                }
+                
+        except (ValueError, SyntaxError):
+            # Not valid Python either - truly malformed
+            return {
+                'entry_id': entry_id,
+                'table': table_name,
+                'column': column_name,
+                'value': value,
+                'current_text': json_text,
+                'converted_json': None,
+                'python_object': None,
+                'type': 'truly_malformed',
+                'error': 'Cannot parse as JSON or Python'
+            }
+
+
+
 @data_cleaner_bp.route('/fix_malformed_json', methods=['POST'])
 def fix_malformed_json():
-    """Fix malformed JSON by converting Python-style to proper JSON"""
+    """Fix malformed JSON by converting Python-style to proper JSON in ALL columns"""
     try:
+        print("=== DEBUG: Starting comprehensive malformed JSON fix ===")
         from index import get_db
         db = get_db()
         
@@ -279,35 +328,49 @@ def fix_malformed_json():
         
         for entry in malformed_entries:
             entry_id = entry['entry_id']
+            table = entry['table']
+            column = entry['column']
             converted_json = entry.get('converted_json')
+            
+            print(f"DEBUG: Processing {table}.{column} for entry {entry_id}")
             
             # Only fix entries that have a valid conversion
             if converted_json is not None:
-                db.execute(
-                    "UPDATE text_entries SET images = ? WHERE entry_id = ?",
-                    (converted_json, entry_id)
-                )
+                # Determine the correct ID column name
+                id_column = 'entry_id' if table == 'text_entries' else 'image_id'
+                
+                # Update the specific column in the specific table
+                query = f"UPDATE {table} SET {column} = ? WHERE {id_column} = ?"
+                cursor = db.execute(query, (converted_json, entry_id))
+                
+                print(f"DEBUG: Updated {table}.{column} for {entry_id}, affected {cursor.rowcount} rows")
                 fixed_count += 1
             else:
+                print(f"DEBUG: Skipping unfixable entry {entry_id} in {table}.{column}")
                 skipped_count += 1
         
         # Commit the changes
         db.commit()
+        print(f"DEBUG: Committed changes, fixed {fixed_count} entries, skipped {skipped_count}")
         
         return jsonify({
             'success': True,
             'fixed_count': fixed_count,
             'skipped_count': skipped_count,
-            'message': f'Successfully fixed {fixed_count} entries, skipped {skipped_count} unfixable entries'
+            'message': f'Successfully fixed {fixed_count} entries across all tables, skipped {skipped_count} unfixable entries'
         })
         
     except Exception as e:
-        db.rollback()
+        print(f"ERROR in fix_malformed_json: {str(e)}")
+        try:
+            db.rollback()
+            print("DEBUG: Database rollback completed")
+        except:
+            print("DEBUG: Database rollback failed or not needed")
         return jsonify({
             'success': False,
             'error': str(e)
         })
-
 
 @data_cleaner_bp.route('/check_artists_without_images', methods=['POST'])
 def check_artists_without_images():
@@ -412,6 +475,208 @@ def remove_artists_without_images():
         
     except Exception as e:
         print(f"ERROR in remove_artists_without_images: {str(e)}")
+        try:
+            db.rollback()
+            print("DEBUG: Database rollback completed")
+        except:
+            print("DEBUG: Database rollback failed or not needed")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@data_cleaner_bp.route('/check_invalid_image_urls', methods=['POST'])
+def check_invalid_image_urls():
+    """Check for image entries with invalid or broken image URLs"""
+    try:
+        print("=== DEBUG: Starting invalid image URLs check ===")
+        from index import get_db
+        import requests
+        from urllib.parse import urlparse
+        
+        db = get_db()
+        
+        invalid_entries = []
+        cursor = db.execute("SELECT image_id, value, image_urls FROM image_entries WHERE image_urls IS NOT NULL AND image_urls != ''")
+        
+        total_checked = 0
+        for row in cursor.fetchall():
+            total_checked += 1
+            image_id = row['image_id']
+            value = row['value']
+            image_urls_text = row['image_urls']
+            
+            print(f"DEBUG: Checking image {image_id}: {value}")
+            
+            try:
+                # Parse the JSON
+                image_urls = json.loads(image_urls_text)
+                
+                if not isinstance(image_urls, dict):
+                    print(f"DEBUG: Image {image_id} - image_urls is not a dictionary")
+                    invalid_entries.append({
+                        'image_id': image_id,
+                        'value': value,
+                        'image_urls_text': image_urls_text,
+                        'error': 'image_urls is not a JSON object/dictionary',
+                        'invalid_urls': [],
+                        'valid_urls': {},
+                        'type': 'not_dict'
+                    })
+                    continue
+                
+                # Check each URL in the dictionary
+                invalid_urls = []
+                valid_urls = {}
+                
+                expected_sizes = ['large', 'large_rectangle', 'larger', 'medium', 'medium_rectangle', 
+                                'normalized', 'small', 'square', 'tall']
+                
+                for size, url in image_urls.items():
+                    if not url or not isinstance(url, str):
+                        invalid_urls.append({'size': size, 'url': url, 'error': 'Empty or non-string URL'})
+                        continue
+                    
+                    # Basic URL validation
+                    try:
+                        parsed = urlparse(url)
+                        if not parsed.scheme or not parsed.netloc:
+                            invalid_urls.append({'size': size, 'url': url, 'error': 'Invalid URL format'})
+                            continue
+                    except Exception as e:
+                        invalid_urls.append({'size': size, 'url': url, 'error': f'URL parse error: {str(e)}'})
+                        continue
+                    
+                    # Check if URL is accessible (with timeout)
+                    try:
+                        response = requests.head(url, timeout=5, allow_redirects=True)
+                        if response.status_code == 200:
+                            valid_urls[size] = url
+                            print(f"DEBUG: Image {image_id} - {size} URL is valid")
+                        else:
+                            invalid_urls.append({'size': size, 'url': url, 'error': f'HTTP {response.status_code}'})
+                            print(f"DEBUG: Image {image_id} - {size} URL returned {response.status_code}")
+                    except requests.exceptions.Timeout:
+                        invalid_urls.append({'size': size, 'url': url, 'error': 'Request timeout'})
+                        print(f"DEBUG: Image {image_id} - {size} URL timed out")
+                    except requests.exceptions.RequestException as e:
+                        invalid_urls.append({'size': size, 'url': url, 'error': f'Request failed: {str(e)}'})
+                        print(f"DEBUG: Image {image_id} - {size} URL failed: {str(e)}")
+                
+                # If there are any invalid URLs, add to the list
+                if invalid_urls:
+                    invalid_entries.append({
+                        'image_id': image_id,
+                        'value': value,
+                        'image_urls_text': image_urls_text,
+                        'invalid_urls': invalid_urls,
+                        'valid_urls': valid_urls,
+                        'total_urls': len(image_urls),
+                        'type': 'broken_urls'
+                    })
+                
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: Image {image_id} - JSON decode error: {str(e)}")
+                invalid_entries.append({
+                    'image_id': image_id,
+                    'value': value,
+                    'image_urls_text': image_urls_text,
+                    'error': f'JSON decode error: {str(e)}',
+                    'invalid_urls': [],
+                    'valid_urls': {},
+                    'type': 'json_error'
+                })
+        
+        print(f"DEBUG: Checked {total_checked} images, found {len(invalid_entries)} with invalid URLs")
+        
+        return jsonify({
+            'success': True,
+            'invalid_entries': invalid_entries,
+            'total_invalid': len(invalid_entries),
+            'total_checked': total_checked
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_invalid_image_urls: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/fix_invalid_image_urls', methods=['POST'])
+def fix_invalid_image_urls():
+    """Fix image entries by removing invalid URLs and keeping only valid ones"""
+    try:
+        print("=== DEBUG: Starting fix invalid image URLs ===")
+        from index import get_db
+        db = get_db()
+        
+        invalid_entries = request.json.get('invalid_entries', [])
+        action = request.json.get('action', 'clean')  # 'clean' or 'remove'
+        
+        print(f"DEBUG: Received {len(invalid_entries)} entries to fix with action: {action}")
+        
+        if not invalid_entries:
+            return jsonify({
+                'success': False,
+                'error': 'No invalid entries provided'
+            })
+        
+        fixed_count = 0
+        removed_count = 0
+        
+        for entry in invalid_entries:
+            image_id = entry['image_id']
+            value = entry.get('value', 'Unknown')
+            
+            print(f"DEBUG: Processing image {image_id} - {value}")
+            
+            if action == 'remove':
+                # Remove the entire image entry
+                cursor = db.execute("DELETE FROM image_entries WHERE image_id = ?", (image_id,))
+                print(f"DEBUG: Removed image entry {image_id}, affected {cursor.rowcount} rows")
+                removed_count += 1
+            else:
+                # Clean URLs - keep only valid ones
+                valid_urls = entry.get('valid_urls', {})
+                
+                if valid_urls:
+                    # Update with only valid URLs
+                    new_image_urls_json = json.dumps(valid_urls)
+                    cursor = db.execute(
+                        "UPDATE image_entries SET image_urls = ? WHERE image_id = ?",
+                        (new_image_urls_json, image_id)
+                    )
+                    print(f"DEBUG: Cleaned URLs for image {image_id}, kept {len(valid_urls)} valid URLs")
+                    fixed_count += 1
+                else:
+                    # No valid URLs, set to empty object
+                    cursor = db.execute(
+                        "UPDATE image_entries SET image_urls = ? WHERE image_id = ?",
+                        ('{}', image_id)
+                    )
+                    print(f"DEBUG: No valid URLs for image {image_id}, set to empty object")
+                    fixed_count += 1
+        
+        # Commit the changes
+        db.commit()
+        print(f"DEBUG: Committed changes")
+        
+        if action == 'remove':
+            message = f'Successfully removed {removed_count} image entries with invalid URLs'
+        else:
+            message = f'Successfully cleaned {fixed_count} image entries, keeping only valid URLs'
+        
+        return jsonify({
+            'success': True,
+            'fixed_count': fixed_count,
+            'removed_count': removed_count,
+            'message': message
+        })
+        
+    except Exception as e:
+        print(f"ERROR in fix_invalid_image_urls: {str(e)}")
         try:
             db.rollback()
             print("DEBUG: Database rollback completed")
