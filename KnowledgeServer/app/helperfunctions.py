@@ -9,6 +9,12 @@ import base64
 import json
 import requests
 
+# --- imports for using ResNet50  --- #
+import torch
+import torchvision.transforms as transforms
+from torchvision.models import resnet50, ResNet50_Weights
+import numpy as np
+
 # The database paths inside the container will always be:
 MODEL_CACHE_DIR = "/root/.cache/torch/hub"
 
@@ -23,7 +29,40 @@ print("Loading MiniLM text encoding model...")
 text_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 print("loaded MiniLM!")
 
-# Load spaCy model (MUCH faster than NLTK)
+# # Will use GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print(f"Loading ResNet50 from {MODEL_CACHE_DIR}...")
+# Load ResNet50 weights and remove the last classification layer
+model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+model = torch.nn.Sequential(*list(model.children())[:-1])  # Remove final classification layer
+# Move model to correct device
+model.to(device)
+model.eval()  # Set model to evaluation mode
+
+
+def extract_img_features(img):
+    """
+    Extract features from a PIL image using ResNet50.
+    Returns a 2048D feature vector.
+    """
+    # Preprocess images sent from the client
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    img_tensor = preprocess(img).unsqueeze(0).to(device)  # Preprocess & add batch dim
+
+    with torch.no_grad():
+        features = model(img_tensor)  # Extract features
+
+    result = features.view(-1).cpu().numpy()  # Flatten as NumPy array
+    print("Extracted feature vector shape:", result.shape)  
+    return result
+
 
 def extract_text_features(text):
     """
