@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
-import json
+import json, requests
 
 health_check_bp = Blueprint('health_check', __name__)
 
@@ -23,7 +23,7 @@ def health_check():
     image_url = request.form.get('image_url', '').strip()
     
     # Import the functions we need (adjust imports based on your app structure)
-    from index import keyword_check, handle_text, handle_image, get_db
+    from index import keyword_check, handle_lookup_text, handle_lookup_image, get_db
     
     # Test 1: Keyword Check (if text provided)
     if test_text:
@@ -41,7 +41,7 @@ def health_check():
     if text_query:
         try:
             with current_app.test_request_context(json={'query': text_query, 'top_k': top_k}):
-                text_response = handle_text()
+                text_response = handle_lookup_text()
                 results['text_lookup'] = {
                     'query': text_query,
                     'top_k': top_k,
@@ -54,7 +54,7 @@ def health_check():
     if image_url:
         try:
             with current_app.test_request_context(json={'image': image_url}):
-                image_response = handle_image()
+                image_response = handle_lookup_image()
                 results['image_lookup'] = {
                     'query_image': image_url,
                     'results': image_response.get_json()

@@ -4,8 +4,19 @@ import json
 import sqlite3
 import requests
 import uuid
+import os
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "default_password")
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+# @admin_bp.before_request
+# def require_authentication():
+#     """Require authentication for all admin routes."""
+#     auth = request.authorization
+#     if not auth or auth.username != "admin" or auth.password != ADMIN_PASSWORD:
+#         # Prompt for authentication
+#         return jsonify({"error": "Authentication required"}), 401
+
 
 def check_if_valid_image_url(url):
     try:

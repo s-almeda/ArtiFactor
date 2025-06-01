@@ -7,7 +7,10 @@ import pandas as pd
 import os
 import base64
 import json
-import requests
+
+
+# import for TSNE
+from sklearn.manifold import TSNE
 
 # --- imports for using ResNet50  --- #
 import torch
@@ -62,6 +65,29 @@ def extract_img_features(img):
     result = features.view(-1).cpu().numpy()  # Flatten as NumPy array
     print("Extracted feature vector shape:", result.shape)  
     return result
+
+# T-SNE for Dimensionality Reduction with Non-Linear Similarity Preservation 
+def tsne_similarity_flatten(features, num_dims=2):
+    """
+    Use t-SNE to preserve non-linear similarities
+    
+    Args:
+    - features: Original feature array
+    - num_dims: Target dimensionality (typically 2 or 3)
+    
+    Returns:
+    - Flattened features preserving local and global similarities
+    """
+    
+    tsne = TSNE(
+        n_components=num_dims, 
+        random_state=42, 
+        perplexity=min(30, len(features)-1)
+    )
+    
+    flattened = tsne.fit_transform(features.reshape(1, -1))
+    
+    return flattened
 
 
 def extract_text_features(text):
@@ -309,6 +335,25 @@ def safe_json_loads(json_string, default=None):
         return json.loads(json_string)
     except (json.JSONDecodeError, TypeError):
         return default if default is not None else {}
+
+def base64_to_image(base64_string):
+    # what we will use for now before we have user database solution
+    # Convert base64 string to PIL Image
+    try:
+        img_data = base64.b64decode(base64_string)
+        img = Image.open(BytesIO(img_data)).convert('RGB')
+        return img
+    except (base64.binascii.Error, UnidentifiedImageError) as e:
+        print(f"Error decoding base64 image: {e}")
+        return None
+
+def url_to_image(url):
+    # what we will use once we have stable image urls
+    # Convert image URL to PIL Image
+    response = requests.get(url)
+    img = Image.open(BytesIO(response.content)).convert('RGB')
+    return img
+
 
 def match_input_text_to_keywords(original_words, candidate_keywords, all_matches, keyword_details):
     final_results = []

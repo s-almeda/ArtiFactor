@@ -2,16 +2,10 @@
 # run me with './bootstrap.sh' in terminal
 import json
 from flask import Flask, jsonify, request, g
-from difflib import SequenceMatcher
+# 
 
 
 
-
-# --- imports for using ResNet50  --- #
-import torch
-import torchvision.transforms as transforms
-from torchvision.models import resnet50, ResNet50_Weights
-import numpy as np
 # -- image conversion -- #
 import base64
 from io import BytesIO
@@ -83,17 +77,6 @@ except sqlite3.Error as e:
     print(f"🚨 ERROR: Failed to connect to Text DB at {DB_PATH}. Error: {e}")
 
 
-# # Will use GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-print(f"Loading ResNet50 from {MODEL_CACHE_DIR}...")
-# Load ResNet50 weights and remove the last classification layer
-model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-model = torch.nn.Sequential(*list(model.children())[:-1])  # Remove final classification layer
-# Move model to correct device
-model.to(device)
-model.eval()  # Set model to evaluation mode
-
 
 # def load_sqlite_vec(db):
 #     db.enable_load_extension(True)
@@ -124,14 +107,16 @@ print("Done! Time to run the app...")
 app = Flask(__name__, static_folder='static')
 
 # Register blueprints for other pages
-from admin import admin_bp
-app.register_blueprint(admin_bp)
-from artist_lookup import artist_lookup_bp
-app.register_blueprint(artist_lookup_bp)
-from health_check import health_check_bp
-app.register_blueprint(health_check_bp)
-from data_cleaner import data_cleaner_bp
-app.register_blueprint(data_cleaner_bp)
+# Only register admin blueprints if ADMIN_MODE is enabled
+if os.getenv('ADMIN_MODE', '').lower() == 'true':
+    from templates.admin import admin_bp
+    app.register_blueprint(admin_bp)
+    from templates.artist_lookup import artist_lookup_bp
+    app.register_blueprint(artist_lookup_bp)
+    from templates.health_check import health_check_bp
+    app.register_blueprint(health_check_bp)
+    from templates.data_cleaner import data_cleaner_bp
+    app.register_blueprint(data_cleaner_bp)
 
 @app.route("/")
 def hello_world():
@@ -155,7 +140,7 @@ def hello_world():
     try:
         # Call the text lookup handler directly
         with app.test_request_context(json={'query': 'dogs', 'top_k': 5}):
-            text_response = handle_text()
+            text_response = handle_lookup_text()
             results['text_lookup'] = {
                 'query': 'dogs',
                 'results': text_response.get_json()
@@ -167,7 +152,7 @@ def hello_world():
     try:
         test_image_url = "https://d32dm0rphc51dk.cloudfront.net/gTPexURCjkBek6MrG7g1bg/small.jpg"
         with app.test_request_context(json={'image': test_image_url}):
-            image_response = handle_image()
+            image_response = handle_lookup_image()
             results['image_lookup'] = {
                 'query_image': test_image_url,
                 'results': image_response.get_json()
@@ -461,11 +446,10 @@ def keyword_check(input_text, threshold):
     return final_results
 
 
-
 @app.route('/lookup_text', methods=['POST'])
-def handle_text(): 
+def handle_lookup_text():
     """
-    Given a text query, find and return the most similar text entries in the database.
+    Handles a text lookup request by processing input JSON and calling the lookup_text function.
     
     Expected request JSON:
     {
@@ -474,26 +458,83 @@ def handle_text():
     }
     
     Returns JSON array of matches with distance scores and full database details.
-    Example:
-    [
-        {
-            "artist_aliases": [],
-            "descriptions": {
-            "artsy": "_\u201cAnimals are such agreeable friends\u2014they ask no questions, they pass no criticisms.\u201d \u2014George Eliot_\n\nWhether pets, mythological beasts, or wild creatures, animals have always been a major subject of art and literature. Dating back to Paleolithic cave paintings in France and ancient Egyptian reliefs and artifacts, animals have been depicted by artists as friends, allegories, muses, and reflections on human nature."
-            },
-            "distance": 1.1766963005065918,
-            "entry_id": "4d937b5517cb1325370000ee",
-            "images": [],
-            "isArtist": 0,
-            "relatedKeywordIds": [],
-            "relatedKeywordStrings": [],
-            "type": "Subject Matter",
-            "value": "Animals"
-        },
-        ...
-    ]
     """
     print("Received request for text handling...")
+    
+    # ---- PROCESS THE REQUEST ---- #
+    query_text = request.json.get('query')
+    if not query_text:
+        return jsonify({"error": "No query text provided"}), 400
+        
+    top_k = request.json.get('top_k', 5)
+    print(f"Query text: {query_text}")
+    print(f"Top K: {top_k}")
+
+    # Call the general lookup_text function
+    try:
+        results = lookup_text(query_text, top_k)
+        return jsonify(results)
+    except Exception as e:
+        print(f"Error during text lookup: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def lookup_text(query_text, top_k=5):
+    """
+    Given a text query, find and return the most similar text entries in the database.
+    
+    Args:
+        query_text (str): The text to search for.
+        top_k (int): Number of top matches to return.
+    
+    Returns:
+        List of dictionaries containing matches with distance scores and full database details.
+    """
+    print(f"Performing text lookup for query: '{query_text}' with top_k={top_k}")
+    
+    # Extract features from query text
+    query_features = helpers.extract_text_features(query_text)
+    print(f"Query features shape: {query_features.shape}")
+    
+    # ---- LOOK UP SIMILAR TEXTS ---- #
+    db = get_db()
+
+    # Find the most similar text entries
+    similar_texts_df = helpers.find_most_similar_texts(query_features, db, top_k=top_k)
+    print(f"Found {len(similar_texts_df)} similar texts")
+
+    # Get detailed information for each match
+    results = []
+    
+    for idx, row in similar_texts_df.iterrows():
+        # Fetch the full record from the database
+        query = "SELECT * FROM text_entries WHERE entry_id = ?"
+        cursor = db.execute(query, [row['entry_id']])
+        db_row = cursor.fetchone()
+        
+        if db_row:
+            db_row_dict = dict(db_row)
+            
+            # Build the result with parsed JSON fields
+            result_entry = {
+                "entry_id": db_row_dict["entry_id"],
+                "value": db_row_dict["value"],
+                "distance": row['distance'],  # Add the similarity distance
+                "images": helpers.safe_json_loads(db_row_dict.get("images", "[]"), default=[]),
+                "isArtist": db_row_dict.get("isArtist", 0),
+                "type": db_row_dict.get("type"),
+                "artist_aliases": helpers.safe_json_loads(db_row_dict.get("artist_aliases", "[]"), default=[]) 
+                    if db_row_dict.get("isArtist") == 1 else [],
+                "descriptions": helpers.safe_json_loads(db_row_dict.get("descriptions", "{}"), default={}),
+                "relatedKeywordIds": helpers.safe_json_loads(db_row_dict.get("relatedKeywordIds", "[]"), default=[]),
+                "relatedKeywordStrings": helpers.safe_json_loads(db_row_dict.get("relatedKeywordStrings", "[]"), default=[])
+            }
+            
+            results.append(result_entry)
+            print(f"Match: '{result_entry['value']}' (distance: {result_entry['distance']:.4f})")
+    
+    print(f"Returning {len(results)} matches for query: '{query_text}'")
+    return results
     
     # ---- PROCESS THE REQUEST ---- #
     query_text = request.json.get('query')
@@ -553,69 +594,61 @@ def handle_text():
 
 #--------------------------- IMAGE HANDLING --------------------------#
 @app.route('/image', methods=['POST'])
-def handle_image():
+def handle_lookup_image():
     """
-    Find similar images based on a query image.
-    
+    Handles a request to find similar images based on a query image.
+
     Expected request JSON:
     {
         "image": "url or base64 string",
         "top_k": 3  (optional, defaults to 3)
     }
-    
+
     Returns JSON array of matches with distance scores and full database details.
-    [
-        {
-            "image_id": <int>,  # Unique identifier for the image in the database
-            "value": <str>,  # Title of the image
-            "distance": <float>,  # Cosine similarity distance between query and database image
-            "image_url": <str>,  # URL or base64-encoded string of the matched image
-            "artist_names": [<str>, ...],  # List of artist names associated with the image
-            "image_urls": {  # Dictionary of image URLs by size
-                "large": <str>,
-                "medium": <str>,
-                "small": <str>,
-                ...
-            },
-            "filename": <str>,  # Filename of the image in the database
-            "rights": <str>,  # Rights or copyright information for the image
-            "descriptions": {  # Dictionary of descriptions for the image
-                <str>: <str>,  # Key-value pairs of description types and their content
-                ...
-            },
-            "relatedKeywordIds": [<int>, ...],  # List of related keyword IDs
-            "relatedKeywordStrings": [<str>, ...]  # List of related keyword strings
-        },
-        ...
-    ]
     """
     print("Received request for image handling...")
-    
-    # ---- PROCESS THE REQUEST ---- #
 
-    
-    # Get image from request
+    # Validate the request
     if 'image' not in request.json:
         return jsonify({"error": "No image provided"}), 400
-        
+
     # Load image from URL or base64
     if helpers.check_image_url(request.json['image']):
-        print("✅")
-        img = url_to_image(request.json['image'])
+        img = helpers.url_to_image(request.json['image'])
     else:
-        img = base64_to_image(request.json['image'])
-    
+        img = helpers.base64_to_image(request.json['image'])
+
     if img is None:
         return jsonify({"error": "Failed to load image"}), 400
-    
+
     # Get top_k parameter (how many matches to return)
     top_k = request.json.get('top_k', 3)
-    
-    # Extract features from the posted image
-    query_features = extract_features(img)
-    print(f"Query features shape: {query_features.shape}")
 
-    # ---- LOOK UP SIMILAR IMAGES ---- #
+    # Call the general lookup_image function
+    try:
+        results = lookup_image(img, top_k)
+        return jsonify(results)
+    except Exception as e:
+        print(f"Error during image lookup: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def lookup_image(img, top_k=3):
+    """
+    Finds similar images based on the provided image.
+
+    Args:
+        img: Preprocessed image object (e.g., PIL Image).
+        top_k: Number of top matches to return.
+
+    Returns:
+        List of dictionaries containing matches with distance scores and full database details.
+    """
+    print("Performing image lookup...")
+
+    # Extract features from the image
+    query_features = helpers.extract_img_features(img)
+    print(f"Query features shape: {query_features.shape}")
 
     # Get database connection
     db = get_db()
@@ -623,31 +656,30 @@ def handle_image():
     # Find the most similar images
     similar_images = find_most_similar_images(query_features, db, top_k=top_k)
     print(f"Found {len(similar_images)} similar images")
-    
+
     # Get detailed information for each match
     results = []
-    
+
     for match in similar_images:
         # Fetch the full record from the database
         query = "SELECT * FROM image_entries WHERE image_id = ?"
         cursor = db.execute(query, [match["image_id"]])
         db_row = cursor.fetchone()
-        
+
         if db_row:
             db_row_dict = dict(db_row)
-            
+
             # Parse image_urls to find a valid image URL
             image_urls = helpers.safe_json_loads(db_row_dict.get('image_urls', '{}'), default={})
             image_url = None
-            
+
             # Try to get the first valid image URL
             for size in ['large', 'medium', 'larger', 'small', 'square', 'tall']:
                 url = image_urls.get(size)
                 if url and helpers.check_image_url(url):
-                    print("✅")
                     image_url = url
                     break
-            
+
             # Fallback to local file if no valid URL
             if not image_url and db_row_dict.get('filename'):
                 try:
@@ -657,7 +689,7 @@ def handle_image():
                     image_url = f"data:image/jpeg;base64,{image_base64}"
                 except FileNotFoundError:
                     image_url = "https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png"
-            
+
             # Build the result with parsed JSON fields
             result_entry = {
                 "image_id": db_row_dict["image_id"],
@@ -672,12 +704,96 @@ def handle_image():
                 "relatedKeywordIds": helpers.safe_json_loads(db_row_dict.get("relatedKeywordIds", "[]"), default=[]),
                 "relatedKeywordStrings": helpers.safe_json_loads(db_row_dict.get("relatedKeywordStrings", "[]"), default=[])
             }
-            
+
             results.append(result_entry)
             print(f"Match: '{result_entry['value']}' (distance: {result_entry['distance']:.4f})")
-    
+
     print(f"Returning {len(results)} matches")
-    return jsonify(results)
+    return results
+
+@app.route('/get_image_features', methods=['POST'])
+def get_image_features():
+    """
+    Extract features from an image provided in the request.
+    
+    Expected request JSON:
+    {
+        "image": "url or base64 string"
+    }
+    
+    Returns JSON with extracted features.
+    Example:
+    {
+        "features": [0.123, 0.456, ...]
+    }
+    """
+    print("Received request to extract image features...")
+    
+    # Validate the request
+    if 'image' not in request.json:
+        return jsonify({"error": "No image provided"}), 400
+    
+    # Load image from URL or base64
+    image_data = request.json['image']
+    if helpers.check_image_url(image_data):
+        img = helpers.url_to_image(image_data)
+    else:
+        img = helpers.base64_to_image(image_data)
+    
+    if img is None:
+        return jsonify({"error": "Failed to load image"}), 400
+    
+    # Extract features using the helper function
+    try:
+        features = helpers.extract_img_features(img)
+        print(f"Extracted features: {features.shape}")
+        return jsonify({"features": features.tolist()})
+    except Exception as e:
+        print(f"Error extracting features: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/get_text_features', methods=['POST'])
+def get_text_features():
+    """
+    Extract features from text provided in the request.
+
+    Expected request JSON:
+    {
+        "text": "sample text",
+        "dimensions": 2  # Optional, if provided, returns features in 2D using t-SNE
+    }
+
+    Returns JSON with extracted features.
+    
+    """
+    print("Received request to extract text features...")
+
+    # Validate the request
+    if 'text' not in request.json:
+        return jsonify({"error": "No text provided"}), 400
+
+    # Extract text from the request
+    input_text = request.json['text']
+    dimensions = request.json.get('dimensions', None)
+
+    # Extract features using the helper function
+    try:
+        features = helpers.extract_text_features(input_text)
+        print(f"Extracted features: {features.shape}")
+
+        # If dimensions=2 is requested, use t-SNE to reduce to 2D
+        if dimensions == 2:
+            features_2d = helpers.tsne_similarity_flatten(features, num_dims=2)
+            print(f"Reduced features to 2D: {features_2d.shape}")
+            return jsonify({"features": features_2d.tolist()})
+
+        return jsonify({"features": features.tolist()})
+    except Exception as e:
+        print(f"Error extracting features: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 def find_most_similar_images(image_features, conn, top_k=3):
@@ -710,48 +826,6 @@ def find_most_similar_images(image_features, conn, top_k=3):
     similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
 
     return similar_images
-
-# -- helper functions -- #
-
-def base64_to_image(base64_string):
-    # what we will use for now before we have user database solution
-    # Convert base64 string to PIL Image
-    try:
-        img_data = base64.b64decode(base64_string)
-        img = Image.open(BytesIO(img_data)).convert('RGB')
-        return img
-    except (base64.binascii.Error, UnidentifiedImageError) as e:
-        print(f"Error decoding base64 image: {e}")
-        return None
-
-def url_to_image(url):
-    # what we will use once we have stable image urls
-    # Convert image URL to PIL Image
-    response = requests.get(url)
-    img = Image.open(BytesIO(response.content)).convert('RGB')
-    return img
-
-def extract_features(img):
-    """
-    Extract features from a PIL image using ResNet50.
-    Returns a 2048D feature vector.
-    """
-    # Preprocess images sent from the client
-    preprocess = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
-
-    img_tensor = preprocess(img).unsqueeze(0).to(device)  # Preprocess & add batch dim
-
-    with torch.no_grad():
-        features = model(img_tensor)  # Extract features
-
-    result = features.view(-1).cpu().numpy()  # Flatten as NumPy array
-    print("Extracted feature vector shape:", result.shape)  
-    return result
 
 
 # function for getting the matched enty matched_entry = next((entry for entry in dataset if entry["filename"] == row.filename), None)
@@ -799,39 +873,77 @@ def clean(s):
     s = re.sub(r"-{2,}", "-", s) #remove double hyphens
     return s
     
-#   deprecated! 
-#  def try_wikiart_url(title, artist, date):
+
+
+# def get_coordinates_dict(method='umap'):
 #     """
-#     Given an artwork's title, artist, and date, generate the WikiArt image URL.
-#     """
-#     try:
-#         formatted_artist = clean(artist)
-#         formatted_title = clean(title)
+#     Retrieve coordinates as a dictionary for use in other scripts.
+    
+#     Args:
+#         method (str): The method used to generate coordinates ('umap', 'pca', 'tsne')
         
-#         if date == 'None':
-#             formatted_date = ''
-#         else:
-#             formatted_date = str(int(re.sub(r'\D', '', date)))[:4]  # Ensure date is an integer
+#     Returns:
+#         dict: {entry_id: {"x": 1.23, "y": 4.56}, ...}
+#     """
+#     import json
+    
+#     conn = sqlite3.connect('LOCALDB/knowledgebase.db')
+#     cursor = conn.cursor()
+    
+#     try:
+#         column_name = f"{method}_coords"
+#         cursor.execute(f'''
+#         SELECT entry_id, {column_name}
+#         FROM text_coordinates 
+#         WHERE {column_name} IS NOT NULL
+#         ''')
+        
+#         results = cursor.fetchall()
+#         coords_dict = {}
+        
+#         for entry_id, coord_json in results:
+#             coords_dict[entry_id] = json.loads(coord_json)
+        
+#         logging.info(f"Retrieved {len(coords_dict)} coordinates for method '{method}'")
+#         return coords_dict
+        
+#     finally:
+#         conn.close()
 
-#         base_url = f"https://uploads3.wikiart.org/images/{formatted_artist}/{formatted_title}"
-#         possible_urls = [
-#             f"{base_url}-{formatted_date}.jpg",
-#             f"{base_url}.jpg",
-#             f"{base_url}-{formatted_date}(1).jpg"
-#         ]
 
-#         for j in range(1, 4):
-#             possible_urls.append(f"{base_url}-{formatted_date}({j}).jpg")
-#             possible_urls.append(f"{base_url}({j}).jpg")
-#             possible_urls.append(f"{base_url}-0{j}.jpg")
-#             possible_urls.append(f"{base_url}-0{j}-{formatted_date}.jpg")
-
-#         for url in possible_urls:
-#             if check_image_url(url):
-#                 return url
-
-#         print(f"broken: {base_url}")
-#         return None
-#     except Exception as e:
-#         print(f"Error generating URL: {e}")
-#         return None  # Return None if there's an issue
+# def get_all_coordinates_dict():
+#     """
+#     Retrieve all coordinates for all methods.
+    
+#     Returns:
+#         dict: {entry_id: {"umap": {"x": 1.23, "y": 4.56}, "pca": {...}, "tsne": {...}}, ...}
+#     """
+#     import json
+    
+#     conn = sqlite3.connect('LOCALDB/knowledgebase.db')
+#     cursor = conn.cursor()
+    
+#     try:
+#         cursor.execute('''
+#         SELECT entry_id, umap_coords, pca_coords, tsne_coords
+#         FROM text_coordinates
+#         ''')
+        
+#         results = cursor.fetchall()
+#         coords_dict = {}
+        
+#         for entry_id, umap_json, pca_json, tsne_json in results:
+#             coords_dict[entry_id] = {}
+            
+#             if umap_json:
+#                 coords_dict[entry_id]['umap'] = json.loads(umap_json)
+#             if pca_json:
+#                 coords_dict[entry_id]['pca'] = json.loads(pca_json)
+#             if tsne_json:
+#                 coords_dict[entry_id]['tsne'] = json.loads(tsne_json)
+        
+#         logging.info(f"Retrieved coordinates for {len(coords_dict)} entries")
+#         return coords_dict
+        
+#     finally:
+#         conn.close()
