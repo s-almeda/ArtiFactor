@@ -5,8 +5,13 @@ import sqlean as sqlite3
 import struct
 import pandas as pd
 import os
-import base64
 import json
+import requests
+# -- image conversion -- #
+import base64
+from io import BytesIO
+from PIL import (Image, UnidentifiedImageError)
+
 
 
 # import for TSNE
@@ -66,28 +71,6 @@ def extract_img_features(img):
     print("Extracted feature vector shape:", result.shape)  
     return result
 
-# T-SNE for Dimensionality Reduction with Non-Linear Similarity Preservation 
-def tsne_similarity_flatten(features, num_dims=2):
-    """
-    Use t-SNE to preserve non-linear similarities
-    
-    Args:
-    - features: Original feature array
-    - num_dims: Target dimensionality (typically 2 or 3)
-    
-    Returns:
-    - Flattened features preserving local and global similarities
-    """
-    
-    tsne = TSNE(
-        n_components=num_dims, 
-        random_state=42, 
-        perplexity=min(30, len(features)-1)
-    )
-    
-    flattened = tsne.fit_transform(features.reshape(1, -1))
-    
-    return flattened
 
 
 def extract_text_features(text):

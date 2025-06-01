@@ -3,7 +3,7 @@
 import json
 from flask import Flask, jsonify, request, g
 # 
-
+import requests
 
 
 # -- image conversion -- #
@@ -21,7 +21,7 @@ import sqlean as sqlite3
 
 import helperfunctions as helpers # helper functions including preprocess_text
 
-import requests, re, os, ast
+import re, os, ast
 import pandas as pd
 
 #todo, incorporate exact matches into keyword checking too
@@ -106,15 +106,16 @@ print("Done! Time to run the app...")
 
 app = Flask(__name__, static_folder='static')
 
+
 # Register blueprints for other pages
-# Only register admin blueprints if ADMIN_MODE is enabled
+from templates.health_check import health_check_bp
+app.register_blueprint(health_check_bp)
+# Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
 if os.getenv('ADMIN_MODE', '').lower() == 'true':
     from templates.admin import admin_bp
     app.register_blueprint(admin_bp)
     from templates.artist_lookup import artist_lookup_bp
     app.register_blueprint(artist_lookup_bp)
-    from templates.health_check import health_check_bp
-    app.register_blueprint(health_check_bp)
     from templates.data_cleaner import data_cleaner_bp
     app.register_blueprint(data_cleaner_bp)
 
@@ -608,6 +609,7 @@ def handle_lookup_image():
     """
     print("Received request for image handling...")
 
+    # SOMETHING IS WRONG STARTING HERE....
     # Validate the request
     if 'image' not in request.json:
         return jsonify({"error": "No image provided"}), 400
@@ -623,6 +625,10 @@ def handle_lookup_image():
 
     # Get top_k parameter (how many matches to return)
     top_k = request.json.get('top_k', 3)
+
+
+    # .. TO HERE (basd on the comments tht actually get printed)
+    print("sending to lookup_image function: " + str(img) + " with top_k=" + str(top_k))
 
     # Call the general lookup_image function
     try:
@@ -783,8 +789,8 @@ def get_text_features():
         print(f"Extracted features: {features.shape}")
 
         # TODO: If dimensions=2 is requested, reduce to 2D
-        if dimensions == 2:
-            continue
+        # if dimensions == 2:
+        #     continue
             # features_2d = helpers.tsne_similarity_flatten(features, num_dims=2)
             # print(f"Reduced features to 2D: {features_2d.shape}")
             # return jsonify({"features": features_2d.tolist()})
