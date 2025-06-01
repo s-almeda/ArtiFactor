@@ -782,11 +782,12 @@ def get_text_features():
         features = helpers.extract_text_features(input_text)
         print(f"Extracted features: {features.shape}")
 
-        # If dimensions=2 is requested, use t-SNE to reduce to 2D
+        # TODO: If dimensions=2 is requested, reduce to 2D
         if dimensions == 2:
-            features_2d = helpers.tsne_similarity_flatten(features, num_dims=2)
-            print(f"Reduced features to 2D: {features_2d.shape}")
-            return jsonify({"features": features_2d.tolist()})
+            continue
+            # features_2d = helpers.tsne_similarity_flatten(features, num_dims=2)
+            # print(f"Reduced features to 2D: {features_2d.shape}")
+            # return jsonify({"features": features_2d.tolist()})
 
         return jsonify({"features": features.tolist()})
     except Exception as e:

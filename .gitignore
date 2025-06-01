@@ -9,10 +9,10 @@ lerna-debug.log*
 log*
 
 
-/KnowledgeServer/app/LOCALDB/*
-KnowledgeServer/app/LOCALDB/*
-LOCALDB/*
-LOCALDB
+/KnowledgeServer/app/LOCALDB/images/*
+KnowledgeServer/app/LOCALDB/images/*
+# LOCALDB/*
+# LOCALDB
 
 *.db
 */images/*

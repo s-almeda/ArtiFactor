@@ -16,7 +16,6 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries=5 -r requirements
 
 RUN pip install --no-cache-dir "numpy==1.24.4"
 RUN pip install --no-cache-dir "beautifulsoup4==4.13.4"
-RUN pip install --no-cache-dir "requests==2.32.3"
 #RUN pip install --force-reinstall -v "numpy==1.25.2"
 # # Download spaCy model
 # RUN python -m spacy download en_core_web_sm

@@ -1,0 +1,16 @@
+# Exclude database and data files
+app/LOCALDB/
+app/*.csv
+app/*.numbers
+app/build_*.py
+app/get_*.py
+app/update_embeddings.py
+
+# Exclude non-essential files
+.git/
+.gitignore
+*.md
+docker_build.sh
+docker_run.sh
+
+# Add any other files you don't need in the container
