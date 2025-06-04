@@ -1,0 +1,67 @@
+[2025-05-15T21:33:19.866Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:19.970Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:19.985Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:19.987Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:20.009Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:20.082Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:21.130Z] API Call: POST /api/check-for-keywords | Body: {"text":"Texts are integral to the representation and understanding of cultures, often appearing alongside images in artworks. Historical artifacts like the Rosetta Stone and the Code of Hammurabi illustrate the enduring significance of texts in conveying political and moral authority, a tradition that persists in contemporary art through inscriptions."} | Query: {} | Params: {}
+[2025-05-15T21:33:24.172Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:25.442Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:25.513Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:26.784Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:26.854Z] API Call: POST /api/check-for-keywords | Body: {"text":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:29.178Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a black background with a yellow text that says text heare, text, with text, text poster, text and a pale young woman"} | Query: {} | Params: {}
+[2025-05-15T21:33:29.262Z] API Call: POST /api/check-for-keywords | Body: {"text":"Texts are integral to the representation and understanding of cultures, often appearing alongside images in artworks. Historical artifacts like the Rosetta Stone and the Code of Hammurabi illustrate the enduring significance of texts in conveying political and moral authority, a tradition that persists in contemporary art through inscriptions."} | Query: {} | Params: {}
+[2025-05-15T21:33:30.556Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:31.909Z] API Call: POST /api/get-similar-texts | Body: {"query":"Texts are integral to the representation and understanding of cultures, often appearing alongside images in artworks. Historical artifacts like the Rosetta Stone and the Code of Hammurabi illustrate the enduring significance of texts in conveying political and moral authority, a tradition that persists in contemporary art through inscriptions."} | Query: {} | Params: {}
+[2025-05-15T21:33:33.398Z] API Call: POST /api/get-similar-texts | Body: {"query":"there is a picture of a toothbrush with the words your he, instagram story, in the style of john baldessari, album art, by Niko Henrichon"} | Query: {} | Params: {}
+[2025-05-15T21:33:35.903Z] API Call: POST /api/get-similar-texts | Body: {"query":"Texts are integral to the representation and understanding of cultures, often appearing alongside images in artworks. Historical artifacts like the Rosetta Stone and the Code of Hammurabi illustrate the enduring significance of texts in conveying political and moral authority, a tradition that persists in contemporary art through inscriptions."} | Query: {} | Params: {}
+[2025-05-15T21:34:11.440Z] API Call: POST /api/get-similar-images | Body: {"image":"https://d32dm0rphc51dk.cloudfront.net/IG8ZLvVmZgQiTn2zK0Bp8w/large.jpg"} | Query: {} | Params: {}
+[2025-05-15T21:34:25.307Z] API Call: POST /api/check-for-keywords | Body: {"text":"Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:25.310Z] API Call: POST /api/check-for-keywords | Body: {"text":"Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:25.562Z] API Call: POST /api/get-similar-texts | Body: {"query":"Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:25.732Z] API Call: POST /api/get-similar-texts | Body: {"query":"Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:30.921Z] API Call: POST /api/check-for-keywords | Body: {"text":"\"The Company of Frans Banning Cocq and Willem van Ruytenburch (The Night Watch)\"(Unknown) by Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:30.923Z] API Call: POST /api/check-for-keywords | Body: {"text":"\"The Company of Frans Banning Cocq and Willem van Ruytenburch (The Night Watch)\"(Unknown) by Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:32.192Z] API Call: POST /api/get-similar-texts | Body: {"query":"\"The Company of Frans Banning Cocq and Willem van Ruytenburch (The Night Watch)\"(Unknown) by Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:34:33.270Z] API Call: POST /api/get-similar-texts | Body: {"query":"\"The Company of Frans Banning Cocq and Willem van Ruytenburch (The Night Watch)\"(Unknown) by Rembrandt van Rijn"} | Query: {} | Params: {}
+[2025-05-15T21:36:18.213Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:36:18.215Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:36:18.348Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:36:18.429Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:37:08.842Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:37:08.845Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:37:09.199Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:37:09.263Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:37:21.156Z] API Call: POST /api/check-for-keywords | Body: {"text":" Chiaroscuro"} | Query: {} | Params: {}
+[2025-05-15T21:37:21.159Z] API Call: POST /api/check-for-keywords | Body: {"text":" Chiaroscuro"} | Query: {} | Params: {}
+[2025-05-15T21:37:21.267Z] API Call: POST /api/get-similar-texts | Body: {"query":" Chiaroscuro"} | Query: {} | Params: {}
+[2025-05-15T21:37:21.312Z] API Call: POST /api/get-similar-texts | Body: {"query":" Chiaroscuro"} | Query: {} | Params: {}
+[2025-05-15T21:38:29.786Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:29.788Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:30.070Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:30.183Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:57.020Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:57.024Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:57.360Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:38:57.552Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:41:57.547Z] API Call: POST /api/check-for-keywords | Body: {"text":" Collective History"} | Query: {} | Params: {}
+[2025-05-15T21:41:57.555Z] API Call: POST /api/check-for-keywords | Body: {"text":" Collective History"} | Query: {} | Params: {}
+[2025-05-15T21:41:58.229Z] API Call: POST /api/get-similar-texts | Body: {"query":" Collective History"} | Query: {} | Params: {}
+[2025-05-15T21:41:58.368Z] API Call: POST /api/get-similar-texts | Body: {"query":" Collective History"} | Query: {} | Params: {}
+[2025-05-15T21:42:29.289Z] API Call: POST /api/check-for-keywords | Body: {"text":"Frans Hals (1582-1666) was a Dutch painter from Antwerp, known for his lively portraits and mastery of light and color, particularly in the Haarlem region of the Netherlands."} | Query: {} | Params: {}
+[2025-05-15T21:42:29.295Z] API Call: POST /api/check-for-keywords | Body: {"text":"Frans Hals (1582-1666) was a Dutch painter from Antwerp, known for his lively portraits and mastery of light and color, particularly in the Haarlem region of the Netherlands."} | Query: {} | Params: {}
+[2025-05-15T21:42:31.260Z] API Call: POST /api/get-similar-texts | Body: {"query":"Frans Hals (1582-1666) was a Dutch painter from Antwerp, known for his lively portraits and mastery of light and color, particularly in the Haarlem region of the Netherlands."} | Query: {} | Params: {}
+[2025-05-15T21:42:32.776Z] API Call: POST /api/get-similar-texts | Body: {"query":"Frans Hals (1582-1666) was a Dutch painter from Antwerp, known for his lively portraits and mastery of light and color, particularly in the Haarlem region of the Netherlands."} | Query: {} | Params: {}
+[2025-05-15T21:56:07.351Z] API Call: POST /api/check-for-keywords | Body: {"text":"Bars and Restaurants"} | Query: {} | Params: {}
+[2025-05-15T21:56:07.355Z] API Call: POST /api/check-for-keywords | Body: {"text":"Bars and Restaurants"} | Query: {} | Params: {}
+[2025-05-15T21:56:07.712Z] API Call: POST /api/get-similar-texts | Body: {"query":"Bars and Restaurants"} | Query: {} | Params: {}
+[2025-05-15T21:56:07.955Z] API Call: POST /api/get-similar-texts | Body: {"query":"Bars and Restaurants"} | Query: {} | Params: {}
+[2025-05-15T21:56:10.001Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:56:10.008Z] API Call: POST /api/check-for-keywords | Body: {"text":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:56:10.534Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T21:56:10.712Z] API Call: POST /api/get-similar-texts | Body: {"query":"17th Century"} | Query: {} | Params: {}
+[2025-05-15T22:58:40.538Z] API Call: POST /api/check-for-keywords | Body: {"text":"colorful drawing on a piece of paper"} | Query: {} | Params: {}
+[2025-05-15T22:58:40.563Z] API Call: POST /api/check-for-keywords | Body: {"text":"colorful drawing on a piece of paper"} | Query: {} | Params: {}
+[2025-05-15T22:58:40.715Z] API Call: POST /api/get-similar-texts | Body: {"query":"colorful drawing on a piece of paper"} | Query: {} | Params: {}
+[2025-05-15T22:58:40.734Z] API Call: POST /api/get-similar-texts | Body: {"query":"colorful drawing on a piece of paper"} | Query: {} | Params: {}

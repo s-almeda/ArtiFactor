@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Data Cleaner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_styles.css') }}">
+</head>
+<body>
+    <div class="data-cleaner-container">
+        <h1>🧹 Database Data Cleaner</h1>
+        <p>Identify and fix data integrity issues in your database</p>
+
+        <!-- Database Stats Section -->
+        <div class="cleaner-section">
+            <h3>📊 Database Overview</h3>
+            <div id="database-stats">
+                <button type="button" class="btn" onclick="loadDatabaseStats()">Load Database Stats</button>
+                <div id="stats-display"></div>
+            </div>
+        </div>
+
+        <!-- Malformed JSON Section -->
+        <div class="cleaner-section">
+            <h3>🔧 Malformed JSON Repair</h3>
+            <p>Find and fix Python-style lists that should be proper JSON</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkMalformedJson()" id="json-check-btn">
+                    🔍 Check for Malformed JSON
+                </button>
+                <div class="loading" id="json-check-loading">Scanning for malformed JSON...</div>
+            </div>
+
+            <!-- JSON Results Section -->
+            <div id="json-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="json-results-title"></h4>
+                    <div id="json-results-summary"></div>
+                </div>
+
+                <!-- JSON Fix Button -->
+                <div id="json-fix-section" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="fixMalformedJson()" id="json-fix-btn">
+                        🔧 Convert to Proper JSON
+                    </button>
+                    <div class="loading" id="json-fix-loading">Converting to JSON...</div>
+                    <p class="warning-text">⚠️ This will convert Python-style lists to proper JSON format.</p>
+                </div>
+
+                <!-- Malformed Entries List -->
+                <div id="malformed-entries-list"></div>
+            </div>
+
+            <!-- JSON Success Message -->
+            <div id="json-fix-success" class="success-message" style="display: none;"></div>
+        </div>
+
+
+        <!-- Artists Without Images Section -->
+        <div class="cleaner-section">
+            <h3>🎨 Artists Without Images</h3>
+            <p>Find and remove artists that have no associated artwork</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkArtistsWithoutImages()" id="artists-check-btn">
+                    🔍 Check for Artists Without Images
+                </button>
+                <div class="loading" id="artists-check-loading">Scanning for artists without images...</div>
+            </div>
+
+            <!-- Artists Results Section -->
+            <div id="artists-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="artists-results-title"></h4>
+                    <div id="artists-results-summary"></div>
+                </div>
+
+                <!-- Artists Remove Button -->
+                <div id="artists-remove-section" style="display: none;">
+                    <button type="button" class="btn btn-danger" onclick="removeArtistsWithoutImages()" id="artists-remove-btn">
+                        🗑️ Remove All Artists Without Images
+                    </button>
+                    <div class="loading" id="artists-remove-loading">Removing artists...</div>
+                    <p class="warning-text">⚠️ This will permanently delete these artist entries from your database.</p>
+                </div>
+
+                <!-- Artists List -->
+                <div id="artists-list"></div>
+            </div>
+
+            <!-- Artists Success Message -->
+            <div id="artists-success" class="success-message" style="display: none;"></div>
+        </div>
+
+        <!-- Orphaned Image References Section -->
+        <div class="cleaner-section">
+            <h3>🔗 Orphaned Image References</h3>
+            <p>Find text entries that reference non-existent image IDs</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkOrphanedImages()" id="check-btn">
+                    🔍 Check for Orphaned References
+                </button>
+                <div class="loading" id="check-loading">Checking database...</div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="orphaned-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="results-title"></h4>
+                    <div id="results-summary"></div>
+                </div>
+
+                <!-- Fix Button (appears only when issues found) -->
+                <div id="fix-section" style="display: none;">
+                    <button type="button" class="btn btn-danger" onclick="fixOrphanedImages()" id="fix-btn">
+                        🔧 Fix All Orphaned References
+                    </button>
+                    <div class="loading" id="fix-loading">Fixing entries...</div>
+                    <p class="warning-text">⚠️ This will permanently remove invalid image references from your database.</p>
+                </div>
+
+                <!-- Faulty Entries List -->
+                <div id="faulty-entries-list"></div>
+            </div>
+
+            <!-- Success Message -->
+            <div id="fix-success" class="success-message" style="display: none;"></div>
+        </div>
+
+
+        <!-- Invalid Image URLs Section -->
+        <div class="cleaner-section">
+            <h3>🖼️ Invalid Image URLs</h3>
+            <p>Find and fix broken or invalid image URLs in the image_urls column</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkInvalidImageUrls()" id="urls-check-btn">
+                    🔍 Check Image URLs
+                </button>
+                <div class="loading" id="urls-check-loading">Checking image URLs... (this may take a while)</div>
+            </div>
+
+            <!-- URLs Results Section -->
+            <div id="urls-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="urls-results-title"></h4>
+                    <div id="urls-results-summary"></div>
+                </div>
+
+                <!-- URLs Fix Buttons -->
+                <div id="urls-fix-section" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="fixInvalidImageUrls('clean')" id="urls-clean-btn">
+                        🧹 Clean URLs (Keep Valid Only)
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="fixInvalidImageUrls('remove')" id="urls-remove-btn">
+                        🗑️ Remove Entire Entries
+                    </button>
+                    <div class="loading" id="urls-fix-loading">Processing...</div>
+                    <p class="warning-text">⚠️ Clean: removes broken URLs but keeps entries. Remove: deletes entire image entries.</p>
+                </div>
+
+                <!-- URLs List -->
+                <div id="urls-list"></div>
+            </div>
+
+            <!-- URLs Success Message -->
+            <div id="urls-success" class="success-message" style="display: none;"></div>
+        </div>
+
+        <!-- Future Cleaning Options -->
+        <div class="cleaner-section">
+            <h3>🚀 More Cleaning Options</h3>
+            <p>Additional data cleaning features coming soon...</p>
+            <div class="placeholder-buttons">
+                <button type="button" class="btn btn-secondary disabled" disabled>Check Orphaned Text References</button>
+                <button type="button" class="btn btn-secondary disabled" disabled>Validate JSON Formatting</button>
+                <button type="button" class="btn btn-secondary disabled" disabled>Find Duplicate Entries</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFaultyEntries = [];
+        let currentMalformedEntries = [];
+
+        function loadDatabaseStats() {
+            fetch('/get_database_stats')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const statsHtml = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number">${data.stats.total_text_entries}</div>
+                                <div class="stat-label">Text Entries</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${data.stats.total_image_entries}</div>
+                                <div class="stat-label">Image Entries</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${data.stats.text_entries_with_images}</div>
+                                <div class="stat-label">Text w/ Image Refs</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('stats-display').innerHTML = statsHtml;
+                } else {
+                    document.getElementById('stats-display').innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('stats-display').innerHTML = `<div class="error">Failed to load stats</div>`;
+            });
+        }
+
+        function checkMalformedJson() {
+            const checkBtn = document.getElementById('json-check-btn');
+            const loading = document.getElementById('json-check-loading');
+            const resultsDiv = document.getElementById('json-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_malformed_json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentMalformedEntries = data.malformed_entries;
+                    displayMalformedResults(data);
+                } else {
+                    alert('Error checking malformed JSON: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to check malformed JSON');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayMalformedResults(data) {
+            const resultsDiv = document.getElementById('json-results');
+            const titleEl = document.getElementById('json-results-title');
+            const summaryEl = document.getElementById('json-results-summary');
+            const fixSection = document.getElementById('json-fix-section');
+            const entriesList = document.getElementById('malformed-entries-list');
+            
+            if (data.total_malformed === 0) {
+                titleEl.textContent = '✅ All JSON is Properly Formatted';
+                summaryEl.innerHTML = '<div class="success">No malformed JSON found!</div>';
+                fixSection.style.display = 'none';
+                entriesList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_malformed} Entries with Malformed JSON`;
+                
+                const fixableCount = data.malformed_entries.filter(e => e.converted_json !== null).length;
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_malformed}</strong> entries have malformed JSON<br>
+                        <strong>${fixableCount}</strong> can be automatically converted to proper JSON
+                    </div>
+                `;
+                
+                if (fixableCount > 0) {
+                    fixSection.style.display = 'block';
+                } else {
+                    fixSection.style.display = 'none';
+                }
+                
+                // Display malformed entries
+                let entriesHtml = '<div class="malformed-entries">';
+                data.malformed_entries.forEach(entry => {
+                    let statusClass = '';
+                    let statusText = '';
+                    let conversionPreview = '';
+                    
+                    if (entry.type === 'python_list') {
+                        statusClass = 'fixable';
+                        statusText = '✅ Can convert Python list to JSON';
+                        conversionPreview = `<div class="conversion-preview">
+                            <strong>Will convert to:</strong> <code>${entry.converted_json}</code>
+                        </div>`;
+                    } else if (entry.type === 'python_string') {
+                        statusClass = 'fixable';
+                        statusText = '✅ Can convert Python string to JSON array';
+                        conversionPreview = `<div class="conversion-preview">
+                            <strong>Will convert to:</strong> <code>${entry.converted_json}</code>
+                        </div>`;
+                    } else if (entry.type === 'truly_malformed') {
+                        statusClass = 'unfixable';
+                        statusText = '❌ Cannot auto-fix: ' + entry.error;
+                    } else {
+                        statusClass = 'unfixable';
+                        statusText = '❌ Unknown format: ' + (entry.error || entry.type);
+                    }
+                    
+                    // In displayMalformedResults function, update the entry display part:
+                    entriesHtml += `
+                        <div class="malformed-entry ${statusClass}">
+                            <div class="entry-header">
+                                <strong>Table:</strong> ${entry.table}<br>
+                                <strong>Column:</strong> ${entry.column}<br>
+                                <strong>Entry ID:</strong> ${entry.entry_id}<br>
+                                <strong>Value:</strong> ${entry.value || 'N/A'}
+                            </div>
+                            <div class="entry-details">
+                                <strong>Current Text:</strong> <code class="current-text">${entry.current_text}</code><br>
+                                <strong>Status:</strong> <span class="status-${statusClass}">${statusText}</span>
+                                ${conversionPreview}
+                            </div>
+                        </div>
+                    `;
+                });
+                entriesHtml += '</div>';
+                
+                entriesList.innerHTML = entriesHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+
+        let currentInvalidUrls = [];
+
+        function checkInvalidImageUrls() {
+            console.log("DEBUG: Starting invalid image URLs check...");
+            const checkBtn = document.getElementById('urls-check-btn');
+            const loading = document.getElementById('urls-check-loading');
+            const resultsDiv = document.getElementById('urls-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_invalid_image_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("DEBUG: Got response from URLs check:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: URLs check data:", data);
+                if (data.success) {
+                    currentInvalidUrls = data.invalid_entries;
+                    console.log("DEBUG: Found", data.total_invalid, "images with invalid URLs");
+                    displayUrlsResults(data);
+                } else {
+                    console.error("DEBUG: Error in URLs check:", data.error);
+                    alert('Error checking image URLs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in URLs check:', error);
+                alert('Failed to check image URLs');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayUrlsResults(data) {
+            console.log("DEBUG: Displaying URLs results:", data);
+            const resultsDiv = document.getElementById('urls-results');
+            const titleEl = document.getElementById('urls-results-title');
+            const summaryEl = document.getElementById('urls-results-summary');
+            const fixSection = document.getElementById('urls-fix-section');
+            const urlsList = document.getElementById('urls-list');
+            
+            if (data.total_invalid === 0) {
+                titleEl.textContent = '✅ All Image URLs Are Valid';
+                summaryEl.innerHTML = '<div class="success">No invalid image URLs found!</div>';
+                fixSection.style.display = 'none';
+                urlsList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_invalid} Images with Invalid URLs`;
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_invalid}</strong> images have invalid or broken URLs<br>
+                        <small>Checked ${data.total_checked} total images</small>
+                    </div>
+                `;
+                fixSection.style.display = 'block';
+                
+                // Display invalid entries
+                let urlsHtml = '<div class="invalid-urls-list">';
+                data.invalid_entries.forEach(entry => {
+                    let statusClass = entry.type === 'json_error' ? 'json-error' : 'broken-urls';
+                    let invalidUrlsHtml = '';
+                    
+                    if (entry.invalid_urls && entry.invalid_urls.length > 0) {
+                        invalidUrlsHtml = '<strong>Invalid URLs:</strong><ul>';
+                        entry.invalid_urls.forEach(invalid => {
+                            invalidUrlsHtml += `<li><strong>${invalid.size}:</strong> ${invalid.error} - <code>${invalid.url}</code></li>`;
+                        });
+                        invalidUrlsHtml += '</ul>';
+                    }
+                    
+                    let validUrlsHtml = '';
+                    if (entry.valid_urls && Object.keys(entry.valid_urls).length > 0) {
+                        validUrlsHtml = `<br><strong>Valid URLs:</strong> ${Object.keys(entry.valid_urls).join(', ')}`;
+                    }
+                    
+                    urlsHtml += `
+                        <div class="invalid-url-entry ${statusClass}">
+                            <div class="entry-header">
+                                <strong>Image ID:</strong> ${entry.image_id}<br>
+                                <strong>Value:</strong> ${entry.value || 'N/A'}
+                            </div>
+                            <div class="entry-details">
+                                ${entry.error ? `<strong>Error:</strong> ${entry.error}<br>` : ''}
+                                ${invalidUrlsHtml}
+                                ${validUrlsHtml}
+                                ${entry.total_urls ? `<br><strong>Total URLs:</strong> ${entry.total_urls}` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                urlsHtml += '</div>';
+                urlsList.innerHTML = urlsHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function fixInvalidImageUrls(action) {
+            console.log("DEBUG: Starting fix invalid URLs with action:", action);
+            if (currentInvalidUrls.length === 0) {
+                alert('No invalid URLs to fix');
+                return;
+            }
+            
+            const actionText = action === 'remove' ? 'permanently delete' : 'clean URLs for';
+            if (!confirm(`Are you sure you want to ${actionText} ${currentInvalidUrls.length} image entries?`)) {
+                console.log("DEBUG: User cancelled fix operation");
+                return;
+            }
+            
+            const cleanBtn = document.getElementById('urls-clean-btn');
+            const removeBtn = document.getElementById('urls-remove-btn');
+            const loading = document.getElementById('urls-fix-loading');
+            const successDiv = document.getElementById('urls-success');
+            
+            cleanBtn.disabled = true;
+            removeBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/fix_invalid_image_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    invalid_entries: currentInvalidUrls,
+                    action: action
+                })
+            })
+            .then(response => {
+                console.log("DEBUG: Fix URLs response status:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Fix URLs response data:", data);
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>Database has been updated.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    document.getElementById('urls-fix-section').style.display = 'none';
+                    currentInvalidUrls = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('urls-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in fix response:", data.error);
+                    alert('Error fixing URLs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in fix URLs:', error);
+                alert('Failed to fix URLs');
+            })
+            .finally(() => {
+                cleanBtn.disabled = false;
+                removeBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function fixMalformedJson() {
+            if (currentMalformedEntries.length === 0) {
+                alert('No malformed entries to fix');
+                return;
+            }
+            
+            const fixableCount = currentMalformedEntries.filter(e => e.converted_json !== null).length;
+            if (fixableCount === 0) {
+                alert('No entries can be automatically fixed');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to convert ${fixableCount} entries to proper JSON format?`)) {
+                return;
+            }
+            
+            const fixBtn = document.getElementById('json-fix-btn');
+            const loading = document.getElementById('json-fix-loading');
+            const successDiv = document.getElementById('json-fix-success');
+            
+            fixBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/fix_malformed_json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    malformed_entries: currentMalformedEntries
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>You can now run the orphaned image check to verify the fixes.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    document.getElementById('json-fix-section').style.display = 'none';
+                    currentMalformedEntries = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('json-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    alert('Error fixing JSON: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to fix JSON');
+            })
+            .finally(() => {
+                fixBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+
+        let currentArtistsWithoutImages = [];
+
+        function checkArtistsWithoutImages() {
+            console.log("DEBUG: Starting artists without images check...");
+            const checkBtn = document.getElementById('artists-check-btn');
+            const loading = document.getElementById('artists-check-loading');
+            const resultsDiv = document.getElementById('artists-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_artists_without_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("DEBUG: Got response from artists check:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Artists check data:", data);
+                if (data.success) {
+                    currentArtistsWithoutImages = data.artists_without_images;
+                    console.log("DEBUG: Found", data.total_artists_without_images, "artists without images");
+                    displayArtistsResults(data);
+                } else {
+                    console.error("DEBUG: Error in artists check:", data.error);
+                    alert('Error checking artists: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in artists check:', error);
+                alert('Failed to check artists');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayArtistsResults(data) {
+            console.log("DEBUG: Displaying artists results:", data);
+            const resultsDiv = document.getElementById('artists-results');
+            const titleEl = document.getElementById('artists-results-title');
+            const summaryEl = document.getElementById('artists-results-summary');
+            const removeSection = document.getElementById('artists-remove-section');
+            const artistsList = document.getElementById('artists-list');
+            
+            if (data.total_artists_without_images === 0) {
+                titleEl.textContent = '✅ All Artists Have Images';
+                summaryEl.innerHTML = '<div class="success">No artists without images found!</div>';
+                removeSection.style.display = 'none';
+                artistsList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_artists_without_images} Artists Without Images`;
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_artists_without_images}</strong> artists have no associated artwork
+                    </div>
+                `;
+                removeSection.style.display = 'block';
+                
+                // Display artists without images
+                let artistsHtml = '<div class="artists-without-images">';
+                data.artists_without_images.forEach(artist => {
+                    const aliasesText = artist.aliases && artist.aliases.length > 0 ? 
+                        `<br><strong>Aliases:</strong> ${artist.aliases.join(', ')}` : '';
+                    
+                    artistsHtml += `
+                        <div class="artist-entry">
+                            <div class="entry-header">
+                                <strong>Artist:</strong> ${artist.value || 'N/A'}<br>
+                                <strong>Entry ID:</strong> ${artist.entry_id}
+                                ${aliasesText}
+                            </div>
+                            <div class="entry-details">
+                                <strong>Images:</strong> ${artist.images || 'NULL'}
+                            </div>
+                        </div>
+                    `;
+                });
+                artistsHtml += '</div>';
+                artistsList.innerHTML = artistsHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function removeArtistsWithoutImages() {
+            console.log("DEBUG: Starting remove artists without images...");
+            if (currentArtistsWithoutImages.length === 0) {
+                alert('No artists to remove');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to permanently delete ${currentArtistsWithoutImages.length} artists? This cannot be undone.`)) {
+                console.log("DEBUG: User cancelled remove operation");
+                return;
+            }
+            
+            const removeBtn = document.getElementById('artists-remove-btn');
+            const loading = document.getElementById('artists-remove-loading');
+            const successDiv = document.getElementById('artists-success');
+            
+            removeBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/remove_artists_without_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    artists_to_remove: currentArtistsWithoutImages
+                })
+            })
+            .then(response => {
+                console.log("DEBUG: Remove artists response status:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Remove artists response data:", data);
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>Database has been updated.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    document.getElementById('artists-remove-section').style.display = 'none';
+                    currentArtistsWithoutImages = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('artists-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in remove response:", data.error);
+                    alert('Error removing artists: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in remove artists:', error);
+                alert('Failed to remove artists');
+            })
+            .finally(() => {
+                removeBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function checkOrphanedImages() {
+            console.log("DEBUG: Starting orphaned images check...");
+            const checkBtn = document.getElementById('check-btn');
+            const loading = document.getElementById('check-loading');
+            const resultsDiv = document.getElementById('orphaned-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_orphaned_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("DEBUG: Got response from orphaned images check:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Orphaned images check data:", data);
+                if (data.success) {
+                    currentFaultyEntries = data.faulty_entries;
+                    console.log("DEBUG: Found", data.total_faulty, "faulty entries");
+                    displayOrphanedResults(data);
+                } else {
+                    console.error("DEBUG: Error in orphaned images check:", data.error);
+                    alert('Error checking orphaned images: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in orphaned images check:', error);
+                alert('Failed to check orphaned images');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayOrphanedResults(data) {
+            const resultsDiv = document.getElementById('orphaned-results');
+            const titleEl = document.getElementById('results-title');
+            const summaryEl = document.getElementById('results-summary');
+            const fixSection = document.getElementById('fix-section');
+            const entriesList = document.getElementById('faulty-entries-list');
+            
+            if (data.total_faulty === 0) {
+                titleEl.textContent = '✅ No Orphaned References Found';
+                summaryEl.innerHTML = '<div class="success">All image references are valid!</div>';
+                fixSection.style.display = 'none';
+                entriesList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_faulty} Entries with Orphaned References`;
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_faulty}</strong> text entries have invalid image references<br>
+                        Database contains <strong>${data.total_valid_images}</strong> valid images
+                    </div>
+                `;
+                fixSection.style.display = 'block';
+                
+                // Display faulty entries
+                let entriesHtml = '<div class="faulty-entries">';
+                data.faulty_entries.forEach(entry => {
+                    const invalidIdsHtml = entry.invalid_image_ids.map(id => 
+                        `<span class="invalid-id">${id}</span>`
+                    ).join(', ');
+                    
+                    const validIdsHtml = entry.valid_image_ids.length > 0 ? 
+                        `<br><strong>Valid IDs:</strong> ${entry.valid_image_ids.join(', ')}` : '';
+                    
+                    entriesHtml += `
+                        <div class="faulty-entry">
+                            <div class="entry-header">
+                                <strong>Entry ID:</strong> ${entry.entry_id}<br>
+                                <strong>Value:</strong> ${entry.value || 'N/A'}
+                            </div>
+                            <div class="entry-details">
+                                <strong>Invalid Image IDs:</strong> ${invalidIdsHtml}
+                                ${validIdsHtml}
+                                <br><strong>Total Refs:</strong> ${entry.total_image_refs}
+                                ${entry.json_error ? '<br><span class="json-error">⚠️ Malformed JSON</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                entriesHtml += '</div>';
+                entriesList.innerHTML = entriesHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function fixOrphanedImages() {
+            console.log("DEBUG: Starting fix orphaned images...");
+            console.log("DEBUG: Current faulty entries:", currentFaultyEntries);
+            
+            if (currentFaultyEntries.length === 0) {
+                console.log("DEBUG: No faulty entries to fix");
+                alert('No faulty entries to fix');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to fix ${currentFaultyEntries.length} entries? This will permanently remove invalid image references.`)) {
+                console.log("DEBUG: User cancelled fix operation");
+                return;
+            }
+            
+            const fixBtn = document.getElementById('fix-btn');
+            const loading = document.getElementById('fix-loading');
+            const successDiv = document.getElementById('fix-success');
+            
+            console.log("DEBUG: Starting fetch to fix orphaned images...");
+            
+            fixBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            const requestData = {
+                faulty_entries: currentFaultyEntries
+            };
+            console.log("DEBUG: Sending request data:", requestData);
+            
+            fetch('/fix_orphaned_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                console.log("DEBUG: Fix orphaned images response status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Fix orphaned images response data:", data);
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>You can now run the check again to verify the fixes.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    // Hide the fix section and clear current data
+                    document.getElementById('fix-section').style.display = 'none';
+                    currentFaultyEntries = [];
+                    
+                    // Clear the results to encourage re-checking
+                    setTimeout(() => {
+                        document.getElementById('orphaned-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in fix response:", data.error);
+                    alert('Error fixing entries: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in fix orphaned images:', error);
+                alert('Failed to fix entries: ' + error.message);
+            })
+            .finally(() => {
+                console.log("DEBUG: Fix orphaned images operation completed");
+                fixBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        // Load database stats on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDatabaseStats();
+        });
+    </script>
+
+    <style>
+        .data-cleaner-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .cleaner-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .cleaner-section h3 {
+            margin-top: 0;
+            color: #343a40;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        
+        .action-buttons {
+            margin: 15px 0;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .btn:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover:not(:disabled) {
+            background: #e0a800;
+        }
+        
+        .loading {
+            display: none;
+            color: #6c757d;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        
+        .results-header {
+            margin-bottom: 20px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .faulty-entries {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        .faulty-entry {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            background: white;
+        }
+        
+        .faulty-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .entry-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .entry-details {
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .invalid-id {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 0 2px;
+        }
+        
+        .json-error {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .warning-text {
+            font-size: 12px;
+            color: #856404;
+            margin-top: 5px;
+        }
+        
+        .success-message {
+            margin-top: 15px;
+        }
+        
+        .placeholder-buttons .btn {
+            opacity: 0.6;
+        }
+        
+        .malformed-entries {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        .malformed-entry {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            background: white;
+        }
+        
+        .malformed-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .malformed-entry.fixable {
+            border-left: 4px solid #28a745;
+        }
+        
+        .malformed-entry.unfixable {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .status-fixable {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .status-unfixable {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .current-text {
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .conversion-preview {
+            margin-top: 8px;
+            padding: 8px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+        
+        .conversion-preview code {
+            background: #fff;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 11px;
+        }
+    </style>
+</body>
+</html>

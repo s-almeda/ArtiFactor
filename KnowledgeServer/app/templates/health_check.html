@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML/Data Server Health Check</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_styles.css') }}">
+</head>
+<body>
+    <div class="health-check-container">
+        <h1>ML/Data Server Health Check</h1>
+        <p>Test your ML/Data server components with custom inputs</p>
+        
+        <form method="POST" id="health-check-form">
+            <!-- Database Stats Section -->
+            <div class="test-section">
+                <h3>📊 Database Connectivity</h3>
+                <p>Database stats are checked automatically with every test.</p>
+                {% if results and results.database_stats %}
+                <div class="database-stats">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ results.database_stats.text_entries }}</div>
+                        <div>Text Entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ results.database_stats.image_entries }}</div>
+                        <div>Image Entries</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Keyword Check Section -->
+            <div class="test-section">
+                <h3>🔍 Keyword Check Test</h3>
+                <div class="form-group">
+                    <label for="test_text">Test Text:</label>
+                    <textarea name="test_text" id="test_text" placeholder="Enter text to analyze for keywords...">{{ form_data.test_text if form_data else 'dog and cats eating a sandwich abstract-expressionism art nouveau abstract expressionistic portraiture michelangelo' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="threshold">Threshold:</label>
+                    <input type="number" name="threshold" id="threshold" step="0.1" min="0" max="1" value="{{ form_data.threshold if form_data else '0.3' }}">
+                </div>
+                <button type="button" class="btn" onclick="runTest('keyword')">Test Keywords Only</button>
+            </div>
+
+            <!-- Text Lookup Section -->
+            <div class="test-section">
+                <h3>📝 Text Lookup Test</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="text_query">Search Query:</label>
+                        <input type="text" name="text_query" id="text_query" value="{{ form_data.text_query if form_data else 'dogs' }}" placeholder="Enter search query...">
+                    </div>
+                    <div class="form-group">
+                        <label for="top_k">Top K Results:</label>
+                        <input type="number" name="top_k" id="top_k" min="1" max="20" value="{{ form_data.top_k if form_data else '5' }}">
+                    </div>
+                </div>
+                <button type="button" class="btn" onclick="runTest('text')">Test Text Search Only</button>
+            </div>
+
+            <!-- Image Lookup Section -->
+            <div class="test-section">
+                <h3>🖼️ Image Lookup Test</h3>
+                <div class="form-group">
+                    <label for="image_url">Image URL:</label>
+                    <input type="url" name="image_url" id="image_url" value="{{ form_data.image_url if form_data else 'https://d32dm0rphc51dk.cloudfront.net/gTPexURCjkBek6MrG7g1bg/small.jpg' }}" placeholder="Enter image URL...">
+                </div>
+                <button type="button" class="btn" onclick="runTest('image')">Test Image Search Only</button>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="test-section">
+                <h3>🚀 Run Tests</h3>
+                <button type="submit" class="btn">Run All Tests</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset to Defaults</button>
+                <div class="loading" id="loading">Running tests...</div>
+            </div>
+        </form>
+
+        <!-- Results Section -->
+        {% if results or errors %}
+        <div class="results-section">
+            <h2>Test Results</h2>
+            
+            {% if errors %}
+            <div class="error">
+                <strong>Errors Found:</strong>
+                <ul>
+                {% for component, error in errors.items() %}
+                    <li><strong>{{ component }}:</strong> {{ error }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            {% if results.keyword_check %}
+            <div>
+                <h4>🔍 Keyword Check Results</h4>
+                <p><strong>Input:</strong> "{{ results.keyword_check.input }}"</p>
+                <p><strong>Threshold:</strong> {{ results.keyword_check.threshold }}</p>
+                <p><strong>Found Keywords:</strong></p>
+                <ul>
+                {% for word in results.keyword_check.words %}
+                    <li>
+                        {{ word.value }}
+                        {% if word.details %}
+                        → {{ word.details.databaseValue }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+                <div class="json-output">{{ results.keyword_check.words | tojson(indent=2) }}</div>
+            </div>
+            {% endif %}
+            
+            {% if results.text_lookup %}
+            <div>
+                <h4>📝 Text Lookup Results</h4>
+                <p><strong>Query:</strong> "{{ results.text_lookup.query }}"</p>
+                <p><strong>Top {{ results.text_lookup.top_k }} matches:</strong></p>
+                <ul>
+                {% for match in results.text_lookup.results %}
+                    <li>{{ match.value or 'N/A' }} (distance: {{ "%.3f"|format(match.distance or 0) }})</li>
+                {% endfor %}
+                </ul>
+                <div class="json-output">{{ results.text_lookup.results | tojson(indent=2) }}</div>
+            </div>
+            {% endif %}
+            
+            {% if results.image_lookup %}
+            <div>
+                <h4>🖼️ Image Lookup Results</h4>
+                <p><strong>Query Image:</strong></p>
+                <img src="{{ results.image_lookup.query_image }}" alt="Query Image" class="image-preview">
+                <p><strong>Similar Images:</strong></p>
+                {% for img in results.image_lookup.results[:3] %}
+                <div style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <img src="{{ img.image_url or '#' }}" alt="Similar Image" class="image-preview">
+                    <p><strong>{{ img.value or 'N/A' }}</strong> by {{ img.artist_names | join(', ') if img.artist_names else 'Unknown Artist' }}</p>
+                </div>
+                {% endfor %}
+                <div class="json-output">{{ results.image_lookup.results | tojson(indent=2) }}</div>
+            </div>
+            {% endif %}
+            
+            {% if results and not errors %}
+            <div class="success">
+                ✅ All tested systems operational!
+            </div>
+            {% elif errors %}
+            <div class="error">
+                ⚠️ Some systems need attention.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function runTest(type) {
+            const form = document.getElementById('health-check-form');
+            const formData = new FormData(form);
+            const loading = document.getElementById('loading');
+            
+            // Clear fields for other tests
+            if (type === 'keyword') {
+                formData.set('text_query', '');
+                formData.set('image_url', '');
+            } else if (type === 'text') {
+                formData.set('test_text', '');
+                formData.set('image_url', '');
+            } else if (type === 'image') {
+                formData.set('test_text', '');
+                formData.set('text_query', '');
+            }
+            
+            loading.style.display = 'block';
+            
+            fetch('/health_check', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.body.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Test failed: ' + error.message);
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+            });
+        }
+        
+        function resetForm() {
+            document.getElementById('test_text').value = 'dog and cats eating a sandwich abstract-expressionism art nouveau abstract expressionistic portraiture michelangelo';
+            document.getElementById('threshold').value = '0.3';
+            document.getElementById('text_query').value = 'dogs';
+            document.getElementById('top_k').value = '5';
+            document.getElementById('image_url').value = 'https://d32dm0rphc51dk.cloudfront.net/gTPexURCjkBek6MrG7g1bg/small.jpg';
+        }
+        
+        // Add form submission handler
+        document.getElementById('health-check-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('/health_check', {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.body.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Test failed: ' + error.message);
+            })
+            .finally(() => {
+                document.getElementById('loading').style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>

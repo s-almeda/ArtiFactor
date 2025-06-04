@@ -1,13 +1,14 @@
 import { useAppContext } from "../context/AppContext";
 import { NodeToolbar, Position, Handle, NodeProps } from "@xyflow/react";
 import { type Word, type Keyword, type TextWithKeywordsNode } from "./types";
-import { stringToWords, wordsToString } from "../utils/utilityFunctions";
+import { stringToWords, wordsToString, keywordJSONtoKeyword } from "../utils/utilityFunctions";
 import React, { useRef, useState, useEffect } from "react";
 import { useDnD } from "../context/DnDContext";
 import { Bookmark, Search, Edit2, Paperclip, BookCopy, Expand } from "lucide-react"; // Eye, EyeClosed
 import { motion } from "framer-motion";
 import { usePaletteContext } from "../context/PaletteContext";
-import NavigationButtons from "../utils/commonComponents";
+import {NavigationButtons, DynamicDescription, LiveImageDisplay} from "../utils/commonComponents";
+
 
 import { useNodeContext } from "../context/NodeContext";
 
@@ -66,7 +67,7 @@ export const RelatedKeywords: React.FC<{
   };
 
   return (
-    <div className="nodrag p-2 flex flex-wrap gap-0.5">
+    <div className="nodrag p-2 flex flex-wrap gap-0.5 mb-5 pb-5">
       <strong className="text-gray-900 text-sm italic mr-1">see also: </strong>
       {relatedKeywords.map((relatedKeyword, index) => (
         <div
@@ -85,6 +86,7 @@ export const RelatedKeywords: React.FC<{
     </div>
   );
 };
+
 
 export const KeywordDescription: React.FC<{
   keyword: Keyword | null;
@@ -165,7 +167,7 @@ export const KeywordDescription: React.FC<{
                 <div
                 draggable
                 onDragStart={(event) =>
-                  onDragStart(event, "text", keyword.databaseValue)
+                  onDragStart(event, "text", keyword.databaseValue || keyword.value)
                 }
                 className={`nodrag nowheel text-sm font-bold text-gray-800 mb-2 cursor-pointer ${
                   isAIGenerated
@@ -186,22 +188,19 @@ export const KeywordDescription: React.FC<{
                   borderRadius: "0 8px 8px 0", // Only right borders rounded
                 }}
                 >
-                {keyword.databaseValue}
+                {keyword.databaseValue || keyword.value}
                 </div>
             )}
-            {keyword.description && (
-              <div
-                draggable
-                onDragStart={(event) =>
-                  onDragStart(event, "text", keyword.description)
-                }
-                className={`p-1 m-2 flex flex-col gap-3 overflow-y-auto text-xs flex-grow ${
-                  isAIGenerated ? "hover:bg-blue-300" : "hover:bg-[#dbcdb4]"
-                }`}
-              >
-                {keyword.description}
-              </div>
+            {/* ----- DESCRIPTION of keywordCard ----- */}
+            <div className={`text-xs/4 m-2 p-0.5 rounded-sm`} >
+            {keyword.descriptions && (
+              <DynamicDescription
+                descriptions={keyword.descriptions}
+                isAIGenerated={isAIGenerated}
+              />
             )}
+            </div>
+
 
             {/* RELATED KEYWORDS */}
             {keyword.relatedKeywordStrings &&
@@ -252,6 +251,7 @@ const FolderPanel: React.FC<{
   toggleFolder: () => void;
   similarTexts: Keyword[];
   isAIGenerated: boolean;
+  selected?: boolean;
 }> = ({
   parentNodeId,
   width,
@@ -260,8 +260,10 @@ const FolderPanel: React.FC<{
   toggleFolder,
   similarTexts,
   isAIGenerated = false,
+  selected
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
   // const [contentState, setContentState] = useState<string | null>(content || '');
   const { setDraggableType, setDraggableData } = useDnD();
 
@@ -294,6 +296,12 @@ const FolderPanel: React.FC<{
   };
 
   const currentText = similarTexts[currentIndex];
+
+  useEffect(() => { 
+    if (!selected) {
+      setIsExpanded(false); // Collapse when not selected
+    } 
+  }, [selected]);
 
   return (
     <>
@@ -329,24 +337,41 @@ const FolderPanel: React.FC<{
         className="absolute"
       >
         <div
-          className={`absolute left-0 top-0 transform -translate-x-[${
-            width + 6
-          }px] ${
-            isAIGenerated
+          className={`absolute left-0 top-0 transform ${
+            isExpanded
+              ? `-translate-x-[${width * 1.5 + 6}px] z-500`
+              : `-translate-x-[${width + 50}px]`
+          } ${
+            isExpanded
+              ? "bg-white border-2 border-gray-700" // White bg with border when expanded
+              : isAIGenerated
               ? "bg-blue-100"
               : showFolder
               ? "bg-[#f2e7ce]"
               : "bg-[#dbcdb4]"
           } rounded-md shadow-md`}
-          style={{ height: `${height * 2}px`, width: `${width}px` }}
+          style={{
+            height: isExpanded ? `${height * 3}px` : `${height * 2}px`, // Taller when expanded
+            width: isExpanded ? `${width * 1.5}px` : `${width}px`, // Wider when expanded
+            fontSize: isExpanded ? "1.2rem" : "inherit", // Larger base font size
+          }}
         >
           {similarTexts.length > 0 ? (
             <>
               {/* LEFT AND RIGHT BUTTONS */}
-              <div className="p-3 pt-0 ml-0 h-full overflow-y-auto">
-                {/* <h2 className="text-xs font-medium text-gray-900 italic font-bold">
-                  This could be related...
-                </h2> */}
+              <div className={`p-3 pt-0 ml-0 h-full overflow-y-auto ${
+                isExpanded ? "p-5" : ""  // More padding when expanded
+              }`}>
+                {/* <button
+                  onClick={() => setIsExpanded(true)}
+                  className={`absolute top-2 right-5 p-1 rounded ${
+                    isExpanded ? "hover:bg-gray-300" : "hover:bg-gray-200"
+                  }`}
+                  title="Expand reader view"
+                >
+                  <Expand size={isExpanded ? 20 : 16} />
+                </button> */}
+
                 <NavigationButtons
                   currentIndex={currentIndex}
                   totalItems={similarTexts.length}
@@ -355,69 +380,69 @@ const FolderPanel: React.FC<{
                 />
 
                 {currentText && (
-                  <div className="nodrag nowheel text-gray-600 overflow-y-auto">
+                  <div className={`nodrag nowheel overflow-y-auto ${
+                    isExpanded ? "text-black" : "text-gray-600"  // Black text when expanded
+                  }`}>
                     {/* TITLE */}
                     <p
                       draggable
                       onDragStart={(event) =>
                         onDragStart(event, "text", currentText.value)
                       }
-                      className={`text-md font-bold ${
-                        isAIGenerated
-                          ? "hover:bg-blue-200"
-                          : "hover:bg-[#dbcdb4]"
+                      className={`font-bold ${
+                        isExpanded 
+                          ? "text-xl hover:bg-gray-200"  // Larger title when expanded
+                          : `text-md ${
+                              isAIGenerated
+                                ? "hover:bg-blue-200"
+                                : "hover:bg-[#dbcdb4]"
+                            }`
                       }`}
                     >
                       {currentText.value}
                     </p>
-                    
+                    {/* TYPE */}
                     <p
                       draggable
                       onDragStart={(event) =>
                         onDragStart(event, "text", currentText.type)
                       }
-                      className={`italic text-xs ${
-                        isAIGenerated
-                          ? "hover:bg-blue-200"
-                          : "hover:bg-[#dbcdb4]"
+                      className={`italic ${
+                        isExpanded
+                          ? "text-sm hover:bg-gray-200"  // Larger type text when expanded
+                          : `text-xs ${
+                              isAIGenerated
+                                ? "hover:bg-blue-200"
+                                : "hover:bg-[#dbcdb4]"
+                            }`
                       }`}
                     >
                       {currentText.type}
                     </p>
 
-                    {/* DESCRIPTION */}
-                    {/* <div
-                      style={{
-                      height: "170px",
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      background: isAIGenerated ? "#fdfdf4" : "#f4f0e4",
-                      borderRadius: "8px",
-                      padding: "2px",
-                      margin: "2px",
-                      }}
-                    > */}
-                      <p
-                      draggable
-                      onDragStart={(event) =>
-                        onDragStart(
-                        event,
-                        "text",
-                        currentText.description,
-                        "human"
-                        )
-                      }
-                      className={`text-xs/4 mt-2 p-0.5 rounded-sm ${
-                        isAIGenerated
-                        ? "hover:bg-blue-200"
-                        : "hover:bg-[#dbcdb4]"
-                      }`}
-                      >
-                      {currentText.description}
-                      </p>
-                    {/* </div> */}
+                    {/* IMAGES */}
+                    {currentText.images && currentText.images.length > 0 && (
+                      <LiveImageDisplay
+                        imageIds={currentText.images}
+                        parentNodeId={parentNodeId}
+                      />
+                    )}
 
-                    {/* RELATED KEYWORDS */}
+                    {/* FOLDER PANEL DESCRIPTION */}
+                    <div
+                      className={`mt-2 p-0.5 rounded-sm ${
+                        isExpanded ? "text-base" : "text-xs/4"
+                      }`}
+                    >
+                      {currentText.descriptions && (
+                        <DynamicDescription
+                          descriptions={currentText.descriptions}
+                          isAIGenerated={isAIGenerated}
+                        />
+                      )}
+                    </div>
+
+                    {/* RELATED KEYWORDS FOR FOLDER PANEL*/}
                     {currentText.relatedKeywordStrings &&
                       currentText.relatedKeywordStrings.length > 0 && (
                         <RelatedKeywords
@@ -430,8 +455,12 @@ const FolderPanel: React.FC<{
               </div>
             </>
           ) : (
-            <div className="p-3 ml-0 h-full overflow-y-auto flex flex-col items-center justify-center">
-              <h2 className="text-xs font-medium text-gray-900 italic font-bold text-center mb-5">
+            <div className={`p-3 ml-0 h-full overflow-y-auto flex flex-col items-center justify-center ${
+              isExpanded ? "text-black" : ""
+            }`}>
+              <h2 className={`font-medium italic font-bold text-center mb-5 ${
+                isExpanded ? "text-base" : "text-xs text-gray-900"
+              }`}>
                 ...We haven't found anything relevant to this in our
                 database yet...
               </h2>
@@ -440,6 +469,8 @@ const FolderPanel: React.FC<{
           )}
         </div>
       </motion.div>
+
+      
     </>
   );
 };
@@ -496,21 +527,19 @@ export function TextWithKeywordsNode({
       }
 
       const data = await response.json();
+
       if (data.length === 0) {
         return [];
       } else {
-        const keywords = data.map((item: any) => ({
-          id: item.id,
-          value: item.database_value,
-          description: extractValueFromJsonString(item.description || item.full_description),
-          relatedKeywordStrings: item.relatedKeywordStrings,
-          type: item.type,
-        }));
-        return keywords;
+          //turn each item in the json response into a Keyword object
+          const keywords = data.map((item: any) => keywordJSONtoKeyword(item)); 
+          console.log("similar texts found:", keywords);
+          return keywords;
       }
     } catch (error) {
       console.error("Error fetching similar texts:", error);
       return {
+
         id: "0",
         value: "none",
         description:
@@ -520,17 +549,17 @@ export function TextWithKeywordsNode({
     }
   };
 
-  const extractValueFromJsonString = (input: string): string => {
-    try {
-      const parsed = JSON.parse(input);
-      if (typeof parsed === "object" && parsed !== null) {
-        return parsed.short_description || parsed.value || input;
-      }
-    } catch {
+  // const extractValueFromJsonString = (input: string): string => {
+  //   try {
+  //     const parsed = JSON.parse(input);
+  //     if (typeof parsed === "object" && parsed !== null) {
+  //       return parsed.short_description || parsed.value || input;
+  //     }
+  //   } catch {
 
-    }
-    return input;
-  };
+  //   }
+  //   return input;
+  // };
 
   const checkForKeywords = async (
     queryWords: Word[]
@@ -558,16 +587,8 @@ export function TextWithKeywordsNode({
 
       const data = await response.json();
       const result = data.words.map((item: any) => {
-        if (item.id) {
-          return {
-            id: item.id,
-            value: item.value,
-            databaseValue: item.database_value,
-            description: item.description,
-            relatedKeywordIds: item.relatedKeywordIds,
-            relatedKeywordStrings: item.relatedKeywordStrings,
-            type: item.type,
-          } as Keyword;
+        if (item.details) {
+          return keywordJSONtoKeyword(item) as Keyword;
         } else {
           return { value: item.value } as Word;
         }
@@ -752,6 +773,7 @@ export function TextWithKeywordsNode({
       setSelectedKeyword(null);
       setIsEditing(false);
       setShowControls(false);
+      setIsExpanded(false);
     } else {
       setShowControls(true);
     }
@@ -795,8 +817,8 @@ export function TextWithKeywordsNode({
       className={``}
     >
 
-
-        <Handle
+      {/**react flow node handles */}
+      <Handle
         type="source"
         position={Position.Bottom}
         id="a"
@@ -810,6 +832,8 @@ export function TextWithKeywordsNode({
         isConnectable={false}
         onConnect={(params) => console.log("handle onConnect", params)}
       />
+
+
       {/* edit area! */}
       <div className="relative" style={{ width: `${width}px` }}>
         {isEditing ? (
@@ -859,8 +883,8 @@ export function TextWithKeywordsNode({
           </>
         ) : (
           <>
-                                  {/* EDIT BUTTON */}
-                                  <button
+                {/* EDIT BUTTON */}
+                <button
                   onClick={handleEditClick}
                   style={{
                     display: showControls ? "block" : "none",
@@ -876,26 +900,27 @@ export function TextWithKeywordsNode({
 
             {/* --- FOLDER PANEL --- */}
             {condition === "experimental" && (
-              <motion.div
+                <motion.div
                 initial={{ left: "-6px", transform: `scaleY(0.5)` }}
                 animate={{
-                  left: showFolder ? `-${width+15}px` : "-6px",
+                  left: showFolder ? `-${width+50}px` : "-6px",
                   transform: `scaleY(1)`,
                   opacity: showControls ? 1 : 0,
                 }}
                 transition={{ duration: 0.2 }}
                 className="absolute"
-              >
+                >
                 <FolderPanel
                   parentNodeId={id}
-                  width={showFolder? width+15 : width}
+                  width={showFolder ? width + 50: width}
                   height={height}
                   showFolder={showFolder}
                   toggleFolder={toggleFolder}
                   similarTexts={similarTexts}
                   isAIGenerated={isAIGenerated}
+                  selected={selected && showFolder}
                 />
-              </motion.div>
+                </motion.div>
             )}
 
             {/* ---- NODE TOOLBAR ---- */}
@@ -1012,7 +1037,7 @@ export function TextWithKeywordsNode({
                   <div className="nowheel p-0 overflow-y-auto overflow-x-visible h-full text-xs/4 text-gray-800 relative inline-block">
                     {words.map((word, index) => (
                       <React.Fragment key={index}>
-                        {"id" in word && condition === "experimental" ? ( // if its a keyword, AND we're in the experimental condition, render the keyword component
+                        {"entryId" in word && condition === "experimental" ? ( // if its a keyword, AND we're in the experimental condition, render the keyword component
                           <KeywordComponent
                             keyword={word}
                             handleKeywordClick={() => handleKeywordClick(word)}

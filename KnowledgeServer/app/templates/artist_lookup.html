@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Artist Database Lookup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Artist Database Lookup</h1>
+        
+        <div class="section">
+            <h2>Step 1: Enter Artist Name</h2>
+            <div class="input-group">
+                <input type="text" id="first_name" placeholder="First Name">
+                <input type="text" id="last_name" placeholder="Last Name">
+                <button onclick="lookupArtist()">Lookup Artist</button>
+            </div>
+            <div id="status"></div>
+        </div>
+        
+        <div class="section" id="wikiart_info_section" style="display: none;">
+            <h2>Step 2: WikiArt Information</h2>
+            <div class="field-label">Slug: <span id="slug_display"></span></div>
+            <div id="parsed_info"></div>
+            <details>
+                <summary>Raw HTML Preview (click to expand)</summary>
+                <div class="html-preview" id="html_preview"></div>
+            </details>
+        </div>
+        
+        <div class="section form-section" id="artist_form_section">
+            <h2>Step 3: Artist Database Entry</h2>
+            <div id="database_status"></div>
+            <form id="artistForm">
+                <input type="hidden" name="entry_id" id="entry_id">
+                
+                <div class="field-label">Artist Name</div>
+                <input type="text" name="value" id="artist_value" required>
+                
+                <div class="field-label">Type</div>
+                <input type="text" name="type" value="artist" readonly>
+                
+                <input type="hidden" name="isArtist" value="1">
+                
+                <div class="field-label">Artist Aliases</div>
+                <div class="field-hint">JSON array of alternative names</div>
+                <textarea name="artist_aliases" rows="2">[]</textarea>
+                
+                <div class="field-label">Images</div>
+                <div class="field-hint">JSON array of image IDs</div>
+                <textarea name="images" rows="2">[]</textarea>
+                
+                <div class="field-label">Descriptions</div>
+                <div class="field-hint">JSON object with source descriptions</div>
+                <textarea name="descriptions" rows="4">{}</textarea>
+
+                <div class="field-label">Auto-Generate Keywords</div>
+                <button type="button" onclick="generateKeywords()" id="generate_keywords_btn">🔍 Find Related Keywords</button>
+                <div id="keyword_status"></div>
+
+                <div id="keyword_checklist" style="display: none;">
+                    <div class="field-label">Select Related Keywords:</div>
+                    <div id="keyword_checkboxes" class="keyword-checkbox-container"></div>
+                </div>
+
+                <div class="field-label">Related Keyword IDs</div>
+                <textarea name="relatedKeywordIds" rows="2">[]</textarea>
+                
+                <div class="field-label">Related Keyword Strings</div>
+                <textarea name="relatedKeywordStrings" rows="2">[]</textarea>
+
+                <button type="button" onclick="getArtworks()" id="get_artworks_btn">🎨 Get Artist's Artworks</button>
+                <div id="artwork_status"></div>
+
+                <div id="artwork_list" style="display: none;">
+                    <div class="field-label">Artist's Artworks (click to select):</div>
+                    <div id="artwork_container" class="artwork-list-container"></div>
+                    <button type="button" onclick="checkDataBeforeSubmission()" class="check-data-btn">
+                        🔍 Check Data Before Submission
+                    </button>
+                    <div id="data_validation_results" style="display: none;"></div>
+                </div>
+                
+                <button type="submit" id="submit_button">Add to Database</button>
+            </form>
+            <div id="form_result"></div>
+        </div>
+    </div>
+    
+    <script>
+        let isUpdating = false;
+        let artworkList = []; // Store fetched artworks
+        let selectedArtworkIndices = new Set(); // Track selected artworks
+        let availableKeywords = []; // Store all retrieved keywords
+        
+        // JavaScript version of the slugify function
+        function slugify(name) {
+            // Convert to lowercase
+            name = name.toLowerCase().trim();
+            
+            // Replace accented characters
+            const accents = {
+                'à': 'a', 'á': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a', 'ā': 'a',
+                'è': 'e', 'é': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e',
+                'ì': 'i', 'í': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i',
+                'ò': 'o', 'ó': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o', 'ō': 'o',
+                'ù': 'u', 'ú': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u',
+                'ñ': 'n', 'ç': 'c', 'ś': 's', 'ź': 'z', 'ż': 'z',
+                'ą': 'a', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'š': 's', 'č': 'c', 'ř': 'r',
+                'ð': 'd', 'þ': 'th', 'ß': 'ss'
+            };
+            
+            for (const [accent, replacement] of Object.entries(accents)) {
+                name = name.replace(new RegExp(accent, 'g'), replacement);
+            }
+            
+            // Replace spaces with hyphens
+            name = name.replace(/\s+/g, '-');
+            
+            // Remove any remaining non-alphanumeric characters except hyphens
+            name = name.replace(/[^a-z0-9-]/g, '');
+            
+            // Remove multiple consecutive hyphens
+            name = name.replace(/-+/g, '-');
+            
+            // Remove leading/trailing hyphens
+            name = name.replace(/^-+|-+$/g, '');
+            
+            return name;
+        }
+        
+        async function lookupArtist() {
+            const firstName = document.getElementById('first_name').value.trim();
+            const lastName = document.getElementById('last_name').value.trim();
+            
+            if (!firstName || !lastName) {
+                showStatus('Please enter both first and last name', 'error');
+                return;
+            }
+            
+            showStatus('Processing...', 'info');
+            
+            try {
+                const response = await fetch('/artist_lookup/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ first_name: firstName, last_name: lastName })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show the slug and parsed info
+                    document.getElementById('slug_display').textContent = result.slug;
+                    
+                    // Display parsed WikiArt information
+                    const parsedInfoDiv = document.getElementById('parsed_info');
+                    if (result.artist_info && Object.keys(result.artist_info).length > 0) {
+                        let infoHtml = '<div class="parsed-artist-info"><h3>Extracted Information:</h3>';
+                        
+                        // Handle Wikipedia section
+                        if (result.artist_info.wikipedia) {
+                            infoHtml += '<h4>Wikipedia Information:</h4>';
+                            for (const [key, value] of Object.entries(result.artist_info.wikipedia)) {
+                                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                if (key === 'link') {
+                                    infoHtml += `<div><strong>${label}:</strong> <a href="${value}" target="_blank">${value}</a></div>`;
+                                } else {
+                                    // Truncate long text like article excerpt
+                                    const displayValue = value.length > 200 ? value.substring(0, 200) + '...' : value;
+                                    infoHtml += `<div><strong>${label}:</strong> ${displayValue}</div>`;
+                                }
+                            }
+                        }
+                        
+                        // Handle structured data section
+                        if (result.artist_info.structured_data) {
+                            infoHtml += '<h4>Artist Details:</h4>';
+                            for (const [key, value] of Object.entries(result.artist_info.structured_data)) {
+                                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                if (key === 'image_url') {
+                                    infoHtml += `<div><strong>${label}:</strong> <img src="${value}" alt="Artist" style="max-width: 100px; max-height: 100px;"></div>`;
+                                } else {
+                                    infoHtml += `<div><strong>${label}:</strong> ${value}</div>`;
+                                }
+                            }
+                        }
+                        
+                        infoHtml += '</div>';
+                        parsedInfoDiv.innerHTML = infoHtml;
+                    } else {
+                        parsedInfoDiv.innerHTML = '<div class="status warning">No structured information could be extracted from WikiArt page</div>';
+                    }
+                    
+                    // Show raw HTML in collapsible section
+                    document.getElementById('html_preview').textContent = result.html_content;
+                    document.getElementById('wikiart_info_section').style.display = 'block';
+                    
+                    // Setup the form
+                    if (result.existing_artist) {
+                        showDatabaseStatus('Artist already exists in database. Form will update existing entry.', 'info');
+                        document.getElementById('submit_button').textContent = 'Update Artist';
+                        isUpdating = true;
+                        
+                        // Pre-fill form with existing data
+                        document.getElementById('entry_id').value = result.existing_artist.entry_id;
+                        document.getElementById('artist_value').value = result.existing_artist.value;
+                        document.querySelector('[name="artist_aliases"]').value = 
+                            JSON.stringify(result.existing_artist.artist_aliases || [], null, 2);
+                        document.querySelector('[name="images"]').value = 
+                            JSON.stringify(result.existing_artist.images || [], null, 2);
+                        
+                        // Merge WikiArt data with existing descriptions
+                        let existingDescriptions = {};
+                        try {
+                            existingDescriptions = JSON.parse(result.existing_artist.descriptions || '{}');
+                        } catch (e) {
+                            existingDescriptions = {};
+                        }
+                        
+                        // Add/update WikiArt data
+                        if (result.artist_info) {
+                            existingDescriptions.wikiart = {};
+                            
+                            // Add Wikipedia data
+                            if (result.artist_info.wikipedia) {
+                                if (result.artist_info.wikipedia.article_excerpt) {
+                                    existingDescriptions.wikiart.description = result.artist_info.wikipedia.article_excerpt;
+                                }
+                                if (result.artist_info.wikipedia.link) {
+                                    existingDescriptions.wikiart.link = result.artist_info.wikipedia.link;
+                                }
+                                if (result.artist_info.wikipedia.license) {
+                                    existingDescriptions.wikiart.license = result.artist_info.wikipedia.license;
+                                }
+                            }
+                            
+                            // Add all structured data
+                            if (result.artist_info.structured_data) {
+                                for (const [key, value] of Object.entries(result.artist_info.structured_data)) {
+                                    if (key !== 'name' && key !== 'image_url') {
+                                        existingDescriptions.wikiart[key] = value;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        document.querySelector('[name="descriptions"]').value = JSON.stringify(existingDescriptions, null, 2);
+                        document.querySelector('[name="relatedKeywordIds"]').value = 
+                            JSON.stringify(result.existing_artist.relatedKeywordIds || [], null, 2);
+                        document.querySelector('[name="relatedKeywordStrings"]').value = 
+                            JSON.stringify(result.existing_artist.relatedKeywordStrings || [], null, 2);
+                    } else {
+                        showDatabaseStatus('Artist not in database. Form will create new entry.', 'success');
+                        document.getElementById('submit_button').textContent = 'Add to Database';
+                        isUpdating = false;
+                        
+                        // Generate new ID
+                        document.getElementById('entry_id').value = 'm_' + Math.random().toString(36).substr(2, 23);
+                        
+                        // Set artist name from meta tag or fallback to input names
+                        let artistName = firstName + ' ' + lastName;
+                        if (result.artist_info && result.artist_info.structured_data && result.artist_info.structured_data.name) {
+                            artistName = result.artist_info.structured_data.name;
+                        }
+                        document.getElementById('artist_value').value = artistName;
+                        
+                        // Create artist aliases from the name
+                        const aliases = [];
+                        if (artistName.includes(' ')) {
+                            const nameParts = artistName.split(' ');
+                            const firstName = nameParts[0];
+                            const lastName = nameParts.slice(1).join(' ');
+                            
+                            // Create alias object with preserved fancy characters
+                            const alias = {
+                                name: artistName,
+                                sortable_name: `${lastName} ${firstName}`,
+                                last: lastName,
+                                first: firstName,
+                                slug: slugify(artistName) // Use the existing slugify function
+                            };
+                            aliases.push(alias);
+                        }
+                        document.querySelector('[name="artist_aliases"]').value = JSON.stringify(aliases, null, 2);
+                        
+                        // Auto-populate descriptions with ALL WikiArt data
+                        const descriptions = {};
+                        if (result.artist_info) {
+                            descriptions.wikiart = {};
+                            
+                            // Add Wikipedia data
+                            if (result.artist_info.wikipedia) {
+                                if (result.artist_info.wikipedia.article_excerpt) {
+                                    descriptions.wikiart.description = result.artist_info.wikipedia.article_excerpt;
+                                }
+                                if (result.artist_info.wikipedia.link) {
+                                    descriptions.wikiart.link = result.artist_info.wikipedia.link;
+                                }
+                                if (result.artist_info.wikipedia.license) {
+                                    descriptions.wikiart.license = result.artist_info.wikipedia.license;
+                                }
+                            }
+                            
+                            // Add all structured data
+                            if (result.artist_info.structured_data) {
+                                for (const [key, value] of Object.entries(result.artist_info.structured_data)) {
+                                    if (key !== 'name' && key !== 'image_url') { // Skip name (already used) and image_url (handled separately)
+                                        descriptions.wikiart[key] = value;
+                                    }
+                                }
+                            }
+                        }
+                        document.querySelector('[name="descriptions"]').value = JSON.stringify(descriptions, null, 2);
+                    }
+                    
+                    document.getElementById('artist_form_section').style.display = 'block';
+                    showStatus('WikiArt page loaded and parsed successfully!', 'success');
+                    
+                } else {
+                    showStatus('Error: ' + result.error, 'error');
+                    document.getElementById('wikiart_info_section').style.display = 'none';
+                    document.getElementById('artist_form_section').style.display = 'none';
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+        }
+        
+        function showDatabaseStatus(message, type) {
+            const statusDiv = document.getElementById('database_status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+        }
+
+        async function generateKeywords() {
+            const generateBtn = document.getElementById('generate_keywords_btn');
+            const statusDiv = document.getElementById('keyword_status');
+            const checklistDiv = document.getElementById('keyword_checklist');
+            
+            // Disable button and show processing
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🔄 Generating...';
+            statusDiv.innerHTML = '<div class="status info">Searching for related keywords...</div>';
+            checklistDiv.style.display = 'none';
+            
+            try {
+                // Compile all text from the form
+                const artistName = document.getElementById('artist_value').value;
+                const descriptionsText = document.querySelector('[name="descriptions"]').value;
+                
+                let compiledText = artistName;
+                
+                // Parse descriptions and extract text content
+                try {
+                    const descriptions = JSON.parse(descriptionsText);
+                    for (const [source, data] of Object.entries(descriptions)) {
+                        if (typeof data === 'object') {
+                            // Handle nested objects like wikiart data
+                            for (const [key, value] of Object.entries(data)) {
+                                if (typeof value === 'string' && key !== 'link') {
+                                    compiledText += ' ' + value;
+                                }
+                            }
+                        } else if (typeof data === 'string') {
+                            compiledText += ' ' + data;
+                        }
+                    }
+                } catch (e) {
+                    // If JSON parsing fails, use raw text
+                    compiledText += ' ' + descriptionsText;
+                }
+                
+                // Call the lookup API
+                const response = await fetch('/lookup_text', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: compiledText,
+                        top_k: 15  // Get more results to filter
+                    })
+                });
+                
+                const results = await response.json();
+                
+                if (results && results.length > 0) {
+                    // Filter out artists and get only keywords/subjects
+                    availableKeywords = results.filter(item => !item.isArtist);
+                    
+                    if (availableKeywords.length > 0) {
+                        displayKeywordCheckboxes();
+                        statusDiv.innerHTML = `<div class="status success">✅ Found ${availableKeywords.length} potential keywords</div>`;
+                        checklistDiv.style.display = 'block';
+                    } else {
+                        statusDiv.innerHTML = '<div class="status warning">No related keywords found</div>';
+                    }
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">No related keywords found</div>';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🔍 Find Related Keywords';
+            }
+        }
+
+        function displayKeywordCheckboxes() {
+            const checkboxContainer = document.getElementById('keyword_checkboxes');
+            checkboxContainer.innerHTML = '';
+            
+            availableKeywords.forEach((keyword, index) => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'keyword-checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `keyword_${index}`;
+                checkbox.checked = false; // Default to unchecked
+                checkbox.addEventListener('change', updateKeywordLists);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `keyword_${index}`;
+                label.textContent = `${keyword.value} (${keyword.type})`;
+                
+                checkboxItem.appendChild(checkbox);
+                checkboxItem.appendChild(label);
+                checkboxContainer.appendChild(checkboxItem);
+            });
+            
+            // Initial update with none selected
+            updateKeywordLists();
+        }
+
+        function updateKeywordLists() {
+            const selectedIds = [];
+            const selectedStrings = [];
+            
+            availableKeywords.forEach((keyword, index) => {
+                const checkbox = document.getElementById(`keyword_${index}`);
+                if (checkbox && checkbox.checked) {
+                    selectedIds.push(keyword.entry_id);
+                    selectedStrings.push(keyword.value);
+                }
+            });
+            
+            // Update form fields
+            document.querySelector('[name="relatedKeywordIds"]').value = 
+                JSON.stringify(selectedIds, null, 2);
+            document.querySelector('[name="relatedKeywordStrings"]').value = 
+                JSON.stringify(selectedStrings, null, 2);
+        }
+
+        async function getArtworks() {
+            const getArtworksBtn = document.getElementById('get_artworks_btn');
+            const statusDiv = document.getElementById('artwork_status');
+            const artworkListDiv = document.getElementById('artwork_list');
+            
+            // Disable button and show processing
+            getArtworksBtn.disabled = true;
+            getArtworksBtn.textContent = '🔄 Fetching Artworks...';
+            statusDiv.innerHTML = '<div class="status info">Loading artist\'s artworks from WikiArt...</div>';
+            artworkListDiv.style.display = 'none';
+            
+            try {
+                // Get the current slug from the displayed slug
+                const slug = document.getElementById('slug_display').textContent;
+                
+                if (!slug) {
+                    throw new Error('No artist slug available. Please lookup an artist first.');
+                }
+                
+                // Call the backend to fetch artworks
+                const response = await fetch('/artist_lookup/get_artworks', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ slug: slug })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.artworks.length > 0) {
+                    artworkList = result.artworks;
+                    selectedArtworkIndices.clear(); // Reset selections
+                    displayArtworkList();
+                    statusDiv.innerHTML = `<div class="status success">✅ Found ${artworkList.length} artworks</div>`;
+                    artworkListDiv.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">No artworks found for this artist</div>';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            } finally {
+                // Re-enable button
+                getArtworksBtn.disabled = false;
+                getArtworksBtn.textContent = '🎨 Get Artist\'s Artworks';
+            }
+        }
+
+        function displayArtworkList() {
+            const container = document.getElementById('artwork_container');
+            container.innerHTML = '';
+            
+            artworkList.forEach((artwork, index) => {
+                const artworkItem = document.createElement('div');
+                artworkItem.className = 'artwork-item';
+                artworkItem.dataset.index = index;
+                
+                // Add click handler for selection
+                artworkItem.addEventListener('click', () => {
+                    toggleArtworkSelection(index, artworkItem);
+                });
+                
+                artworkItem.innerHTML = `
+                    <div class="artwork-selection-indicator" id="selection-indicator-${index}">☐</div>
+                    <img src="${artwork.thumbnail_url}" alt="${artwork.title}" class="artwork-thumbnail" 
+                         onerror="this.src='https://via.placeholder.com/60x60?text=No+Image'">
+                    <div class="artwork-details">
+                        <div class="artwork-title">${artwork.title}</div>
+                        <div class="artwork-year">${artwork.year || 'Unknown year'}</div>
+                        <div class="artwork-url">${artwork.wikiart_url}</div>
+                    </div>
+                `;
+                
+                container.appendChild(artworkItem);
+            });
+        }
+
+        function toggleArtworkSelection(index, artworkElement) {
+            const indicator = document.getElementById(`selection-indicator-${index}`);
+            
+            if (selectedArtworkIndices.has(index)) {
+                // Deselect
+                selectedArtworkIndices.delete(index);
+                artworkElement.classList.remove('selected');
+                indicator.textContent = '☐';
+            } else {
+                // Select
+                selectedArtworkIndices.add(index);
+                artworkElement.classList.add('selected');
+                indicator.textContent = '☑';
+            }
+            
+            console.log('Selected artworks:', Array.from(selectedArtworkIndices));
+        }
+
+
+
+
+        async function fetchArtworkDetailsForValidation(artwork, index) {
+            console.log(`Fetching details for artwork ${index}: ${artwork.title}`);
+            
+            try {
+                const response = await fetch('/artist_lookup/get_artwork_details', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        artwork_url: artwork.wikiart_url,
+                        artwork_title: artwork.title
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Automatically copy artist keywords
+                    const currentKeywordIds = JSON.parse(document.querySelector('[name="relatedKeywordIds"]').value || '[]');
+                    const currentKeywordStrings = JSON.parse(document.querySelector('[name="relatedKeywordStrings"]').value || '[]');
+                    const artistEntryId = document.getElementById('entry_id').value;
+                    const artistName = document.getElementById('artist_value').value;
+                    
+                    // Add artist keywords to artwork data
+                    result.artwork_data.relatedKeywordIds = [...currentKeywordIds, artistEntryId];
+                    result.artwork_data.relatedKeywordStrings = [...currentKeywordStrings, artistName];
+                    
+                    // Handle missing artwork date using artist's birth-death years
+                    if (!result.artwork_data.descriptions?.wikiart?.date) {
+                        console.log(`Artwork ${index} has no date, checking for artist birth-death years`);
+                        
+                        try {
+                            // Get artist's descriptions from the form
+                            const artistDescriptions = JSON.parse(document.querySelector('[name="descriptions"]').value || '{}');
+                            
+                            if (artistDescriptions.wikiart) {
+                                const artistBirth = artistDescriptions.wikiart.birth;
+                                const artistDeath = artistDescriptions.wikiart.death;
+                                
+                                console.log(`Artist birth: ${artistBirth}, death: ${artistDeath}`);
+                                
+                                if (artistBirth || artistDeath) {
+                                    let estimatedDate = '';
+                                    
+                                    // Extract years from birth and death strings
+                                    const birthYear = artistBirth ? extractYear(artistBirth) : null;
+                                    const deathYear = artistDeath ? extractYear(artistDeath) : null;
+                                    
+                                    if (birthYear && deathYear) {
+                                        estimatedDate = `c. ${birthYear}-${deathYear}`;
+                                    } else if (birthYear) {
+                                        estimatedDate = `c. ${birthYear}+`;
+                                    } else if (deathYear) {
+                                        estimatedDate = `c. -${deathYear}`;
+                                    }
+                                    
+                                    if (estimatedDate) {
+                                        console.log(`Estimated date for artwork ${index}: ${estimatedDate}`);
+                                        
+                                        // Initialize descriptions if they don't exist
+                                        if (!result.artwork_data.descriptions) {
+                                            result.artwork_data.descriptions = {};
+                                        }
+                                        if (!result.artwork_data.descriptions.wikiart) {
+                                            result.artwork_data.descriptions.wikiart = {};
+                                        }
+                                        
+                                        // Add the estimated date
+                                        result.artwork_data.descriptions.wikiart.date = estimatedDate;
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`Error estimating date for artwork ${index}:`, error);
+                        }
+                    } else {
+                        console.log(`Artwork ${index} already has date: ${result.artwork_data.descriptions.wikiart.date}`);
+                    }
+                    
+                    // AUTOMATICALLY DOWNLOAD THE IMAGE HERE
+                    console.log(`Auto-downloading image for artwork ${index}: ${result.artwork_data.filename}`);
+                    try {
+                        const downloadResponse = await fetch('/artist_lookup/download_image', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                image_url: result.artwork_data.image_urls.small,
+                                image_id: result.artwork_data.image_id,
+                                filename: result.artwork_data.filename
+                            })
+                        });
+                        
+                        const downloadResult = await downloadResponse.json();
+                        
+                        if (downloadResult.success) {
+                            console.log(`✅ Successfully downloaded image for artwork ${index}: ${downloadResult.filename}`);
+                            result.artwork_data.downloaded = true;
+                        } else {
+                            console.error(`❌ Failed to download image for artwork ${index}:`, downloadResult.error);
+                            result.artwork_data.downloaded = false;
+                        }
+                    } catch (downloadError) {
+                        console.error(`❌ Error downloading image for artwork ${index}:`, downloadError);
+                        result.artwork_data.downloaded = false;
+                    }
+                    
+                    // Store the parsed data on the artwork
+                    artworkList[index].parsed_data = result.artwork_data;
+                    
+                    console.log(`Successfully fetched details for artwork ${index}`);
+                    return result.artwork_data;
+                } else {
+                    console.error(`Failed to fetch details for artwork ${index}:`, result.error);
+                    return null;
+                }
+                
+            } catch (error) {
+                console.error(`Error fetching details for artwork ${index}:`, error);
+                return null;
+            }
+        }
+
+        // Helper function to extract year from date strings
+        function extractYear(dateString) {
+            if (!dateString) return null;
+            
+            // Look for 4-digit year patterns
+            const yearMatch = dateString.match(/\b(\d{4})\b/);
+            return yearMatch ? yearMatch[1] : null;
+        }
+
+        async function checkDataBeforeSubmission() {
+            const checkBtn = document.querySelector('.check-data-btn');
+            const resultsDiv = document.getElementById('data_validation_results');
+            
+            console.log("=== STARTING DATA VALIDATION ===");
+            
+            checkBtn.disabled = true;
+            checkBtn.textContent = '🔄 Processing Selected Artworks...';
+            
+            try {
+                // First, fetch details for all selected artworks
+                const selectedArtworks = [];
+                const selectedImageIds = [];
+                const processPromises = [];
+                
+                console.log("Selected artwork indices:", Array.from(selectedArtworkIndices));
+                
+                if (selectedArtworkIndices.size === 0) {
+                    throw new Error('Please select at least one artwork');
+                }
+                
+                // Process each selected artwork
+                for (const index of selectedArtworkIndices) {
+                    const artwork = artworkList[index];
+                    console.log(`Processing artwork ${index}:`, artwork.title);
+                    
+                    // Fetch artwork details if not already loaded
+                    if (!artwork.parsed_data) {
+                        const promise = fetchArtworkDetailsForValidation(artwork, index);
+                        processPromises.push(promise);
+                    } else {
+                        console.log(`Artwork ${index} already has parsed data`);
+                        selectedArtworks.push(artwork.parsed_data);
+                        selectedImageIds.push(artwork.parsed_data.image_id);
+                    }
+                }
+                
+                // Wait for all artwork details to be fetched AND images to be downloaded
+                if (processPromises.length > 0) {
+                    checkBtn.textContent = '🔄 Fetching Details & Downloading Images...';
+                    const results = await Promise.all(processPromises);
+                    
+                    // Add results to selectedArtworks
+                    results.forEach((artworkData, i) => {
+                        if (artworkData) {
+                            selectedArtworks.push(artworkData);
+                            selectedImageIds.push(artworkData.image_id);
+                        }
+                    });
+                }
+                
+                console.log("Final selected artworks:", selectedArtworks);
+                console.log("Selected image IDs:", selectedImageIds);
+                
+                if (selectedArtworks.length === 0) {
+                    throw new Error('No valid artworks could be processed');
+                }
+                
+                // Update the images field in the form
+                document.querySelector('[name="images"]').value = JSON.stringify(selectedImageIds, null, 2);
+                console.log("Updated images field in form");
+                
+                // Collect all form data
+                const formElement = document.getElementById('artistForm');
+                if (!formElement) {
+                    throw new Error('Artist form not found');
+                }
+                
+                const formData = new FormData(formElement);
+                const artistData = Object.fromEntries(formData);
+                console.log("Artist data:", artistData);
+                
+                // Validate we have required data
+                if (!artistData.entry_id) {
+                    throw new Error('Artist entry_id is missing');
+                }
+                if (!artistData.value) {
+                    throw new Error('Artist name is missing');
+                }
+                
+                // Display validation results
+                resultsDiv.style.display = 'block';
+                resultsDiv.innerHTML = '<div class="status info">🔄 Running validation checks...</div>';
+                checkBtn.textContent = '🔄 Validating Data...';
+                
+                console.log("Sending validation request");
+                
+                const response = await fetch('/artist_lookup/validate_data', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        artist_data: artistData,
+                        selected_artworks: selectedArtworks
+                    })
+                });
+                
+                console.log("Validation response status:", response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log("Validation result:", result);
+                
+                if (result.success) {
+                    displayValidationResults(result.validation, artistData, selectedArtworks);
+                } else {
+                    console.error("Validation failed:", result.error);
+                    resultsDiv.innerHTML = `<div class="status error">❌ Validation failed: ${result.error}</div>`;
+                }
+                
+            } catch (error) {
+                console.error("Error during validation:", error);
+                console.error("Error stack:", error.stack);
+                resultsDiv.innerHTML = `<div class="status error">❌ Error during validation: ${error.message}</div>`;
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.textContent = '🔍 Check Data Before Submission';
+                console.log("=== VALIDATION COMPLETE ===");
+            }
+        }
+
+        function displayValidationResults(validation, artistData, selectedArtworks) {
+            console.log("=== DISPLAYING VALIDATION RESULTS ===");
+            console.log("Validation object:", validation);
+            console.log("Artist data:", artistData);
+            console.log("Selected artworks:", selectedArtworks);
+            
+            const resultsDiv = document.getElementById('data_validation_results');
+            
+            try {
+                let html = '<div class="validation-container">';
+                
+                // Overall Status
+                html += '<div class="validation-section">';
+                html += '<div class="validation-header">📋 Overall Validation Status</div>';
+                if (validation.overall_valid) {
+                    html += '<div class="validation-item validation-success">✅ All checks passed! Ready for database insertion.</div>';
+                } else {
+                    html += '<div class="validation-item validation-error">❌ Some checks failed. Please review below.</div>';
+                }
+                html += '</div>';
+                
+                // Artist Data Preview
+                html += '<div class="validation-section">';
+                html += '<div class="validation-header">👤 Artist Data (text_entries)</div>';
+                
+                if (validation.artist_preview) {
+                    html += '<div class="json-preview">' + JSON.stringify(validation.artist_preview, null, 2) + '</div>';
+                } else {
+                    console.error("artist_preview is missing from validation object");
+                    html += '<div class="validation-error">❌ Artist preview data missing</div>';
+                }
+                
+                // JSON Validation for Artist
+                if (validation.artist_json_valid) {
+                    html += '<div class="validation-item validation-success">✅ All artist JSON fields are valid</div>';
+                } else {
+                    html += '<div class="validation-item validation-error">❌ Artist JSON validation errors: ' + (validation.artist_json_errors || []).join(', ') + '</div>';
+                }
+                html += '</div>';
+                
+                // Selected Artworks Preview
+                html += '<div class="validation-section">';
+                html += `<div class="validation-header">🎨 Selected Artworks (${selectedArtworks.length} items for image_entries)</div>`;
+                
+                selectedArtworks.forEach((artwork, index) => {
+                    console.log(`Processing artwork ${index} for display:`, artwork);
+                    
+                    html += `<div class="artwork-validation-item" style="border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 4px;">`;
+                    html += `<div style="font-weight: bold; margin-bottom: 10px;">${artwork.value || 'Unknown Title'}</div>`;
+                    
+                    // Clean artwork preview
+                    const cleanArtworkPreview = {
+                        image_id: artwork.image_id,
+                        title: artwork.value,
+                        artist_names: artwork.artist_names,
+                        image_urls: artwork.image_urls,
+                        filename: artwork.filename,
+                        rights: artwork.rights,
+                        descriptions: artwork.descriptions,
+                        relatedKeywordIds: artwork.relatedKeywordIds,
+                        relatedKeywordStrings: artwork.relatedKeywordStrings
+                    };
+                    
+                    html += '<div class="json-preview" style="margin-bottom: 10px;">' + JSON.stringify(cleanArtworkPreview, null, 2) + '</div>';
+                    
+                    // Validation checks
+                    html += '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">';
+                    
+                    // JSON validation for this artwork
+                    const artworkJsonValid = validation.artworks_json_valid && validation.artworks_json_valid[index];
+                    if (artworkJsonValid) {
+                        html += '<span class="validation-success">✅ JSON valid</span>';
+                    } else {
+                        html += '<span class="validation-error">❌ JSON invalid</span>';
+                        console.error(`Artwork ${index} failed JSON validation`);
+                    }
+                    
+                    // File existence check with download button if missing
+                    const fileExists = validation.files_exist && validation.files_exist[index];
+                    if (fileExists) {
+                        html += '<span class="validation-success">✅ File exists</span>';
+                        html += `<img src="/static/images/${artwork.filename}" class="tiny-image" onerror="this.style.display='none'">`;
+                    } else {
+                        html += '<span class="validation-error">❌ File missing</span>';
+                        html += `<button type="button" onclick="downloadMissingImage(${index})" class="download-missing-btn" id="download-btn-${index}">💾 Download Image</button>`;
+                    }
+                    
+                    // Image URL validation
+                    const urlsValid = validation.image_urls_valid && validation.image_urls_valid[index];
+                    if (urlsValid) {
+                        html += '<span class="validation-success">✅ URLs valid</span>';
+                        if (artwork.image_urls && artwork.image_urls.small) {
+                            html += `<img src="${artwork.image_urls.small}" class="tiny-image" onerror="this.style.display='none'">`;
+                        }
+                        if (artwork.image_urls && artwork.image_urls.medium && artwork.image_urls.medium !== artwork.image_urls.small) {
+                            html += `<img src="${artwork.image_urls.medium}" class="tiny-image" onerror="this.style.display='none'">`;
+                        }
+                        if (artwork.image_urls && artwork.image_urls.large && artwork.image_urls.large !== artwork.image_urls.medium) {
+                            html += `<img src="${artwork.image_urls.large}" class="tiny-image" onerror="this.style.display='none'">`;
+                        }
+                    } else {
+                        html += '<span class="validation-error">❌ Invalid URLs</span>';
+                        console.error(`Artwork ${index} failed URL validation`);
+                    }
+                    
+                    html += '</div>'; // Close validation checks div
+                    html += '</div>'; // Close artwork validation item
+                });
+                html += '</div>';
+                
+                // Final submission button
+                if (validation.overall_valid) {
+                    html += '<div class="validation-section">';
+                    html += '<div class="validation-header">🚀 Ready for Submission</div>';
+                    html += '<button type="button" onclick="submitValidatedData()" class="final-submit-btn">✅ Submit All Data to Database</button>';
+                    html += '<div id="final_submission_status"></div>';
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+                console.log("Validation results displayed successfully");
+                
+            } catch (error) {
+                console.error("Error displaying validation results:", error);
+                console.error("Error stack:", error.stack);
+                resultsDiv.innerHTML = `<div class="status error">❌ Error displaying results: ${error.message}</div>`;
+            }
+            
+            console.log("=== END DISPLAYING VALIDATION RESULTS ===");
+        }
+
+        async function downloadMissingImage(artworkIndex) {
+            // Find the actual artwork in the selected artworks array
+            const selectedArtworksArray = [];
+            for (const index of selectedArtworkIndices) {
+                if (artworkList[index].parsed_data) {
+                    selectedArtworksArray.push(artworkList[index].parsed_data);
+                }
+            }
+            
+            const artwork = selectedArtworksArray[artworkIndex];
+            const downloadBtn = document.getElementById(`download-btn-${artworkIndex}`);
+            
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '🔄 Downloading...';
+            
+            try {
+                const response = await fetch('/artist_lookup/download_image', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        image_url: artwork.image_urls.small,
+                        image_id: artwork.image_id,
+                        filename: artwork.filename
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    downloadBtn.textContent = '✅ Downloaded';
+                    downloadBtn.style.background = '#28a745';
+                    
+                    // Re-run validation to update the display
+                    setTimeout(() => {
+                        checkDataBeforeSubmission();
+                    }, 1000);
+                } else {
+                    downloadBtn.textContent = '❌ Failed';
+                    downloadBtn.disabled = false;
+                    alert(`Download failed: ${result.error}`);
+                }
+                
+            } catch (error) {
+                downloadBtn.textContent = '💾 Download Image';
+                downloadBtn.disabled = false;
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function submitValidatedData() {
+            const submitBtn = document.querySelector('.final-submit-btn');
+            const statusDiv = document.getElementById('final_submission_status');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = '🔄 Submitting to Database...';
+            statusDiv.innerHTML = '<div class="status info">🔄 Inserting data into database...</div>';
+            
+            try {
+                // Get all the selected artwork data
+                const selectedArtworks = [];
+                for (const index of selectedArtworkIndices) {
+                    if (artworkList[index].parsed_data) {
+                        selectedArtworks.push(artworkList[index].parsed_data);
+                    }
+                }
+                
+                const formData = new FormData(document.getElementById('artistForm'));
+                const artistData = Object.fromEntries(formData);
+                
+                const response = await fetch('/artist_lookup/submit_all_data', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        artist_data: artistData,
+                        selected_artworks: selectedArtworks
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `<div class="status success">✅ Success! Added artist and ${result.artworks_added} artworks to database.</div>`;
+                    submitBtn.textContent = '✅ Submitted Successfully';
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Submission failed: ${result.error}</div>`;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '✅ Submit All Data to Database';
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ Submit All Data to Database';
+            }
+        }
+
+        document.getElementById('artistForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            const endpoint = isUpdating ? '/artist_lookup/update' : '/artist_lookup/add';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                const resultDiv = document.getElementById('form_result');
+                
+                if (result.success) {
+                    resultDiv.innerHTML = '<div class="status success">✅ ' + result.message + '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="status error">❌ ' + result.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('form_result').innerHTML = 
+                    '<div class="status error">❌ Error: ' + error.message + '</div>';
+            }
+        };
+
+    </script>
+</body>
+</html>

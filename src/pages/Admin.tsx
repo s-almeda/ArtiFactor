@@ -246,6 +246,18 @@ const Admin: React.FC = () => {
                         >
                             Print Local Storage to console
                         </button>
+
+                        <button 
+                            onClick={() => {
+                                const keysToDelete = Object.keys(localStorage).filter(key => localStorage.getItem(key)?.includes('"nodes":'));
+                                keysToDelete.forEach(key => localStorage.removeItem(key));
+                                alert('All canvases in LocalStorage have been deleted.');
+                            }} 
+                            className="w-50% bg-red-500 text-white p-2 rounded mt-2"
+                        >
+                            Delete All LocalStorage Canvases
+                        </button>
+
                         <br></br>
                         <label htmlFor='user-select'>Select User: </label>
                         <select id='user-select' value={selectedUser} onChange={handleUserChange} className="w-full p-2 border rounded text-black mb-2">
