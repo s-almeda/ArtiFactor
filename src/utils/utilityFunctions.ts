@@ -33,7 +33,7 @@ export const keywordJSONtoKeyword = (json: any): Keyword => {
 export const calcNearbyPosition = (
     inputBounds: { x: number; y: number; width: number; height: number }
 ) => {
-    console.log("getting nearby position for... inputBounds", inputBounds);
+    //console.log("getting nearby position for... inputBounds", inputBounds);
     const padding = 10;
     const randomness = () => Math.random() * 40 - 10; // Random value between -10 and 10
 

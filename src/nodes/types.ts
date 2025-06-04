@@ -70,12 +70,26 @@ export type Entry = {
 
 
 
-
 export interface Artwork {
-  title: string;
-  date: number;
-  artist: string;
-  keywords: Keyword[];
-  description: string;
-  image: string;
+  image_id: string;
+  image_url: string;
+  image_urls: Record<string, string>;
+  filename: string;
+  value: string; // artwork title or label
+  artist_names: string[]; // array of artist names (as strings)
+  
+  descriptions: Record<
+    string,
+    {
+      date?: string;
+      description?: string;
+      [key: string]: any;
+    }
+  >;
+
+  relatedKeywordIds: string[];
+  relatedKeywordStrings: string[];
+
+  rights?: string;
+  distance?: number;
 }

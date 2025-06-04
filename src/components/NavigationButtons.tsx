@@ -24,7 +24,8 @@ export const DynamicDescription: React.FC<{
         descriptions.find((entry) => entry.source === selectedSource)?.description || "";
 
     if (!descriptions || descriptions.length === 0) {
-        return <span className="text-gray-500 italic">No descriptions available.</span>;
+        return <></>
+        // return <span className="text-gray-500 italic">No descriptions available.</span>;
     }
 
     const handleSourceClick = (source: string) => {

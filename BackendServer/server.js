@@ -16,8 +16,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-//const flask_server = "https://data.snailbunny.site";
-const flask_server = "http://localhost:8080";
+const flask_server = "https://data.snailbunny.site";
+//const flask_server = "http://localhost:8080";
 
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
@@ -165,6 +165,100 @@ app.get("/health_check", async (req, res) => {
 
 // -------- Start of flask ML/Data server API calls ---------- //
 
+
+app.post("/api/get-artworks-by-ids", async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const { entryIds } = req.body;
+
+  if (!Array.isArray(entryIds) || entryIds.length === 0) {
+    return res.status(400).json({ error: "Missing or invalid 'entryIds' array in request body" });
+  }
+
+  try {
+    const results = await Promise.all(
+      entryIds.map(async (entryId) => {
+        try {
+          const response = await axios.post(
+            `${flask_server}/lookup_entry`,
+            { entryId, type: "image" },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          const data = response.data;
+
+          // Parse fields as needed
+          return {
+            image_id: data.image_id || data.entryId || entryId,
+            image_url: (() => {
+              try {
+                const urls = typeof data.image_urls === "string" ? JSON.parse(data.image_urls) : data.image_urls;
+                return (
+                  urls?.medium ||
+                  urls?.small ||
+                  urls?.square ||
+                  urls?.medium_rectangle ||
+                  urls?.normalized ||
+                  urls?.large ||
+                  urls?.large_rectangle ||
+                  ""
+                );
+              } catch {
+                return "";
+              }
+            })(),
+            image_urls: (() => {
+              try {
+                return typeof data.image_urls === "string" ? JSON.parse(data.image_urls) : data.image_urls || {};
+              } catch {
+                return {};
+              }
+            })(),
+            filename: data.filename || "",
+            value: data.value || "",
+            artist_names: (() => {
+              try {
+                return typeof data.artist_names === "string" ? JSON.parse(data.artist_names) : data.artist_names || [];
+              } catch {
+                return [];
+              }
+            })(),
+            descriptions: (() => {
+              try {
+                return typeof data.descriptions === "string" ? JSON.parse(data.descriptions) : data.descriptions || {};
+              } catch {
+                return {};
+              }
+            })(),
+            relatedKeywordIds: (() => {
+              try {
+                return typeof data.relatedKeywordIds === "string" ? JSON.parse(data.relatedKeywordIds) : data.relatedKeywordIds || [];
+              } catch {
+                return [];
+              }
+            })(),
+            relatedKeywordStrings: (() => {
+              try {
+                return typeof data.relatedKeywordStrings === "string" ? JSON.parse(data.relatedKeywordStrings) : data.relatedKeywordStrings || [];
+              } catch {
+                return [];
+              }
+            })(),
+            rights: data.rights,
+            distance: data.distance
+          };
+        } catch (error) {
+          return { error: `Failed to fetch entryId ${entryId}: ${error.message}` };
+        }
+      })
+    );
+
+    res.json({ success: true, artworks: results });
+  } catch (error) {
+    console.error("Error fetching artworks by ids:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 app.post("/api/check-for-keywords", async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const { text, threshold = 0.3 } = req.body;
@@ -191,6 +285,8 @@ app.post("/api/check-for-keywords", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 // get similar texts
 app.post("/api/get-similar-texts", async (req, res) => {

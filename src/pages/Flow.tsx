@@ -298,7 +298,7 @@ useOnViewportChange({
     prompt = prompt ?? "default placeholder image. try creating something of your own!";
     provenance = provenance ?? "user";
     similarArtworks = similarArtworks && similarArtworks.length > 0 ? similarArtworks : undefined;  
-    console.log("addImageWithLookupNode is adding an image to the canvas: ", content, prompt, provenance, parentNodeId);
+    //console.log("addImageWithLookupNode is adding an image to the canvas: ", content, prompt, provenance, parentNodeId);
     position = position ?? { 
       x: Math.random() * 250,
       y: Math.random() * 250,
