@@ -10,7 +10,7 @@ interface TitleBarProps {
 
 const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
   const { canvasID, canvasName, setCanvasName, saveCanvas, lastSaved } = useCanvasContext();
-  const { loginStatus } = useAppContext();
+  const { loginStatus, condition } = useAppContext();
   const { canvasToObject } = useNodeContext();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -72,9 +72,11 @@ const TitleBar = ({ toggleSidebar }: TitleBarProps) => {
   return (
     <div className="w-full flex items-center justify-between bg-stone-900 text-white px-4 py-2 shadow-md">
       {/* Left: Sidebar Toggle */}
-      <button onClick={toggleSidebar} className="p-2">
-        <Menu size={16} />
-      </button>
+      {condition && loginStatus === "logged in" && (
+        <button onClick={toggleSidebar} className="p-2">
+          <Menu size={16} />
+        </button>
+      )}
 
       {/* Center: Canvas Name & Last Saved (Flex Centered) */}
       {loginStatus !== "logged in" ? (
