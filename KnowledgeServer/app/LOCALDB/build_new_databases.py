@@ -15,7 +15,6 @@ import json
 xapp_token = os.getenv("XAPP_TOKEN")
 if not xapp_token:
     print("Error: XAPP_TOKEN environment variable is not set.")
-    return
 
 
 
@@ -291,7 +290,6 @@ def put_artwork_in_images_db(artwork_data, image_db_path):
 def get_artists_for_artwork(artwork_id):
     print(f"|----- Fetching artist names for artwork_id: {artwork_id}")
     text_db_path = "LOCALDB/text.db"
-    xapp_token = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6IiIsInN1YmplY3RfYXBwbGljYXRpb24iOiI2MDNmMWE1Y2E3MWQzMDYzZmFmZjI2YjUiLCJleHAiOjE3NDM0Njc0MDksImlhdCI6MTc0Mjg2MjYwOSwiYXVkIjoiNjAzZjFhNWNhNzFkMzA2M2ZhZmYyNmI1IiwiaXNzIjoiR3Jhdml0eSIsImp0aSI6IjY3ZTFmOTExMmJmY2NkMDAwZjhhYjNmYSJ9.yT38b-BND0MXpCrszZ8OfMptzjD8UMVb-rLT0bJr918"
 
     url = f"https://api.artsy.net/api/artists?artwork_id={artwork_id}"
     headers = {"X-Xapp-Token": xapp_token}
@@ -377,7 +375,6 @@ def get_artists_for_artwork(artwork_id):
 def get_related_keywords_for_artist(artist_id, artist_name):
     print(f"Fetching related keywords for artist_id: {artist_id}, name: {artist_name}")
     text_db_path = "LOCALDB/text.db"
-    xapp_token = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6IiIsInN1YmplY3RfYXBwbGljYXRpb24iOiI2MDNmMWE1Y2E3MWQzMDYzZmFmZjI2YjUiLCJleHAiOjE3NDM0Njc0MDksImlhdCI6MTc0Mjg2MjYwOSwiYXVkIjoiNjAzZjFhNWNhNzFkMzA2M2ZhZmYyNmI1IiwiaXNzIjoiR3Jhdml0eSIsImp0aSI6IjY3ZTFmOTExMmJmY2NkMDAwZjhhYjNmYSJ9.yT38b-BND0MXpCrszZ8OfMptzjD8UMVb-rLT0bJr918"
     url = f"https://api.artsy.net/api/genes?artist_id={artist_id}"
     headers = {"X-Xapp-Token": xapp_token}
     result_list = []
@@ -436,7 +433,6 @@ def get_related_keywords_for_artist(artist_id, artist_name):
 def get_related_keywords_for_artwork(artwork_id):
     print(f"Fetching related keywords for artwork_id: {artwork_id}")
     text_db_path = "LOCALDB/text.db"
-    xapp_token = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6IiIsInN1YmplY3RfYXBwbGljYXRpb24iOiI2MDNmMWE1Y2E3MWQzMDYzZmFmZjI2YjUiLCJleHAiOjE3NDM0Njc0MDksImlhdCI6MTc0Mjg2MjYwOSwiYXVkIjoiNjAzZjFhNWNhNzFkMzA2M2ZhZmYyNmI1IiwiaXNzIjoiR3Jhdml0eSIsImp0aSI6IjY3ZTFmOTExMmJmY2NkMDAwZjhhYjNmYSJ9.yT38b-BND0MXpCrszZ8OfMptzjD8UMVb-rLT0bJr918"
 
     url = f"https://api.artsy.net/api/genes?artwork_id={artwork_id}"
     headers = {"X-Xapp-Token": xapp_token}

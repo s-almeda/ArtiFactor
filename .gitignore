@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 log*
 
-
+*/__pycache__/*
+/KnowledgeServer/app/__pycache__/*
 /KnowledgeServer/app/LOCALDB/images/*
 KnowledgeServer/app/LOCALDB/images/*
 # LOCALDB/*
