@@ -23,14 +23,16 @@ export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
 };
 export const KeywordComponent: React.FC<{
   keyword: Keyword;
-  handleKeywordClick: () => void;
-}> = ({ keyword, handleKeywordClick }) => {
-  const [isSelected, setIsSelected] = useState(false);
+  // handleKeywordClick: () => void;
+}> = ({ keyword
+  // , handleKeywordClick 
+}) => {
+  // const [isSelected, setIsSelected] = useState(false);
 
-  const handleClick = () => {
-    handleKeywordClick();
-    setIsSelected(!isSelected);
-  };
+  // const handleClick = () => {
+  //   handleKeywordClick();
+  //   setIsSelected(!isSelected);
+  // };
 
   return (
     <motion.div
@@ -39,15 +41,15 @@ export const KeywordComponent: React.FC<{
       transition={{ duration: 0.3 }}
       style={{ position: "relative", display: "inline-block" }}
     >
-      <span
+      {/* <span
         className={`cursor-pointer 
                     rounded-sm mx-0.5 p-0
                     transition-all duration-200 
                     bg-amber-100 hover:bg-amber-200`}
         onClick={handleClick}
-      >
+      > */}
         {keyword.value}
-      </span>
+      {/* </span> */}
     </motion.div>
   );
 };
@@ -581,14 +583,13 @@ export function TextWithKeywordsNode({
       setShowDescription(false);
       setShowFolder(false);
       setSelectedKeyword(null);
-      console.log("words hve changed to:", updatedWords);
+      console.log("words have changed to:", updatedWords);
       //check for keywords in the new content
-      const checkedWords = await checkForKeywords(updatedWords);
-      setWords(checkedWords);
-      data.words = checkedWords; // Update the data object with the new words
-
+      //const checkedWords = await checkForKeywords(updatedWords);
+      //setWords(checkedWords);
+      //data.words = checkedWords; // Update the data object with the new words
       //check for similar texts in the new content
-      const result = await fetchSimilarTexts(wordsToString(checkedWords));
+      const result = await fetchSimilarTexts(wordsToString(updatedWords));//(checkedWords));
       setSimilarTexts(result);
       data.similarTexts = result;
     }
@@ -1006,7 +1007,7 @@ export function TextWithKeywordsNode({
                 transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
                 className="absolute mt-0"
               >
-                <KeywordDescription
+                {/* <KeywordDescription
                   keyword={selectedKeyword}
                   containerHeight={height * 2}
                   containerWidth={width}
@@ -1014,7 +1015,7 @@ export function TextWithKeywordsNode({
                   parentNodeId={id}
                   toggleDescription={toggleDescription}
                   isAIGenerated={isAIGenerated}
-                />
+                /> */}
               </motion.div>
             )}
           </>
