@@ -851,6 +851,41 @@ def find_matching_entry(filename, conn):
         return matched_entry.iloc[0].to_dict()
     return None
 
+@app.route('/lookup_entry', methods=['POST'])
+def lookup_entry():
+    """
+    General lookup API.
+    Expects JSON:
+    {
+        "entryId": "<id>",
+        "type": "text" | "image"
+    }
+    Returns the matching row from text_entries or image_entries, or 404 if not found.
+    """
+    data = request.get_json()
+    entry_id = data.get('entryId')
+    entry_type = data.get('type')
+
+    if not entry_id or entry_type not in ('text', 'image'):
+        return jsonify({"error": "Missing or invalid entryId/type"}), 400
+
+    db = get_db()
+    if entry_type == 'text':
+        query = "SELECT * FROM text_entries WHERE entry_id = ?"
+    else:
+        query = "SELECT * FROM image_entries WHERE image_id = ?"
+
+    cursor = db.execute(query, (entry_id,))
+    row = cursor.fetchone()
+    if not row:
+        return jsonify({"error": "Entry not found"}), 404
+
+    # Convert row to dict and parse any JSON fields if needed
+    row_dict = dict(row)
+    # Optionally, parse JSON fields here if you want (like images, descriptions, etc.)
+
+    return jsonify(row_dict)
+
 
 
 @app.teardown_appcontext

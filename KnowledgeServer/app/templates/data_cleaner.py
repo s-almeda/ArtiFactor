@@ -686,3 +686,226 @@ def fix_invalid_image_urls():
             'success': False,
             'error': str(e)
         })
+
+# Add these routes to your data_cleaner.py file
+
+@data_cleaner_bp.route('/check_related_keywords', methods=['POST'])
+def check_related_keywords():
+    """Check for invalid RelatedKeywordIds and mismatched RelatedKeywordStrings"""
+    try:
+        print("=== DEBUG: Starting related keywords check ===")
+        from index import get_db
+        db = get_db()
+        
+        # Get all valid entry_ids from text_entries
+        valid_entry_ids = set()
+        entry_values = {}  # Map entry_id to value
+        cursor = db.execute("SELECT entry_id, value FROM text_entries")
+        for row in cursor.fetchall():
+            entry_id = row['entry_id']
+            valid_entry_ids.add(entry_id)
+            entry_values[entry_id] = row['value']
+        
+        print(f"DEBUG: Found {len(valid_entry_ids)} valid entry IDs")
+        
+        issues = []
+        
+        # Check text_entries
+        print("DEBUG: Checking text_entries table...")
+        text_cursor = db.execute("""
+            SELECT entry_id, value, relatedKeywordIds, relatedKeywordStrings 
+            FROM text_entries 
+            WHERE (relatedKeywordIds IS NOT NULL AND relatedKeywordIds != '' AND relatedKeywordIds != '[]')
+               OR (relatedKeywordStrings IS NOT NULL AND relatedKeywordStrings != '' AND relatedKeywordStrings != '[]')
+        """)
+        
+        for row in text_cursor.fetchall():
+            entry_id = row['entry_id']
+            value = row['value']
+            keyword_ids_text = row['relatedKeywordIds']
+            keyword_strings_text = row['relatedKeywordStrings']
+            
+            result = check_keyword_integrity(
+                entry_id, value, keyword_ids_text, keyword_strings_text, 
+                valid_entry_ids, entry_values, 'text_entries'
+            )
+            if result:
+                issues.append(result)
+        
+        # Check image_entries
+        print("DEBUG: Checking image_entries table...")
+        image_cursor = db.execute("""
+            SELECT image_id, value, relatedKeywordIds, relatedKeywordStrings 
+            FROM image_entries 
+            WHERE (relatedKeywordIds IS NOT NULL AND relatedKeywordIds != '' AND relatedKeywordIds != '[]')
+               OR (relatedKeywordStrings IS NOT NULL AND relatedKeywordStrings != '' AND relatedKeywordStrings != '[]')
+        """)
+        
+        for row in image_cursor.fetchall():
+            image_id = row['image_id']
+            value = row['value']
+            keyword_ids_text = row['relatedKeywordIds']
+            keyword_strings_text = row['relatedKeywordStrings']
+            
+            result = check_keyword_integrity(
+                image_id, value, keyword_ids_text, keyword_strings_text, 
+                valid_entry_ids, entry_values, 'image_entries'
+            )
+            if result:
+                issues.append(result)
+        
+        print(f"DEBUG: Found {len(issues)} entries with keyword issues")
+        
+        return jsonify({
+            'success': True,
+            'issues': issues,
+            'total_issues': len(issues),
+            'total_valid_entries': len(valid_entry_ids)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_related_keywords: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+def check_keyword_integrity(entry_id, value, keyword_ids_text, keyword_strings_text, 
+                           valid_entry_ids, entry_values, table_name):
+    """Helper function to check keyword integrity for a single entry"""
+    try:
+        # Parse keyword IDs
+        keyword_ids = []
+        invalid_ids = []
+        if keyword_ids_text and keyword_ids_text != '[]':
+            try:
+                keyword_ids = json.loads(keyword_ids_text)
+                if not isinstance(keyword_ids, list):
+                    keyword_ids = []
+            except json.JSONDecodeError:
+                print(f"DEBUG: JSON decode error for relatedKeywordIds in {table_name} {entry_id}")
+                keyword_ids = []
+        
+        # Check for invalid IDs
+        valid_ids = []
+        for kid in keyword_ids:
+            if kid in valid_entry_ids:
+                valid_ids.append(kid)
+            else:
+                invalid_ids.append(kid)
+        
+        # Parse keyword strings
+        keyword_strings = []
+        if keyword_strings_text and keyword_strings_text != '[]':
+            try:
+                keyword_strings = json.loads(keyword_strings_text)
+                if not isinstance(keyword_strings, list):
+                    keyword_strings = []
+            except json.JSONDecodeError:
+                print(f"DEBUG: JSON decode error for relatedKeywordStrings in {table_name} {entry_id}")
+                keyword_strings = []
+        
+        # Build correct strings list from valid IDs
+        correct_strings = []
+        for vid in valid_ids:
+            if vid in entry_values:
+                correct_strings.append(entry_values[vid])
+        
+        # Check if there are issues
+        has_invalid_ids = len(invalid_ids) > 0
+        strings_mismatch = set(keyword_strings) != set(correct_strings)
+        
+        if has_invalid_ids or strings_mismatch:
+            return {
+                'entry_id': entry_id,
+                'table': table_name,
+                'value': value,
+                'keyword_ids': keyword_ids,
+                'valid_ids': valid_ids,
+                'invalid_ids': invalid_ids,
+                'current_strings': keyword_strings,
+                'correct_strings': correct_strings,
+                'has_invalid_ids': has_invalid_ids,
+                'strings_mismatch': strings_mismatch
+            }
+        
+        return None
+        
+    except Exception as e:
+        print(f"ERROR in check_keyword_integrity for {entry_id}: {str(e)}")
+        return {
+            'entry_id': entry_id,
+            'table': table_name,
+            'value': value,
+            'error': str(e),
+            'has_invalid_ids': True,
+            'strings_mismatch': True
+        }
+
+@data_cleaner_bp.route('/fix_related_keywords', methods=['POST'])
+def fix_related_keywords():
+    """Fix RelatedKeywordIds and RelatedKeywordStrings"""
+    try:
+        print("=== DEBUG: Starting fix related keywords ===")
+        from index import get_db
+        db = get_db()
+        
+        issues = request.json.get('issues', [])
+        
+        if not issues:
+            return jsonify({
+                'success': False,
+                'error': 'No issues provided'
+            })
+        
+        fixed_count = 0
+        
+        for issue in issues:
+            entry_id = issue['entry_id']
+            table = issue['table']
+            valid_ids = issue.get('valid_ids', [])
+            correct_strings = issue.get('correct_strings', [])
+            
+            print(f"DEBUG: Fixing {table} entry {entry_id}")
+            
+            # Prepare the new JSON data
+            new_ids_json = json.dumps(valid_ids)
+            new_strings_json = json.dumps(correct_strings)
+            
+            # Determine the correct ID column name
+            id_column = 'entry_id' if table == 'text_entries' else 'image_id'
+            
+            # Update the entry
+            query = f"""
+                UPDATE {table} 
+                SET relatedKeywordIds = ?, relatedKeywordStrings = ? 
+                WHERE {id_column} = ?
+            """
+            cursor = db.execute(query, (new_ids_json, new_strings_json, entry_id))
+            
+            print(f"DEBUG: Updated {table} entry {entry_id}, affected {cursor.rowcount} rows")
+            fixed_count += 1
+        
+        # Commit the changes
+        db.commit()
+        print(f"DEBUG: Committed changes, fixed {fixed_count} entries")
+        
+        return jsonify({
+            'success': True,
+            'fixed_count': fixed_count,
+            'message': f'Successfully fixed {fixed_count} entries with corrected keyword references'
+        })
+        
+    except Exception as e:
+        print(f"ERROR in fix_related_keywords: {str(e)}")
+        try:
+            db.rollback()
+            print("DEBUG: Database rollback completed")
+        except:
+            print("DEBUG: Database rollback failed or not needed")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
