@@ -169,6 +169,50 @@
             <div id="urls-success" class="success-message" style="display: none;"></div>
         </div>
 
+
+
+
+
+        <!-- Related Keywords Integrity Section -->
+        <div class="cleaner-section">
+            <h3>🔗 Related Keywords Integrity</h3>
+            <p>Check and fix RelatedKeywordIds references and ensure RelatedKeywordStrings match</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkRelatedKeywords()" id="keywords-check-btn">
+                    🔍 Check Related Keywords
+                </button>
+                <div class="loading" id="keywords-check-loading">Checking keyword references...</div>
+            </div>
+
+            <!-- Keywords Results Section -->
+            <div id="keywords-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="keywords-results-title"></h4>
+                    <div id="keywords-results-summary"></div>
+                </div>
+
+                <!-- Keywords Fix Button -->
+                <div id="keywords-fix-section" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="fixRelatedKeywords()" id="keywords-fix-btn">
+                        🔧 Fix All Keyword Issues
+                    </button>
+                    <div class="loading" id="keywords-fix-loading">Fixing keyword references...</div>
+                    <p class="warning-text">⚠️ This will remove invalid IDs and rebuild the strings list from valid references.</p>
+                </div>
+
+                <!-- Keywords Issues List -->
+                <div id="keywords-issues-list"></div>
+            </div>
+
+            <!-- Keywords Success Message -->
+            <div id="keywords-success" class="success-message" style="display: none;"></div>
+        </div>
+
+
+
+
+
         <!-- Future Cleaning Options -->
         <div class="cleaner-section">
             <h3>🚀 More Cleaning Options</h3>
@@ -179,7 +223,27 @@
                 <button type="button" class="btn btn-secondary disabled" disabled>Find Duplicate Entries</button>
             </div>
         </div>
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
+
+
+
+
+
+
+
+
 
     <script>
         let currentFaultyEntries = [];
@@ -913,6 +977,205 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadDatabaseStats();
         });
+
+        let currentKeywordIssues = [];
+
+        function checkRelatedKeywords() {
+            console.log("DEBUG: Starting related keywords check...");
+            const checkBtn = document.getElementById('keywords-check-btn');
+            const loading = document.getElementById('keywords-check-loading');
+            const resultsDiv = document.getElementById('keywords-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_related_keywords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log("DEBUG: Got response from keywords check:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Keywords check data:", data);
+                if (data.success) {
+                    currentKeywordIssues = data.issues;
+                    console.log("DEBUG: Found", data.total_issues, "entries with keyword issues");
+                    displayKeywordResults(data);
+                } else {
+                    console.error("DEBUG: Error in keywords check:", data.error);
+                    alert('Error checking related keywords: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in keywords check:', error);
+                alert('Failed to check related keywords');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayKeywordResults(data) {
+            console.log("DEBUG: Displaying keyword results:", data);
+            const resultsDiv = document.getElementById('keywords-results');
+            const titleEl = document.getElementById('keywords-results-title');
+            const summaryEl = document.getElementById('keywords-results-summary');
+            const fixSection = document.getElementById('keywords-fix-section');
+            const issuesList = document.getElementById('keywords-issues-list');
+            
+            if (data.total_issues === 0) {
+                titleEl.textContent = '✅ All Related Keywords Are Valid';
+                summaryEl.innerHTML = '<div class="success">No keyword reference issues found!</div>';
+                fixSection.style.display = 'none';
+                issuesList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_issues} Entries with Keyword Issues`;
+                
+                // Count different types of issues
+                let invalidIdCount = 0;
+                let mismatchCount = 0;
+                data.issues.forEach(issue => {
+                    if (issue.has_invalid_ids) invalidIdCount++;
+                    if (issue.strings_mismatch) mismatchCount++;
+                });
+                
+                summaryEl.innerHTML = `
+                    <div class="warning">
+                        <strong>${data.total_issues}</strong> entries have keyword reference issues<br>
+                        <strong>${invalidIdCount}</strong> have invalid keyword IDs<br>
+                        <strong>${mismatchCount}</strong> have mismatched keyword strings<br>
+                        <small>Total valid entries in database: ${data.total_valid_entries}</small>
+                    </div>
+                `;
+                fixSection.style.display = 'block';
+                
+                // Display issues
+                let issuesHtml = '<div class="keyword-issues-list">';
+                data.issues.forEach(issue => {
+                    let issueTypes = [];
+                    if (issue.has_invalid_ids) issueTypes.push('Invalid IDs');
+                    if (issue.strings_mismatch) issueTypes.push('String Mismatch');
+                    
+                    let invalidIdsHtml = '';
+                    if (issue.invalid_ids && issue.invalid_ids.length > 0) {
+                        invalidIdsHtml = `<br><strong>Invalid IDs:</strong> ${issue.invalid_ids.map(id => 
+                            `<span class="invalid-id">${id}</span>`
+                        ).join(', ')}`;
+                    }
+                    
+                    let stringsComparisonHtml = '';
+                    if (issue.strings_mismatch) {
+                        const currentStrings = issue.current_strings || [];
+                        const correctStrings = issue.correct_strings || [];
+                        stringsComparisonHtml = `
+                            <div class="strings-comparison">
+                                <div class="current-strings">
+                                    <strong>Current Strings:</strong><br>
+                                    ${currentStrings.length > 0 ? currentStrings.map(s => `"${s}"`).join(', ') : '<em>None</em>'}
+                                </div>
+                                <div class="correct-strings">
+                                    <strong>Should Be:</strong><br>
+                                    ${correctStrings.length > 0 ? correctStrings.map(s => `"${s}"`).join(', ') : '<em>None</em>'}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    issuesHtml += `
+                        <div class="keyword-issue-entry">
+                            <div class="entry-header">
+                                <strong>${issue.table === 'text_entries' ? 'Text Entry' : 'Image Entry'}:</strong> ${issue.value || 'N/A'}<br>
+                                <strong>ID:</strong> ${issue.entry_id}<br>
+                                <strong>Issues:</strong> <span class="issue-types">${issueTypes.join(', ')}</span>
+                            </div>
+                            <div class="entry-details">
+                                <strong>Valid IDs:</strong> ${issue.valid_ids && issue.valid_ids.length > 0 ? issue.valid_ids.join(', ') : '<em>None</em>'}
+                                ${invalidIdsHtml}
+                                ${stringsComparisonHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+                issuesHtml += '</div>';
+                issuesList.innerHTML = issuesHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function fixRelatedKeywords() {
+            console.log("DEBUG: Starting fix related keywords...");
+            if (currentKeywordIssues.length === 0) {
+                alert('No keyword issues to fix');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to fix ${currentKeywordIssues.length} entries? This will remove invalid IDs and rebuild the keyword strings.`)) {
+                console.log("DEBUG: User cancelled fix operation");
+                return;
+            }
+            
+            const fixBtn = document.getElementById('keywords-fix-btn');
+            const loading = document.getElementById('keywords-fix-loading');
+            const successDiv = document.getElementById('keywords-success');
+            
+            fixBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/fix_related_keywords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    issues: currentKeywordIssues
+                })
+            })
+            .then(response => {
+                console.log("DEBUG: Fix keywords response status:", response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Fix keywords response data:", data);
+                if (data.success) {
+                    successDiv.innerHTML = `
+                        <div class="success">
+                            ✅ ${data.message}
+                            <br>Database has been updated with corrected keyword references.
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    document.getElementById('keywords-fix-section').style.display = 'none';
+                    currentKeywordIssues = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('keywords-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in fix response:", data.error);
+                    alert('Error fixing keyword references: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in fix keywords:', error);
+                alert('Failed to fix keyword references');
+            })
+            .finally(() => {
+                fixBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+            
+            
     </script>
 
     <style>
@@ -1160,6 +1423,60 @@
             border-radius: 2px;
             font-size: 11px;
         }
-    </style>
-</body>
+
+
+        .keyword-issues-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .keyword-issue-entry {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            background: white;
+        }
+
+        .keyword-issue-entry:last-child {
+            border-bottom: none;
+        }
+
+        .issue-types {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .strings-comparison {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .current-strings, .correct-strings {
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .current-strings {
+            border-left: 3px solid #dc3545;
+        }
+
+        .correct-strings {
+            border-left: 3px solid #28a745;
+        }
+
+        .keyword-issue-entry .invalid-id {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 0 2px;
+        }
+            </style>
+    </body>
 </html>
