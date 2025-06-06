@@ -23,16 +23,16 @@ export const WordComponent: React.FC<{ word: Word }> = ({ word }) => {
 };
 export const KeywordComponent: React.FC<{
   keyword: Keyword;
-  // handleKeywordClick: () => void;
+  handleKeywordClick: () => void;
 }> = ({ keyword
-  // , handleKeywordClick 
+  , handleKeywordClick 
 }) => {
-  // const [isSelected, setIsSelected] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
 
-  // const handleClick = () => {
-  //   handleKeywordClick();
-  //   setIsSelected(!isSelected);
-  // };
+  const handleClick = () => {
+    handleKeywordClick();
+    setIsSelected(!isSelected);
+  };
 
   return (
     <motion.div
@@ -41,15 +41,15 @@ export const KeywordComponent: React.FC<{
       transition={{ duration: 0.3 }}
       style={{ position: "relative", display: "inline-block" }}
     >
-      {/* <span
+      <span
         className={`cursor-pointer 
                     rounded-sm mx-0.5 p-0
                     transition-all duration-200 
                     bg-amber-100 hover:bg-amber-200`}
         onClick={handleClick}
-      > */}
+      >
         {keyword.value}
-      {/* </span> */}
+      </span>
     </motion.div>
   );
 };
@@ -374,12 +374,19 @@ const FolderPanel: React.FC<{
                   <Expand size={isExpanded ? 20 : 16} />
                 </button> */}
 
-                <NavigationButtons
-                  currentIndex={currentIndex}
-                  totalItems={similarTexts.length}
-                  handlePrev={handlePrev}
-                  handleNext={handleNext}
-                />
+
+                <div className="pt-2 pb-0">
+                  <NavigationButtons
+                    currentIndex={currentIndex}
+                    totalItems={similarTexts.length}
+                    handlePrev={handlePrev}
+                    handleNext={handleNext}
+                  />
+                </div>
+                <div className="p-0 text-xs text-gray-600 italic">
+                  This might be related...
+                </div>
+
 
                 {currentText && (
                   <div className={`nodrag nowheel overflow-y-auto ${
@@ -1065,7 +1072,7 @@ export function TextWithKeywordsNode({
                 transition={{ type: "spring", bounce: 0.1, duration: 0.3 }}
                 className="absolute mt-0"
               >
-                {/* <KeywordDescription
+                <KeywordDescription
                   keyword={selectedKeyword}
                   containerHeight={height * 2}
                   containerWidth={width}
@@ -1073,7 +1080,7 @@ export function TextWithKeywordsNode({
                   parentNodeId={id}
                   toggleDescription={toggleDescription}
                   isAIGenerated={isAIGenerated}
-                /> */}
+                />
               </motion.div>
             )}
           </>

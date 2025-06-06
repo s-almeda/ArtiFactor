@@ -220,7 +220,7 @@ useOnViewportChange({
 
     // Check if this is a default text node and no position is provided
     const isDefaultNode =
-      content === "your text here" &&
+      // content === "your text here" &&
       provenance === "user" &&
       !position &&
       !hasNoKeywords;
@@ -516,7 +516,7 @@ useOnViewportChange({
           console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
           setNodes([]);
           setEdges([]);
-          addTextWithKeywordsNode("your text here", "user", { x: 0, y: 0 });
+          addTextWithKeywordsNode("your text here. click the pencil icon in the top right to edit. Right-Click, or use Alt+Click to generate new nodes.", "user", { x: 0, y: 0 });
           setViewport({ x: 0, y: 0, zoom: 1 });
           quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
         }

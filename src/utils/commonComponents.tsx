@@ -12,7 +12,7 @@ export const NavigationButtons: React.FC<{
     itemLabel?: string;
 }> = ({ currentIndex, totalItems, handlePrev, handleNext, itemLabel }) => {
     return (
-        <div className="flex items-center w-full mt-2">
+        <div className="flex items-center w-full">
             <button
                 onClick={handlePrev}
                 className="flex-1 flex justify-end items-center p-2 rounded-full text-gray-500 hover:text-amber-800 cursor-pointer bg-transparent"
