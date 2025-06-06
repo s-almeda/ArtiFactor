@@ -209,7 +209,7 @@ useOnViewportChange({
   //*** -- Node Adders  (functions that add nodes to the canvas) -- ***/
 
   const addTextWithKeywordsNode = (
-    content: string = "your text here",
+    content: string = "your text here. click the pencil icon in the top right to edit. Use Alt+Click to generate new nodes.",
     provenance: "user" | "history" | "ai" = "user",
     position?: { x: number; y: number },
     hasNoKeywords: boolean = false,
