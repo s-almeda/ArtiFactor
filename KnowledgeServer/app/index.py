@@ -122,7 +122,7 @@ if os.getenv('ADMIN_MODE', '').lower() == 'true':
 @app.route("/")
 def browse_database():
     """New home page - database browser"""
-    return render_template('templates/database_browser.html')
+    return render_template('database_browser.html')
 
 @app.route("/api/browse_database")
 def api_browse_database():
