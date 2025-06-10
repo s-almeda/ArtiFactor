@@ -119,19 +119,25 @@ if os.getenv('ADMIN_MODE', '').lower() == 'true':
     from templates.data_cleaner import data_cleaner_bp
     app.register_blueprint(data_cleaner_bp)
 
+# Add this import at the top of your file if not already there:
+# from flask import render_template, jsonify, request
+
+# Replace your existing "/" route with this new one:
+
 @app.route("/")
 def browse_database():
-    """New home page - database browser"""
     return render_template('database_browser.html')
 
 @app.route("/api/browse_database")
 def api_browse_database():
-    """API endpoint for database browsing with pagination"""
+    """API endpoint for database browsing with pagination and sorting"""
     try:
         # Get query parameters
         table = request.args.get('table', 'text_entries')
         page = int(request.args.get('page', 1))
         page_size = int(request.args.get('page_size', 25))
+        sort_by = request.args.get('sort_by', None)
+        sort_dir = request.args.get('sort_dir', 'asc')
         
         # Validate table name
         if table not in ['text_entries', 'image_entries']:
@@ -139,6 +145,10 @@ def api_browse_database():
                 'success': False,
                 'error': 'Invalid table name'
             })
+        
+        # Validate sort direction
+        if sort_dir not in ['asc', 'desc']:
+            sort_dir = 'asc'
         
         # Calculate offset
         offset = (page - 1) * page_size
@@ -150,23 +160,40 @@ def api_browse_database():
         count_cursor = db.execute(f"SELECT COUNT(*) as count FROM {table}")
         total_rows = count_cursor.fetchone()['count']
         
+        # Build ORDER BY clause
+        if sort_by:
+            # Validate sort column to prevent SQL injection
+            valid_columns = {
+                'text_entries': ['entry_id', 'value', 'type', 'isArtist'],
+                'image_entries': ['image_id', 'value', 'filename']
+            }
+            
+            if sort_by in valid_columns.get(table, []):
+                order_clause = f"ORDER BY {sort_by} {sort_dir.upper()}"
+            else:
+                order_clause = f"ORDER BY {'entry_id' if table == 'text_entries' else 'image_id'} ASC"
+        else:
+            order_clause = f"ORDER BY {'entry_id' if table == 'text_entries' else 'image_id'} ASC"
+        
         # Get paginated data
         if table == 'text_entries':
-            cursor = db.execute("""
+            query = f"""
                 SELECT entry_id, value, images, isArtist, type, 
                        artist_aliases, descriptions, relatedKeywordIds, relatedKeywordStrings
                 FROM text_entries
-                ORDER BY entry_id
+                {order_clause}
                 LIMIT ? OFFSET ?
-            """, (page_size, offset))
+            """
         else:
-            cursor = db.execute("""
+            query = f"""
                 SELECT image_id, value, artist_names, image_urls, filename,
                        rights, descriptions, relatedKeywordIds, relatedKeywordStrings
                 FROM image_entries
-                ORDER BY image_id
+                {order_clause}
                 LIMIT ? OFFSET ?
-            """, (page_size, offset))
+            """
+        
+        cursor = db.execute(query, (page_size, offset))
         
         # Convert rows to list of dicts
         rows = []
@@ -189,7 +216,7 @@ def api_browse_database():
             'success': False,
             'error': str(e)
         })
-    
+
 @app.route("/status")
 def hello_world():
     print("User connected...")

@@ -657,7 +657,8 @@ def download_image_route():
             return jsonify({'success': False, 'error': 'Missing image URL or ID'})
 
         # Check if the file already exists
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        # Find the base directory by going up one level from the current (templates) directory
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         images_dir = os.path.join(BASE_DIR, "LOCALDB", "images")
         file_ext = os.path.splitext(urlparse(image_url).path)[1] or '.jpg'
         filename = f"{image_id}{file_ext}"
