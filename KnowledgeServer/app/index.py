@@ -1,7 +1,7 @@
 # index.py
 # run me with './bootstrap.sh' in terminal
 import json
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, render_template
 # 
 import requests
 
@@ -120,6 +120,77 @@ if os.getenv('ADMIN_MODE', '').lower() == 'true':
     app.register_blueprint(data_cleaner_bp)
 
 @app.route("/")
+def browse_database():
+    """New home page - database browser"""
+    return render_template('templates/database_browser.html')
+
+@app.route("/api/browse_database")
+def api_browse_database():
+    """API endpoint for database browsing with pagination"""
+    try:
+        # Get query parameters
+        table = request.args.get('table', 'text_entries')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 25))
+        
+        # Validate table name
+        if table not in ['text_entries', 'image_entries']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid table name'
+            })
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get database connection
+        db = get_db()
+        
+        # Get total count
+        count_cursor = db.execute(f"SELECT COUNT(*) as count FROM {table}")
+        total_rows = count_cursor.fetchone()['count']
+        
+        # Get paginated data
+        if table == 'text_entries':
+            cursor = db.execute("""
+                SELECT entry_id, value, images, isArtist, type, 
+                       artist_aliases, descriptions, relatedKeywordIds, relatedKeywordStrings
+                FROM text_entries
+                ORDER BY entry_id
+                LIMIT ? OFFSET ?
+            """, (page_size, offset))
+        else:
+            cursor = db.execute("""
+                SELECT image_id, value, artist_names, image_urls, filename,
+                       rights, descriptions, relatedKeywordIds, relatedKeywordStrings
+                FROM image_entries
+                ORDER BY image_id
+                LIMIT ? OFFSET ?
+            """, (page_size, offset))
+        
+        # Convert rows to list of dicts
+        rows = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            rows.append(row_dict)
+        
+        return jsonify({
+            'success': True,
+            'table': table,
+            'page': page,
+            'page_size': page_size,
+            'total_rows': total_rows,
+            'rows': rows
+        })
+        
+    except Exception as e:
+        print(f"ERROR in api_browse_database: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+    
+@app.route("/status")
 def hello_world():
     print("User connected...")
     
