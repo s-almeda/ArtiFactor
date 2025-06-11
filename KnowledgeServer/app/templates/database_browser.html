@@ -752,15 +752,15 @@
                     const links = parsed.map(id => 
                         `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
                     ).join(', ');
-                    const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}${more}</div></div>`;
+                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
                 }
                 if (isRelatedKeywordIds) {
                     const links = parsed.map(id => 
                         `<a href="#" onclick="event.stopPropagation(); showDetailsByKeywordId('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
                     ).join(', ');
-                    const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}${more}</div></div>`;
+                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
                 }
 
                 const formatted = JSON.stringify(parsed, null, 2);
