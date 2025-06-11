@@ -7,6 +7,9 @@
 <body>
     <div class="container">
         <h1>Artist Database Lookup</h1>
+        <div id="database_stats" class="database-stats" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace;">
+            <strong>Database Status:</strong> <span id="db_status_text">Not checked</span>
+        </div>
         
         <div class="section">
             <h2>Step 1: Enter Artist Name</h2>
@@ -54,21 +57,38 @@
                 <div class="field-hint">JSON object with source descriptions</div>
                 <textarea name="descriptions" rows="4">{}</textarea>
 
-                <div class="field-label">Auto-Generate Keywords</div>
-                <button type="button" onclick="generateKeywords()" id="generate_keywords_btn">🔍 Find Related Keywords</button>
-                <div id="keyword_status"></div>
-
-                <div id="keyword_checklist" style="display: none;">
-                    <div class="field-label">Select Related Keywords:</div>
-                    <div id="keyword_checkboxes" class="keyword-checkbox-container"></div>
+              <!-- Single unified keyword section -->
+            <div class="field-label">Related Keywords</div>
+            <div class="keyword-section">
+                <!-- Search/Auto-generate controls -->
+                <div class="keyword-controls">
+                    <input type="text" 
+                        id="keyword_search_input" 
+                        class="keyword-search-input" 
+                        placeholder="Search for keywords...">
+                    <button type="button" onclick="searchKeywords()">Search</button>
+                    <button type="button" onclick="autoSuggestKeywords()" id="auto_suggest_btn">
+                        🔍 Auto-Suggest from Artist Data
+                    </button>
                 </div>
-
-                <div class="field-label">Related Keyword IDs</div>
-                <textarea name="relatedKeywordIds" rows="2">[]</textarea>
                 
-                <div class="field-label">Related Keyword Strings</div>
-                <textarea name="relatedKeywordStrings" rows="2">[]</textarea>
+                <!-- Status messages -->
+                <div id="keyword_status"></div>
+                
+                <!-- Search results (hidden by default) -->
+                <div id="keyword_results" class="keyword-results-container" style="display: none;"></div>
+                
+                <!-- Selected keywords display -->
+                <div class="selected-keywords-section">
+                    <div class="field-label">Selected Keywords:</div>
+                    <div id="selected_keywords_list" class="keyword-checkbox-container"></div>
+                    <div id="keyword_count">0 keywords selected</div>
+                </div>
+            </div>
 
+            <!-- Hidden fields for form submission -->
+            <textarea name="relatedKeywordIds" id="relatedKeywordIds" style="display: block;">[]</textarea>
+            <textarea name="relatedKeywordStrings" id="relatedKeywordStrings" style="display: block;">[]</textarea>
                 <button type="button" onclick="getArtworks()" id="get_artworks_btn">🎨 Get Artist's Artworks</button>
                 <div id="artwork_status"></div>
 
@@ -201,6 +221,16 @@
                         showDatabaseStatus('Artist already exists in database. Form will update existing entry.', 'info');
                         document.getElementById('submit_button').textContent = 'Update Artist';
                         isUpdating = true;
+
+                        try {
+                            const existingIds = JSON.parse(result.existing_artist.relatedKeywordIds || '[]');
+                            const existingStrings = JSON.parse(result.existing_artist.relatedKeywordStrings || '[]');
+                            initializeKeywords(existingIds, existingStrings);
+                        } catch (e) {
+                            initializeKeywords([], []);
+                        }
+                        
+
                         
                         // Pre-fill form with existing data
                         document.getElementById('entry_id').value = result.existing_artist.entry_id;
@@ -251,6 +281,7 @@
                         document.querySelector('[name="relatedKeywordStrings"]').value = 
                             JSON.stringify(result.existing_artist.relatedKeywordStrings || [], null, 2);
                     } else {
+                        initializeKeywords([], []);
                         showDatabaseStatus('Artist not in database. Form will create new entry.', 'success');
                         document.getElementById('submit_button').textContent = 'Add to Database';
                         isUpdating = false;
@@ -383,7 +414,7 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         query: compiledText,
-                        top_k: 50  // Get more results to filter
+                        top_k: 15  // Get more results to filter
                     })
                 });
                 
@@ -444,6 +475,7 @@
             const selectedIds = [];
             const selectedStrings = [];
             
+            // Collect from checkboxes (auto-generated keywords)
             availableKeywords.forEach((keyword, index) => {
                 const checkbox = document.getElementById(`keyword_${index}`);
                 if (checkbox && checkbox.checked) {
@@ -452,12 +484,84 @@
                 }
             });
             
-            // Update form fields
-            document.querySelector('[name="relatedKeywordIds"]').value = 
-                JSON.stringify(selectedIds, null, 2);
-            document.querySelector('[name="relatedKeywordStrings"]').value = 
-                JSON.stringify(selectedStrings, null, 2);
+            // Add manually selected keywords (if you implemented that)
+            if (typeof manuallySelectedKeywords !== 'undefined') {
+                manuallySelectedKeywords.forEach((keyword) => {
+                    if (!selectedIds.includes(keyword.entry_id)) {
+                        selectedIds.push(keyword.entry_id);
+                        selectedStrings.push(keyword.value);
+                    }
+                });
+            }
+            
+            // Update hidden textareas
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(selectedIds, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(selectedStrings, null, 2);
+            
+            // Update the final review display
+            updateFinalKeywordDisplay(selectedIds, selectedStrings);
         }
+
+        // New function to display the final keyword list
+        function updateFinalKeywordDisplay(ids, strings) {
+            const container = document.getElementById('final_keyword_list');
+            container.innerHTML = '';
+            
+            if (ids.length === 0) {
+                container.innerHTML = '<em>No keywords selected</em>';
+                document.getElementById('final_keyword_count').textContent = '0 keywords selected';
+                return;
+            }
+            
+            ids.forEach((id, index) => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'keyword-checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `final_keyword_${index}`;
+                checkbox.checked = true; // Default to selected
+                checkbox.dataset.keywordId = id;
+                checkbox.dataset.keywordString = strings[index];
+                checkbox.addEventListener('change', updateFinalKeywordData);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `final_keyword_${index}`;
+                label.textContent = strings[index];
+                
+                checkboxItem.appendChild(checkbox);
+                checkboxItem.appendChild(label);
+                container.appendChild(checkboxItem);
+            });
+            
+            updateFinalKeywordCount();
+        }
+
+        // Update the data when user checks/unchecks in final list
+        function updateFinalKeywordData() {
+            const finalIds = [];
+            const finalStrings = [];
+            
+            const checkboxes = document.querySelectorAll('#final_keyword_list input[type="checkbox"]:checked');
+            checkboxes.forEach((checkbox) => {
+                finalIds.push(checkbox.dataset.keywordId);
+                finalStrings.push(checkbox.dataset.keywordString);
+            });
+            
+            // Update the hidden fields
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(finalIds, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(finalStrings, null, 2);
+            
+            updateFinalKeywordCount();
+        }
+
+        // Update count display
+        function updateFinalKeywordCount() {
+            const total = document.querySelectorAll('#final_keyword_list input[type="checkbox"]').length;
+            const selected = document.querySelectorAll('#final_keyword_list input[type="checkbox"]:checked').length;
+            document.getElementById('final_keyword_count').textContent = `${selected} of ${total} keywords selected`;
+        }
+
 
         async function getArtworks() {
             const getArtworksBtn = document.getElementById('get_artworks_btn');
@@ -1065,6 +1169,218 @@
                     '<div class="status error">❌ Error: ' + error.message + '</div>';
             }
         };
+
+
+                // Add manual keyword search functionality
+        let manuallySelectedKeywords = new Map();
+
+        document.getElementById('keyword_search_input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKeywords();
+            }
+        });
+
+
+
+        // Single master list of selected keywords
+        let selectedKeywords = new Map();
+
+        // Initialize with existing keywords when loading an artist
+        function initializeKeywords(existingIds = [], existingStrings = []) {
+            selectedKeywords.clear();
+            existingIds.forEach((id, index) => {
+                selectedKeywords.set(id, {
+                    entry_id: id,
+                    value: existingStrings[index] || 'Unknown',
+                    source: 'existing'
+                });
+            });
+            updateSelectedKeywordsDisplay();
+        }
+
+        // Search for keywords
+        async function searchKeywords() {
+            const query = document.getElementById('keyword_search_input').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            await performKeywordSearch(query);
+        }
+
+        // Auto-suggest based on artist data
+        async function autoSuggestKeywords() {
+            const artistName = document.getElementById('artist_value').value;
+            const descriptionsText = document.querySelector('[name="descriptions"]').value;
+            
+            let compiledText = artistName;
+            
+            try {
+                const descriptions = JSON.parse(descriptionsText);
+                for (const [source, data] of Object.entries(descriptions)) {
+                    if (typeof data === 'object') {
+                        for (const [key, value] of Object.entries(data)) {
+                            if (typeof value === 'string' && key !== 'link') {
+                                compiledText += ' ' + value;
+                            }
+                        }
+                    } else if (typeof data === 'string') {
+                        compiledText += ' ' + data;
+                    }
+                }
+            } catch (e) {
+                compiledText += ' ' + descriptionsText;
+            }
+            
+            await performKeywordSearch(compiledText);
+        }
+
+        // Shared function to perform keyword search
+        async function performKeywordSearch(query) {
+            const statusDiv = document.getElementById('keyword_status');
+            const resultsDiv = document.getElementById('keyword_results');
+            
+            statusDiv.innerHTML = '<div class="status info">🔄 Searching...</div>';
+            resultsDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/lookup_text', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: 30
+                    })
+                });
+                
+                const results = await response.json();
+                const keywords = results.filter(item => !item.isArtist);
+                
+                if (keywords.length > 0) {
+                    displaySearchResults(keywords);
+                    statusDiv.innerHTML = `<div class="status success">✅ Found ${keywords.length} keywords</div>`;
+                    resultsDiv.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">No keywords found</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(keywords) {
+            const resultsDiv = document.getElementById('keyword_results');
+            resultsDiv.innerHTML = '';
+            
+            keywords.forEach(keyword => {
+                const item = document.createElement('div');
+                item.className = 'keyword-result-item';
+                
+                // Check if already selected
+                if (selectedKeywords.has(keyword.entry_id)) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `
+                    <span>${keyword.value}</span>
+                    <span class="keyword-type-badge">${keyword.type}</span>
+                `;
+                
+                item.onclick = () => {
+                    if (selectedKeywords.has(keyword.entry_id)) {
+                        selectedKeywords.delete(keyword.entry_id);
+                        item.classList.remove('selected');
+                    } else {
+                        selectedKeywords.set(keyword.entry_id, keyword);
+                        item.classList.add('selected');
+                    }
+                    updateSelectedKeywordsDisplay();
+                };
+                
+                resultsDiv.appendChild(item);
+            });
+        }
+
+        // Update the display of selected keywords
+        function updateSelectedKeywordsDisplay() {
+            const listDiv = document.getElementById('selected_keywords_list');
+            listDiv.innerHTML = '';
+            
+            if (selectedKeywords.size === 0) {
+                listDiv.innerHTML = '<em>No keywords selected</em>';
+            } else {
+                selectedKeywords.forEach((keyword, id) => {
+                    const item = document.createElement('div');
+                    item.className = 'keyword-checkbox-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `selected_${id}`;
+                    checkbox.checked = true;
+                    checkbox.onchange = (e) => {
+                        if (!e.target.checked) {
+                            selectedKeywords.delete(id);
+                            updateSelectedKeywordsDisplay();
+                        }
+                    };
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `selected_${id}`;
+                    label.textContent = keyword.value;
+                    
+                    item.appendChild(checkbox);
+                    item.appendChild(label);
+                    listDiv.appendChild(item);
+                });
+            }
+            
+            // Update count
+            document.getElementById('keyword_count').textContent = `${selectedKeywords.size} keywords selected`;
+            
+            // Update hidden form fields
+            const ids = Array.from(selectedKeywords.keys());
+            const strings = Array.from(selectedKeywords.values()).map(k => k.value);
+            
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(ids, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(strings, null, 2);
+        }
+
+        // Enable Enter key for search
+        document.getElementById('keyword_search_input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKeywords();
+            }
+        });
+
+            
+
+
+
+        // Add this function
+        async function checkDatabaseStats() {
+            try {
+                const response = await fetch('/artist_lookup/db_stats');
+                const stats = await response.json();
+                
+                if (stats.success) {
+                    document.getElementById('db_status_text').innerHTML = 
+                        `✅ Connected - Artists: <strong>${stats.artist_count}</strong>, ` +
+                        `Images: <strong>${stats.image_count}</strong>, ` +
+                        `Total Entries: <strong>${stats.total_count}</strong>`;
+                } else {
+                    document.getElementById('db_status_text').innerHTML = 
+                        `❌ Error: ${stats.error}`;
+                }
+            } catch (error) {
+                document.getElementById('db_status_text').innerHTML = 
+                    `❌ Failed to connect: ${error.message}`;
+            }
+        }
+
+        // Call it when page loads
+        window.addEventListener('DOMContentLoaded', checkDatabaseStats);
 
     </script>
 </body>
