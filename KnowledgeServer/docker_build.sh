@@ -4,9 +4,10 @@
 PROJECT_ID="artifactor-449507"
 IMAGE_NAME="resnet50wikiart"
 FULL_IMAGE_PATH="gcr.io/$PROJECT_ID/$IMAGE_NAME:latest"
+export DOCKER_BUILDKIT=1
 
 echo "Building Docker image..."
-docker build -t $FULL_IMAGE_PATH .
+docker build --progress=plain -t $FULL_IMAGE_PATH . 
 
 
 # echo "Pushing image to Google Container Registry..."
