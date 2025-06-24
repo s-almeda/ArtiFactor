@@ -29,19 +29,6 @@ import pandas as pd
 
 print("Mabuhay! Loading...")
 
-
-# # Check if we're inside Docker (set by Docker when running)
-# if os.getenv("RUNNING_IN_DOCKER"):
-#     TEXT_DB_PATH = "/app/LOCALDB/text.db"  
-#     IMAGE_DB_PATH = "/app/LOCALDB/wikiart.db"  
-#     IMAGES_PATH = "/app/LOCALDB/images/"  
-#     MODEL_CACHE_DIR = "/root/.cache/torch/hub"
-# else:
-#     TEXT_DB_PATH = "../../LOCALDB/text.db"
-#     IMAGE_DB_PATH = "../../LOCALDB/wikiart.db"
-#     IMAGES_PATH = "../../images/"
-#     MODEL_CACHE_DIR = os.path.expanduser("~/model_cache/")
-
 # # ----- Load the databases, so we can use the info in them to respond to user requests ----- #
 
 # The database paths inside the container will always be:
@@ -76,15 +63,6 @@ try:
 except sqlite3.Error as e:
     print(f"🚨 ERROR: Failed to connect to Text DB at {DB_PATH}. Error: {e}")
 
-
-
-# def load_sqlite_vec(db):
-#     db.enable_load_extension(True)
-#     sqlite_vec.load(db)
-#     db.enable_load_extension(False)
-#     print("loaded sqlite vector extension...")
-#     return
-
 def get_db():
     """Get a database connection for the current request.
     
@@ -110,6 +88,8 @@ app = Flask(__name__, static_folder='static')
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
+
+
 # Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
 if os.getenv('ADMIN_MODE', '').lower() == 'true':
     from templates.admin import admin_bp
@@ -635,59 +615,6 @@ def lookup_text(query_text, top_k=5):
     print(f"Returning {len(results)} matches for query: '{query_text}'")
     return results
     
-    # ---- PROCESS THE REQUEST ---- #
-    query_text = request.json.get('query')
-    if not query_text:
-        return jsonify({"error": "No query text provided"}), 400
-        
-    top_k = request.json.get('top_k', 5)
-    print(f"Query text: {query_text}")
-    print(f"Top K: {top_k}")
-
-    # Extract features from query text
-    query_features = helpers.extract_text_features(query_text)
-    print(f"Query features shape: {query_features.shape}")
-    
-    # ---- LOOK UP SIMILAR TEXTS ---- #
-    db = get_db()
-
-    # Find the most similar text entries
-    similar_texts_df = helpers.find_most_similar_texts(query_features, db, top_k=top_k)
-    print(f"Found {len(similar_texts_df)} similar texts")
-
-    # Get detailed information for each match
-    results = []
-    
-    for idx, row in similar_texts_df.iterrows():
-        # Fetch the full record from the database
-        query = "SELECT * FROM text_entries WHERE entry_id = ?"
-        cursor = db.execute(query, [row['entry_id']])
-        db_row = cursor.fetchone()
-        
-        if db_row:
-            db_row_dict = dict(db_row)
-            
-            # Build the result with parsed JSON fields
-            result_entry = {
-                "entry_id": db_row_dict["entry_id"],
-                "value": db_row_dict["value"],
-                "distance": row['distance'],  # Add the similarity distance
-                "images": helpers.safe_json_loads(db_row_dict.get("images", "[]"), default=[]),
-                "isArtist": db_row_dict.get("isArtist", 0),
-                "type": db_row_dict.get("type"),
-                "artist_aliases": helpers.safe_json_loads(db_row_dict.get("artist_aliases", "[]"), default=[]) 
-                    if db_row_dict.get("isArtist") == 1 else [],
-                "descriptions": helpers.safe_json_loads(db_row_dict.get("descriptions", "{}"), default={}),
-                "relatedKeywordIds": helpers.safe_json_loads(db_row_dict.get("relatedKeywordIds", "[]"), default=[]),
-                "relatedKeywordStrings": helpers.safe_json_loads(db_row_dict.get("relatedKeywordStrings", "[]"), default=[])
-            }
-            
-            results.append(result_entry)
-            print(f"Match: '{result_entry['value']}' (distance: {result_entry['distance']:.4f})")
-    
-    print(f"Returning {len(results)} matches for query: '{query_text}'")
-    return jsonify(results)
-
 
 
 
