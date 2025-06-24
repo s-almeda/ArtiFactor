@@ -4,351 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Browser</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            background: white;
-            padding: 20px 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .header h1 {
-            color: #2c3e50;
-        }
-        
-        .pagination-top {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .table-selector {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .table-btn {
-            padding: 8px 16px;
-            border: 2px solid #3498db;
-            background: white;
-            color: #3498db;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .table-btn:hover {
-            background: #f0f8ff;
-        }
-        
-        .table-btn.active {
-            background: #3498db;
-            color: white;
-        }
-        
-        .stats {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th {
-            background: #34495e;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: 500;
-            position: sticky;
-            top: 0;
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.2s;
-        }
-        
-        th:hover {
-            background: #2c3e50;
-        }
-        
-        th.sorted-asc::after {
-            content: ' ↑';
-            opacity: 0.8;
-        }
-        
-        th.sorted-desc::after {
-            content: ' ↓';
-            opacity: 0.8;
-        }
-        
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-        
-        tr {
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        tr:hover {
-            background: #f8f9fa;
-        }
-        
-        .truncate {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .json-field {
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 12px;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: inline-block;
-        }
-        
-        .page-btn {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            background: white;
-            color: #333;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-        
-        .page-btn:hover:not(:disabled) {
-            background: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-        
-        .page-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .page-info {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-        
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        
-        .empty {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-        
-        /* Image thumbnail styles */
-        .image-thumbnail {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .image-thumbnail:hover {
-            transform: scale(1.1);
-            transition: transform 0.2s;
-        }
-        
-        /* Artist badge
-        .artist-badge {
-            background: #e74c3c;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 500;
-        } */
-        
-        /* Type badge */
-        .type-badge {
-            background: #9b59b6;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-        
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 0;
-            border-radius: 8px;
-            width: 80%;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
-        .modal-header {
-            background: #34495e;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-header h2 {
-            margin: 0;
-            font-size: 20px;
-        }
-        
-        .close {
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 20px;
-            padding: 0 5px;
-        }
-        
-        .close:hover {
-            opacity: 0.8;
-        }
-        
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            max-height: calc(80vh - 120px);
-        }
-        
-        .detail-row {
-            display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        
-        .detail-label {
-            font-weight: 600;
-            width: 150px;
-            flex-shrink: 0;
-            color: #555;
-        }
-        
-        .detail-value {
-            flex: 1;
-            word-break: break-word;
-        }
-        
-        .detail-value.json {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 13px;
-            white-space: pre-wrap;
-        }
-        
-        .detail-image {
-            max-width: 100%;
-            max-height: 400px;
-            object-fit: contain;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="../static/css/admin_styles.css">
 </head>
 <body>
     <div class="container">
@@ -367,6 +23,14 @@
                     <button class="table-btn active" onclick="switchTable('image_entries')">Image Entries</button>
                 </div>
                 <div class="stats" id="stats">Loading...</div>
+                <label for="download-size" style="font-size:14px;margin-left:10px;">Download:</label>
+                <select id="download-size" style="margin-left:4px;padding:4px 8px;border-radius:4px;">
+                    <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="all">All</option>
+                </select>
+                <button class="page-btn" id="download-json-btn" onclick="downloadCurrentTableAsJSON()">Download as JSON</button>
             </div>
         </div>
         
@@ -786,6 +450,63 @@
                 closeModal();
             }
         });
+
+        function downloadCurrentTableAsJSON() {
+            // Get user-selected download size
+            const sizeSelect = document.getElementById('download-size');
+            let selectedSize = sizeSelect ? sizeSelect.value : "100";
+            let pageSize;
+            if (selectedSize === "all") {
+                pageSize = 1000000;
+            } else {
+                pageSize = parseInt(selectedSize, 10) || 100;
+            }
+
+            let url = `/api/browse_database?table=${currentTable}&page=1&page_size=${pageSize}`;
+            if (sortColumn) {
+                url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+            }
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.rows) {
+                        // Parse JSON-stringified fields so the output is valid JSON
+                        const rows = data.rows.map(row => {
+                            const parsedRow = { ...row };
+                            // Try to parse any field that looks like a JSON array/object string
+                            for (const key in parsedRow) {
+                                if (
+                                    typeof parsedRow[key] === "string" &&
+                                    (
+                                        (parsedRow[key].startsWith("[") && parsedRow[key].endsWith("]")) ||
+                                        (parsedRow[key].startsWith("{") && parsedRow[key].endsWith("}"))
+                                    )
+                                ) {
+                                    try {
+                                        parsedRow[key] = JSON.parse(parsedRow[key]);
+                                    } catch (e) {
+                                        // leave as string if parsing fails
+                                    }
+                                }
+                            }
+                            return parsedRow;
+                        });
+                        const jsonStr = JSON.stringify(rows, null, 2);
+                        const blob = new Blob([jsonStr], { type: "application/json" });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `${currentTable}.json`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        alert("Failed to download data: " + (data.error || "Unknown error"));
+                    }
+                })
+                .catch(error => {
+                    alert("Failed to download data: " + error);
+                });
+        }
     </script>
 </body>
 </html>

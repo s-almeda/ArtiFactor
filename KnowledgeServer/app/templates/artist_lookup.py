@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from index import get_db
 import urllib.request
 from urllib.parse import urlparse
+import hashlib
 
 
 artist_lookup_bp = Blueprint('artist_lookup', __name__, url_prefix='/artist_lookup')
@@ -277,6 +278,37 @@ def process_artist_lookup():
                 
             if existing_artist:
                 print(f"Found existing artist: {existing_artist['value']} with slug search: {slug}")
+            
+            if existing_artist:
+                # Convert Row to dict and ensure JSON fields are properly formatted
+                artist_dict = dict(existing_artist)
+                
+                # Ensure JSON fields are valid JSON strings (not double-encoded)
+                json_fields = ['artist_aliases', 'images', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+                for field in json_fields:
+                    if field in artist_dict and artist_dict[field]:
+                        try:
+                            # Try to parse it
+                            parsed = json.loads(artist_dict[field])
+                            # If successful, it's valid JSON, keep as is
+                            artist_dict[field] = artist_dict[field]
+                        except:
+                            # If it fails, it might be corrupted, try to fix
+                            print(f"Warning: Invalid JSON in {field} for artist {artist_dict.get('value', 'unknown')}")
+                            # Set a default
+                            if field == 'descriptions':
+                                artist_dict[field] = '{}'
+                            else:
+                                artist_dict[field] = '[]'
+                
+                return jsonify({
+                    'success': True,
+                    'slug': slug,
+                    'html_content': response.text[:10000],
+                    'artist_info': artist_info,
+                    'existing_artist': artist_dict
+                })
+            
             else:
                 print(f"No existing artist found for slug: {slug}")
                 
@@ -509,6 +541,9 @@ def get_artwork_details():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+
 
 
 def parse_artwork_details(html_content, artwork_title):
@@ -764,6 +799,8 @@ def parse_artwork_details(html_content, artwork_title):
         traceback.print_exc()
     
     return artwork_data
+
+
 
 
 @artist_lookup_bp.route('/download_image', methods=['POST'])
@@ -1047,7 +1084,7 @@ def submit_all_data():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-        
+
 def download_image(image_url, image_id):
     """Download image to ../LOCALDB/images/ directory"""
     try:
