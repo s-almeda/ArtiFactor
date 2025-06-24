@@ -7,6 +7,9 @@
 <body>
     <div class="container">
         <h1>Artist Database Lookup</h1>
+        <div id="database_stats" class="database-stats" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace;">
+            <strong>Database Status:</strong> <span id="db_status_text">Not checked</span>
+        </div>
         
         <div class="section">
             <h2>Step 1: Enter Artist Name</h2>
@@ -34,6 +37,7 @@
             <form id="artistForm">
                 <input type="hidden" name="entry_id" id="entry_id">
                 
+                
                 <div class="field-label">Artist Name</div>
                 <input type="text" name="value" id="artist_value" required>
                 
@@ -54,25 +58,66 @@
                 <div class="field-hint">JSON object with source descriptions</div>
                 <textarea name="descriptions" rows="4">{}</textarea>
 
-                <div class="field-label">Auto-Generate Keywords</div>
-                <button type="button" onclick="generateKeywords()" id="generate_keywords_btn">🔍 Find Related Keywords</button>
-                <div id="keyword_status"></div>
-
-                <div id="keyword_checklist" style="display: none;">
-                    <div class="field-label">Select Related Keywords:</div>
-                    <div id="keyword_checkboxes" class="keyword-checkbox-container"></div>
+              <!-- Single unified keyword section -->
+            <div class="field-label">Related Keywords</div>
+            <div class="keyword-section">
+                <!-- Search/Auto-generate controls -->
+                <div class="keyword-controls">
+                    <input type="text" 
+                        id="keyword_search_input" 
+                        class="keyword-search-input" 
+                        placeholder="Search for keywords...">
+                    <button type="button" onclick="searchKeywords()">Search</button>
+                    <button type="button" onclick="autoSuggestKeywords()" id="auto_suggest_btn">
+                        🔍 Auto-Suggest from Artist Data
+                    </button>
                 </div>
-
-                <div class="field-label">Related Keyword IDs</div>
-                <textarea name="relatedKeywordIds" rows="2">[]</textarea>
                 
-                <div class="field-label">Related Keyword Strings</div>
-                <textarea name="relatedKeywordStrings" rows="2">[]</textarea>
+                <!-- Status messages -->
+                <div id="keyword_status"></div>
+                
+                <!-- Search results (hidden by default) -->
+                <div id="keyword_results" class="keyword-results-container" style="display: none;"></div>
+                
+                <!-- Selected keywords display -->
+                <div class="selected-keywords-section">
+                    <div class="field-label">Selected Keywords:</div>
+                    <div id="selected_keywords_list" class="keyword-checkbox-container"></div>
+                    <div id="keyword_count">0 keywords selected</div>
+                </div>
+            </div>
 
+            <!-- Hidden fields for form submission -->
+            <textarea name="relatedKeywordIds" id="relatedKeywordIds" style="display: block;">[]</textarea>
+            <textarea name="relatedKeywordStrings" id="relatedKeywordStrings" style="display: block;">[]</textarea>
                 <button type="button" onclick="getArtworks()" id="get_artworks_btn">🎨 Get Artist's Artworks</button>
                 <div id="artwork_status"></div>
 
                 <div id="artwork_list" style="display: none;">
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" onclick="selectAllArtworks(true)">Select All Artworks</button>
+                        <button type="button" onclick="selectAllArtworks(false)">Deselect All</button>
+                    </div>
+                    <script>
+                    function selectAllArtworks(select) {
+                        artworkList.forEach((_, index) => {
+                            const container = document.querySelector(`#artwork_container .artwork-item[data-index="${index}"]`);
+                            if (container) {
+                                if (select && !selectedArtworkIndices.has(index)) {
+                                    selectedArtworkIndices.add(index);
+                                    container.classList.add('selected');
+                                    const indicator = document.getElementById(`selection-indicator-${index}`);
+                                    if (indicator) indicator.textContent = '☑';
+                                } else if (!select && selectedArtworkIndices.has(index)) {
+                                    selectedArtworkIndices.delete(index);
+                                    container.classList.remove('selected');
+                                    const indicator = document.getElementById(`selection-indicator-${index}`);
+                                    if (indicator) indicator.textContent = '☐';
+                                }
+                            }
+                        });
+                    }
+                    </script>
                     <div class="field-label">Artist's Artworks (click to select):</div>
                     <div id="artwork_container" class="artwork-list-container"></div>
                     <button type="button" onclick="checkDataBeforeSubmission()" class="check-data-btn">
@@ -129,6 +174,7 @@
             return name;
         }
         
+
         async function lookupArtist() {
             const firstName = document.getElementById('first_name').value.trim();
             const lastName = document.getElementById('last_name').value.trim();
@@ -205,15 +251,32 @@
                         // Pre-fill form with existing data
                         document.getElementById('entry_id').value = result.existing_artist.entry_id;
                         document.getElementById('artist_value').value = result.existing_artist.value;
-                        document.querySelector('[name="artist_aliases"]').value = 
-                            JSON.stringify(result.existing_artist.artist_aliases || [], null, 2);
-                        document.querySelector('[name="images"]').value = 
-                            JSON.stringify(result.existing_artist.images || [], null, 2);
+                        
+                        // Format JSON fields for display
+                        try {
+                            const aliases = typeof result.existing_artist.artist_aliases === 'string' 
+                                ? JSON.parse(result.existing_artist.artist_aliases || '[]')
+                                : result.existing_artist.artist_aliases || [];
+                            document.querySelector('[name="artist_aliases"]').value = JSON.stringify(aliases, null, 2);
+                        } catch (e) {
+                            document.querySelector('[name="artist_aliases"]').value = '[]';
+                        }
+                        
+                        try {
+                            const images = typeof result.existing_artist.images === 'string'
+                                ? JSON.parse(result.existing_artist.images || '[]')
+                                : result.existing_artist.images || [];
+                            document.querySelector('[name="images"]').value = JSON.stringify(images, null, 2);
+                        } catch (e) {
+                            document.querySelector('[name="images"]').value = '[]';
+                        }
                         
                         // Merge WikiArt data with existing descriptions
                         let existingDescriptions = {};
                         try {
-                            existingDescriptions = JSON.parse(result.existing_artist.descriptions || '{}');
+                            existingDescriptions = typeof result.existing_artist.descriptions === 'string'
+                                ? JSON.parse(result.existing_artist.descriptions || '{}')
+                                : result.existing_artist.descriptions || {};
                         } catch (e) {
                             existingDescriptions = {};
                         }
@@ -246,11 +309,31 @@
                         }
                         
                         document.querySelector('[name="descriptions"]').value = JSON.stringify(existingDescriptions, null, 2);
-                        document.querySelector('[name="relatedKeywordIds"]').value = 
-                            JSON.stringify(result.existing_artist.relatedKeywordIds || [], null, 2);
-                        document.querySelector('[name="relatedKeywordStrings"]').value = 
-                            JSON.stringify(result.existing_artist.relatedKeywordStrings || [], null, 2);
+                        
+                        // Handle keyword fields
+                        let keywordIds = [];
+                        let keywordStrings = [];
+                        
+                        try {
+                            keywordIds = typeof result.existing_artist.relatedKeywordIds === 'string'
+                                ? JSON.parse(result.existing_artist.relatedKeywordIds || '[]')
+                                : result.existing_artist.relatedKeywordIds || [];
+                            keywordStrings = typeof result.existing_artist.relatedKeywordStrings === 'string'
+                                ? JSON.parse(result.existing_artist.relatedKeywordStrings || '[]')
+                                : result.existing_artist.relatedKeywordStrings || [];
+                        } catch (e) {
+                            console.error('Error parsing keywords:', e);
+                        }
+                        
+                        // Initialize keywords for the UI
+                        initializeKeywords(keywordIds, keywordStrings);
+                        
+                        // Set the textarea values
+                        document.getElementById('relatedKeywordIds').value = JSON.stringify(keywordIds, null, 2);
+                        document.getElementById('relatedKeywordStrings').value = JSON.stringify(keywordStrings, null, 2);
+                        
                     } else {
+                        // New artist
                         showDatabaseStatus('Artist not in database. Form will create new entry.', 'success');
                         document.getElementById('submit_button').textContent = 'Add to Database';
                         isUpdating = false;
@@ -278,7 +361,7 @@
                                 sortable_name: `${lastName} ${firstName}`,
                                 last: lastName,
                                 first: firstName,
-                                slug: slugify(artistName) // Use the existing slugify function
+                                slug: slugify(artistName)
                             };
                             aliases.push(alias);
                         }
@@ -305,13 +388,21 @@
                             // Add all structured data
                             if (result.artist_info.structured_data) {
                                 for (const [key, value] of Object.entries(result.artist_info.structured_data)) {
-                                    if (key !== 'name' && key !== 'image_url') { // Skip name (already used) and image_url (handled separately)
+                                    if (key !== 'name' && key !== 'image_url') {
                                         descriptions.wikiart[key] = value;
                                     }
                                 }
                             }
                         }
                         document.querySelector('[name="descriptions"]').value = JSON.stringify(descriptions, null, 2);
+                        
+                        // Initialize empty keywords
+                        initializeKeywords([], []);
+                        document.getElementById('relatedKeywordIds').value = '[]';
+                        document.getElementById('relatedKeywordStrings').value = '[]';
+                        
+                        // Empty images field
+                        document.querySelector('[name="images"]').value = '[]';
                     }
                     
                     document.getElementById('artist_form_section').style.display = 'block';
@@ -326,7 +417,8 @@
                 showStatus('Error: ' + error.message, 'error');
             }
         }
-        
+
+
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
             statusDiv.textContent = message;
@@ -444,6 +536,7 @@
             const selectedIds = [];
             const selectedStrings = [];
             
+            // Collect from checkboxes (auto-generated keywords)
             availableKeywords.forEach((keyword, index) => {
                 const checkbox = document.getElementById(`keyword_${index}`);
                 if (checkbox && checkbox.checked) {
@@ -452,12 +545,84 @@
                 }
             });
             
-            // Update form fields
-            document.querySelector('[name="relatedKeywordIds"]').value = 
-                JSON.stringify(selectedIds, null, 2);
-            document.querySelector('[name="relatedKeywordStrings"]').value = 
-                JSON.stringify(selectedStrings, null, 2);
+            // Add manually selected keywords (if you implemented that)
+            if (typeof manuallySelectedKeywords !== 'undefined') {
+                manuallySelectedKeywords.forEach((keyword) => {
+                    if (!selectedIds.includes(keyword.entry_id)) {
+                        selectedIds.push(keyword.entry_id);
+                        selectedStrings.push(keyword.value);
+                    }
+                });
+            }
+            
+            // Update hidden textareas
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(selectedIds, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(selectedStrings, null, 2);
+            
+            // Update the final review display
+            updateFinalKeywordDisplay(selectedIds, selectedStrings);
         }
+
+        // New function to display the final keyword list
+        function updateFinalKeywordDisplay(ids, strings) {
+            const container = document.getElementById('final_keyword_list');
+            container.innerHTML = '';
+            
+            if (ids.length === 0) {
+                container.innerHTML = '<em>No keywords selected</em>';
+                document.getElementById('final_keyword_count').textContent = '0 keywords selected';
+                return;
+            }
+            
+            ids.forEach((id, index) => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'keyword-checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `final_keyword_${index}`;
+                checkbox.checked = true; // Default to selected
+                checkbox.dataset.keywordId = id;
+                checkbox.dataset.keywordString = strings[index];
+                checkbox.addEventListener('change', updateFinalKeywordData);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `final_keyword_${index}`;
+                label.textContent = strings[index];
+                
+                checkboxItem.appendChild(checkbox);
+                checkboxItem.appendChild(label);
+                container.appendChild(checkboxItem);
+            });
+            
+            updateFinalKeywordCount();
+        }
+
+        // Update the data when user checks/unchecks in final list
+        function updateFinalKeywordData() {
+            const finalIds = [];
+            const finalStrings = [];
+            
+            const checkboxes = document.querySelectorAll('#final_keyword_list input[type="checkbox"]:checked');
+            checkboxes.forEach((checkbox) => {
+                finalIds.push(checkbox.dataset.keywordId);
+                finalStrings.push(checkbox.dataset.keywordString);
+            });
+            
+            // Update the hidden fields
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(finalIds, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(finalStrings, null, 2);
+            
+            updateFinalKeywordCount();
+        }
+
+        // Update count display
+        function updateFinalKeywordCount() {
+            const total = document.querySelectorAll('#final_keyword_list input[type="checkbox"]').length;
+            const selected = document.querySelectorAll('#final_keyword_list input[type="checkbox"]:checked').length;
+            document.getElementById('final_keyword_count').textContent = `${selected} of ${total} keywords selected`;
+        }
+
 
         async function getArtworks() {
             const getArtworksBtn = document.getElementById('get_artworks_btn');
@@ -809,6 +974,26 @@
             }
         }
 
+        function selectAllArtworkKeywords(artworkIndex, selectAll) {
+            const keywordContainer = document.getElementById(`artwork_keywords_list_${artworkIndex}`);
+            const checkboxes = keywordContainer.querySelectorAll('input[type="checkbox"]');
+            
+            checkboxes.forEach((checkbox) => {
+                checkbox.checked = selectAll;
+            });
+            
+            // Update the keyword map for this artwork
+            const keywordMap = artworkKeywordMaps.get(artworkIndex) || new Map();
+            if (selectAll) {
+                checkboxes.forEach((checkbox) => {
+                    keywordMap.set(checkbox.value, checkbox);
+                });
+            } else {
+                keywordMap.clear();
+            }
+            artworkKeywordMaps.set(artworkIndex, keywordMap);
+        }   
+
         function displayValidationResults(validation, artistData, selectedArtworks) {
             console.log("=== DISPLAYING VALIDATION RESULTS ===");
             console.log("Validation object:", validation);
@@ -859,6 +1044,10 @@
                     html += `<div class="artwork-validation-item" style="border: 1px solid #ddd; margin: 15px 0; padding: 15px; border-radius: 4px;">`;
                     html += `<div style="font-weight: bold; margin-bottom: 10px;">${artwork.value || 'Unknown Title'}</div>`;
                     
+
+
+                    
+
                     // Clean artwork preview
                     const cleanArtworkPreview = {
                         image_id: artwork.image_id,
@@ -877,6 +1066,35 @@
                     // Validation checks
                     html += '<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">';
                     
+
+                    // Add keyword management section for this artwork
+                    html += `
+                        <div class="artwork-keyword-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <h4>Keywords for this artwork:</h4>
+                            <div class="artwork-keyword-controls">
+                                <input type="text" 
+                                    id="artwork_keyword_search_${index}" 
+                                    placeholder="Search keywords for this artwork..."
+                                    style="padding: 5px; margin-right: 5px;">
+                                <button type="button" onclick="searchArtworkKeywords(${index})">Search</button>
+                            </div>
+                            <div id="artwork_keyword_status_${index}"></div>
+                            <div id="artwork_keyword_results_${index}" class="keyword-results-container" style="display: none; max-height: 150px; overflow-y: auto;"></div>
+                            <div class="artwork-selected-keywords">
+                                <strong>Selected Keywords:</strong>
+                                <div style="margin-bottom: 5px;">
+                                    <button type="button" onclick="selectAllArtworkKeywords(${index}, true)">Select All</button>
+                                    <button type="button" onclick="selectAllArtworkKeywords(${index}, false)">Deselect All</button>
+                                </div>
+                                <div id="artwork_keywords_list_${index}" class="keyword-checkbox-container"></div>
+                            </div>
+                        </div>
+                    `;
+
+                    
+                    html += '</div>'; // Close artwork validation item
+
+
                     // JSON validation for this artwork
                     const artworkJsonValid = validation.artworks_json_valid && validation.artworks_json_valid[index];
                     if (artworkJsonValid) {
@@ -930,6 +1148,12 @@
                 
                 html += '</div>';
                 resultsDiv.innerHTML = html;
+    
+                // Initialize keyword displays for each artwork
+                selectedArtworks.forEach((artwork, index) => {
+                    initializeArtworkKeywords(artwork, index);
+                });
+
                 
                 console.log("Validation results displayed successfully");
                 
@@ -1000,13 +1224,25 @@
             statusDiv.innerHTML = '<div class="status info">🔄 Inserting data into database...</div>';
             
             try {
-                // Get all the selected artwork data
-                const selectedArtworks = [];
-                for (const index of selectedArtworkIndices) {
-                    if (artworkList[index].parsed_data) {
-                        selectedArtworks.push(artworkList[index].parsed_data);
+                // Get all the selected artwork data with updated keywords
+                    const selectedArtworks = [];
+                    let artworkIndex = 0;
+                    for (const index of selectedArtworkIndices) {
+                        if (artworkList[index].parsed_data) {
+                            const artwork = artworkList[index].parsed_data;
+                            
+                            // Get the updated keywords from the map
+                            const keywordMap = artworkKeywordMaps.get(artworkIndex);
+                            if (keywordMap) {
+                                artwork.relatedKeywordIds = Array.from(keywordMap.keys());
+                                artwork.relatedKeywordStrings = Array.from(keywordMap.values()).map(k => k.value);
+                            }
+                            
+                            selectedArtworks.push(artwork);
+                            artworkIndex++;
+                        }
                     }
-                }
+                
                 
                 const formData = new FormData(document.getElementById('artistForm'));
                 const artistData = Object.fromEntries(formData);
@@ -1065,6 +1301,465 @@
                     '<div class="status error">❌ Error: ' + error.message + '</div>';
             }
         };
+
+
+                // Add manual keyword search functionality
+        let manuallySelectedKeywords = new Map();
+
+        document.getElementById('keyword_search_input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKeywords();
+            }
+        });
+
+
+
+        // Single master list of selected keywords
+        let selectedKeywords = new Map();
+
+        // Initialize with existing keywords when loading an artist
+        function initializeKeywords(existingIds = [], existingStrings = []) {
+            selectedKeywords.clear();
+            existingIds.forEach((id, index) => {
+                selectedKeywords.set(id, {
+                    entry_id: id,
+                    value: existingStrings[index] || 'Unknown',
+                    source: 'existing'
+                });
+            });
+            updateSelectedKeywordsDisplay();
+        }
+
+        // Search for keywords
+        async function searchKeywords() {
+            const query = document.getElementById('keyword_search_input').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            await performKeywordSearch(query);
+        }
+
+        // Auto-suggest based on artist data
+        async function autoSuggestKeywords() {
+            const artistName = document.getElementById('artist_value').value;
+            const descriptionsText = document.querySelector('[name="descriptions"]').value;
+            
+            let compiledText = artistName;
+            
+            try {
+                const descriptions = JSON.parse(descriptionsText);
+                for (const [source, data] of Object.entries(descriptions)) {
+                    if (typeof data === 'object') {
+                        for (const [key, value] of Object.entries(data)) {
+                            if (typeof value === 'string' && key !== 'link') {
+                                compiledText += ' ' + value;
+                            }
+                        }
+                    } else if (typeof data === 'string') {
+                        compiledText += ' ' + data;
+                    }
+                }
+            } catch (e) {
+                compiledText += ' ' + descriptionsText;
+            }
+            
+            await performKeywordSearch(compiledText);
+        }
+
+        // Shared function to perform keyword search
+        async function performKeywordSearch(query) {
+            const statusDiv = document.getElementById('keyword_status');
+            const resultsDiv = document.getElementById('keyword_results');
+            
+            statusDiv.innerHTML = '<div class="status info">🔄 Searching...</div>';
+            resultsDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/lookup_text', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: 30
+                    })
+                });
+                
+                const results = await response.json();
+                const keywords = results.filter(item => !item.isArtist);
+                
+                if (keywords.length > 0) {
+                    displaySearchResults(keywords);
+                    statusDiv.innerHTML = `<div class="status success">✅ Found ${keywords.length} keywords</div>`;
+                    resultsDiv.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">No keywords found</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(keywords) {
+            const resultsDiv = document.getElementById('keyword_results');
+            resultsDiv.innerHTML = '';
+            
+            keywords.forEach(keyword => {
+                const item = document.createElement('div');
+                item.className = 'keyword-result-item';
+                
+                // Check if already selected
+                if (selectedKeywords.has(keyword.entry_id)) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `
+                    <span>${keyword.value}</span>
+                    <span class="keyword-type-badge">${keyword.type}</span>
+                `;
+                
+                item.onclick = () => {
+                    if (selectedKeywords.has(keyword.entry_id)) {
+                        selectedKeywords.delete(keyword.entry_id);
+                        item.classList.remove('selected');
+                    } else {
+                        selectedKeywords.set(keyword.entry_id, keyword);
+                        item.classList.add('selected');
+                    }
+                    updateSelectedKeywordsDisplay();
+                };
+                
+                resultsDiv.appendChild(item);
+            });
+        }
+
+        // Update the display of selected keywords
+        function updateSelectedKeywordsDisplay() {
+            const listDiv = document.getElementById('selected_keywords_list');
+            listDiv.innerHTML = '';
+            
+            if (selectedKeywords.size === 0) {
+                listDiv.innerHTML = '<em>No keywords selected</em>';
+            } else {
+                selectedKeywords.forEach((keyword, id) => {
+                    const item = document.createElement('div');
+                    item.className = 'keyword-checkbox-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `selected_${id}`;
+                    checkbox.checked = true;
+                    checkbox.onchange = (e) => {
+                        if (!e.target.checked) {
+                            selectedKeywords.delete(id);
+                            updateSelectedKeywordsDisplay();
+                        }
+                    };
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `selected_${id}`;
+                    label.textContent = keyword.value;
+                    
+                    item.appendChild(checkbox);
+                    item.appendChild(label);
+                    listDiv.appendChild(item);
+                });
+            }
+            
+            // Update count
+            document.getElementById('keyword_count').textContent = `${selectedKeywords.size} keywords selected`;
+            
+            // Update hidden form fields
+            const ids = Array.from(selectedKeywords.keys());
+            const strings = Array.from(selectedKeywords.values()).map(k => k.value);
+            
+            document.getElementById('relatedKeywordIds').value = JSON.stringify(ids, null, 2);
+            document.getElementById('relatedKeywordStrings').value = JSON.stringify(strings, null, 2);
+        }
+
+        // Enable Enter key for search
+        document.getElementById('keyword_search_input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKeywords();
+            }
+        });
+
+            
+
+
+
+        // Add this function
+        async function checkDatabaseStats() {
+            try {
+                const response = await fetch('/artist_lookup/db_stats');
+                const stats = await response.json();
+                
+                if (stats.success) {
+                    document.getElementById('db_status_text').innerHTML = 
+                        `✅ Connected - Artists: <strong>${stats.artist_count}</strong>, ` +
+                        `Images: <strong>${stats.image_count}</strong>, ` +
+                        `Total Entries: <strong>${stats.total_count}</strong>`;
+                } else {
+                    document.getElementById('db_status_text').innerHTML = 
+                        `❌ Error: ${stats.error}`;
+                }
+            } catch (error) {
+                document.getElementById('db_status_text').innerHTML = 
+                    `❌ Failed to connect: ${error.message}`;
+            }
+        }
+
+
+        // Store artwork-specific keywords
+        let artworkKeywordMaps = new Map(); // Maps artwork index to its keyword Map
+
+
+        // Initialize keywords for a specific artwork
+        function initializeArtworkKeywords(artwork, artworkIndex) {
+            // Create a new Map for this artwork's keywords
+            const keywordMap = new Map();
+            
+            try {
+                // Get the current artist's keywords from the form
+                const keywordIdsElement = document.getElementById('relatedKeywordIds');
+                const keywordStringsElement = document.getElementById('relatedKeywordStrings');
+                
+                let artistKeywordIds = [];
+                let artistKeywordStrings = [];
+                
+                // Parse the values, handling the case where they might be character arrays
+                if (keywordIdsElement && keywordIdsElement.value) {
+                    let idsValue = keywordIdsElement.value;
+                    
+                    // Check if it's a stringified array of characters
+                    try {
+                        const parsed = JSON.parse(idsValue);
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].length === 1) {
+                            // It's an array of single characters - reconstruct the original string
+                            idsValue = parsed.join('');
+                        }
+                        artistKeywordIds = JSON.parse(idsValue);
+                    } catch (e) {
+                        console.error('Error parsing keyword IDs:', e);
+                        artistKeywordIds = [];
+                    }
+                }
+                
+                if (keywordStringsElement && keywordStringsElement.value) {
+                    let stringsValue = keywordStringsElement.value;
+                    
+                    // Check if it's a stringified array of characters
+                    try {
+                        const parsed = JSON.parse(stringsValue);
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].length === 1) {
+                            // It's an array of single characters - reconstruct the original string
+                            stringsValue = parsed.join('');
+                        }
+                        artistKeywordStrings = JSON.parse(stringsValue);
+                    } catch (e) {
+                        console.error('Error parsing keyword strings:', e);
+                        artistKeywordStrings = [];
+                    }
+                }
+                
+                console.log('Parsed keyword IDs:', artistKeywordIds);
+                console.log('Parsed keyword strings:', artistKeywordStrings);
+                
+                // Add artist keywords
+                artistKeywordIds.forEach((id, index) => {
+                    if (artistKeywordStrings[index]) {
+                        keywordMap.set(id, {
+                            entry_id: id,
+                            value: artistKeywordStrings[index],
+                            source: 'artist'
+                        });
+                    }
+                });
+                
+                // Add the artist themselves as a keyword
+                const artistEntryId = document.getElementById('entry_id').value;
+                const artistName = document.getElementById('artist_value').value;
+                if (artistEntryId && artistName) {
+                    keywordMap.set(artistEntryId, {
+                        entry_id: artistEntryId,
+                        value: artistName,
+                        source: 'artist'
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error initializing artwork keywords:', error);
+            }
+            
+            // Store the map
+            artworkKeywordMaps.set(artworkIndex, keywordMap);
+            
+            // Display the keywords
+            updateArtworkKeywordDisplay(artworkIndex);
+            
+            // Add enter key handler
+            const searchInput = document.getElementById(`artwork_keyword_search_${artworkIndex}`);
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchArtworkKeywords(artworkIndex);
+                    }
+                });
+            }
+        }
+
+
+
+        // Search keywords for a specific artwork
+        async function searchArtworkKeywords(artworkIndex) {
+            const searchInput = document.getElementById(`artwork_keyword_search_${artworkIndex}`);
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            const statusDiv = document.getElementById(`artwork_keyword_status_${artworkIndex}`);
+            const resultsDiv = document.getElementById(`artwork_keyword_results_${artworkIndex}`);
+            
+            statusDiv.innerHTML = '<div class="status info">🔄 Searching...</div>';
+            resultsDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/lookup_text', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: 20
+                    })
+                });
+                
+                const results = await response.json();
+                const keywords = results.filter(item => !item.isArtist);
+                
+                if (keywords.length > 0) {
+                    displayArtworkSearchResults(keywords, artworkIndex);
+                    statusDiv.innerHTML = `<div class="status success">✅ Found ${keywords.length} keywords</div>`;
+                    resultsDiv.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '<div class="status warning">No keywords found</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display search results for artwork keywords
+        function displayArtworkSearchResults(keywords, artworkIndex) {
+            const resultsDiv = document.getElementById(`artwork_keyword_results_${artworkIndex}`);
+            const keywordMap = artworkKeywordMaps.get(artworkIndex);
+            
+            resultsDiv.innerHTML = '';
+            
+            keywords.forEach(keyword => {
+                const item = document.createElement('div');
+                item.className = 'keyword-result-item';
+                item.style.padding = '5px';
+                item.style.cursor = 'pointer';
+                
+                if (keywordMap.has(keyword.entry_id)) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `
+                    <span>${keyword.value}</span>
+                    <span class="keyword-type-badge">${keyword.type}</span>
+                `;
+                
+                item.onclick = () => {
+                    if (keywordMap.has(keyword.entry_id)) {
+                        keywordMap.delete(keyword.entry_id);
+                        item.classList.remove('selected');
+                    } else {
+                        keywordMap.set(keyword.entry_id, {
+                            ...keyword,
+                            source: 'search'
+                        });
+                        item.classList.add('selected');
+                    }
+                    updateArtworkKeywordDisplay(artworkIndex);
+                };
+                
+                resultsDiv.appendChild(item);
+            });
+        }
+
+        // Update display of selected keywords for an artwork
+        function updateArtworkKeywordDisplay(artworkIndex) {
+            const listDiv = document.getElementById(`artwork_keywords_list_${artworkIndex}`);
+            const keywordMap = artworkKeywordMaps.get(artworkIndex);
+            
+            listDiv.innerHTML = '';
+            
+            if (keywordMap.size === 0) {
+                listDiv.innerHTML = '<em>No keywords selected</em>';
+            } else {
+                keywordMap.forEach((keyword, id) => {
+                    const item = document.createElement('div');
+                    item.className = 'keyword-checkbox-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `artwork_${artworkIndex}_keyword_${id}`;
+                    checkbox.checked = true;
+                    checkbox.onchange = (e) => {
+                        if (!e.target.checked) {
+                            keywordMap.delete(id);
+                            updateArtworkKeywordDisplay(artworkIndex);
+                        }
+                    };
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `artwork_${artworkIndex}_keyword_${id}`;
+                    label.textContent = `${keyword.value} (${keyword.source})`;
+                    
+                    item.appendChild(checkbox);
+                    item.appendChild(label);
+                    listDiv.appendChild(item);
+                });
+            }
+            
+            // Update the artwork's keyword data
+            updateArtworkKeywordData(artworkIndex);
+        }
+
+        // Update the artwork object with current keywords
+        function updateArtworkKeywordData(artworkIndex) {
+            const keywordMap = artworkKeywordMaps.get(artworkIndex);
+            const selectedArtwork = getSelectedArtworkByIndex(artworkIndex);
+            
+            if (selectedArtwork) {
+                const ids = Array.from(keywordMap.keys());
+                const strings = Array.from(keywordMap.values()).map(k => k.value);
+                
+                selectedArtwork.relatedKeywordIds = ids;
+                selectedArtwork.relatedKeywordStrings = strings;
+            }
+        }
+
+        // Helper to get the artwork data by index
+        function getSelectedArtworkByIndex(artworkIndex) {
+            let currentIndex = 0;
+            for (const index of selectedArtworkIndices) {
+                if (currentIndex === artworkIndex && artworkList[index].parsed_data) {
+                    return artworkList[index].parsed_data;
+                }
+                currentIndex++;
+            }
+            return null;
+        }
+
+        // Call it when page loads
+        window.addEventListener('DOMContentLoaded', checkDatabaseStats);
 
     </script>
 </body>

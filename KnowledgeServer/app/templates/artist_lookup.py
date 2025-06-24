@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from index import get_db
 import urllib.request
 from urllib.parse import urlparse
+import hashlib
 
 
 artist_lookup_bp = Blueprint('artist_lookup', __name__, url_prefix='/artist_lookup')
@@ -191,6 +192,33 @@ def parse_wikiart_html(html_content):
     
     return artist_info
 
+@artist_lookup_bp.route('/db_stats')
+def get_db_stats():
+    """Get database statistics for debugging"""
+    try:
+        db = get_db()
+        
+        # Count artists
+        artist_count = db.execute('SELECT COUNT(*) FROM text_entries WHERE isArtist = 1').fetchone()[0]
+        
+        # Count images
+        image_count = db.execute('SELECT COUNT(*) FROM image_entries').fetchone()[0]
+        
+        # Total text entries
+        total_count = db.execute('SELECT COUNT(*) FROM text_entries').fetchone()[0]
+        
+        return jsonify({
+            'success': True,
+            'artist_count': artist_count,
+            'image_count': image_count,
+            'total_count': total_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
 @artist_lookup_bp.route('/')
 def artist_lookup_page():
     """Artist lookup and form page"""
@@ -198,6 +226,132 @@ def artist_lookup_page():
 
 @artist_lookup_bp.route('/process', methods=['POST'])
 def process_artist_lookup():
+    """Process the artist lookup request"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No JSON data received'})
+            
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        
+        if not first_name or not last_name:
+            return jsonify({'success': False, 'error': 'First name and last name are required'})
+        
+        # Create slug
+        full_name = f"{first_name} {last_name}"
+        slug = slugify(full_name)
+        
+        # Check if artist exists in database using slug in artist_aliases
+        existing_artist = None
+        try:
+            db = get_db()
+            
+            # Search for the slug in the artist_aliases JSON column
+            # SQLite doesn't have native JSON search, so we need to use LIKE
+            search_pattern = f'%"slug": "{slug}"%'
+            cursor = db.execute('''
+                SELECT * FROM text_entries 
+                WHERE isArtist = 1 
+                AND artist_aliases LIKE ?
+            ''', (search_pattern,))
+            existing_artist = cursor.fetchone()
+            
+            # If not found by slug, try searching by name in artist_aliases
+            if not existing_artist:
+                name_pattern = f'%"name": "{full_name}"%'
+                cursor = db.execute('''
+                    SELECT * FROM text_entries 
+                    WHERE isArtist = 1 
+                    AND artist_aliases LIKE ?
+                ''', (name_pattern,))
+                existing_artist = cursor.fetchone()
+            
+            # If still not found, try case-insensitive search on the value field
+            if not existing_artist:
+                cursor = db.execute('''
+                    SELECT * FROM text_entries 
+                    WHERE isArtist = 1 
+                    AND LOWER(value) = LOWER(?)
+                ''', (full_name,))
+                existing_artist = cursor.fetchone()
+                
+            if existing_artist:
+                print(f"Found existing artist: {existing_artist['value']} with slug search: {slug}")
+            
+            if existing_artist:
+                # Convert Row to dict and ensure JSON fields are properly formatted
+                artist_dict = dict(existing_artist)
+                
+                # Ensure JSON fields are valid JSON strings (not double-encoded)
+                json_fields = ['artist_aliases', 'images', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+                for field in json_fields:
+                    if field in artist_dict and artist_dict[field]:
+                        try:
+                            # Try to parse it
+                            parsed = json.loads(artist_dict[field])
+                            # If successful, it's valid JSON, keep as is
+                            artist_dict[field] = artist_dict[field]
+                        except:
+                            # If it fails, it might be corrupted, try to fix
+                            print(f"Warning: Invalid JSON in {field} for artist {artist_dict.get('value', 'unknown')}")
+                            # Set a default
+                            if field == 'descriptions':
+                                artist_dict[field] = '{}'
+                            else:
+                                artist_dict[field] = '[]'
+                
+                return jsonify({
+                    'success': True,
+                    'slug': slug,
+                    'html_content': response.text[:10000],
+                    'artist_info': artist_info,
+                    'existing_artist': artist_dict
+                })
+            
+            else:
+                print(f"No existing artist found for slug: {slug}")
+                
+        except Exception as db_error:
+            print(f"Database error (continuing without DB check): {db_error}")
+            # Continue without database check
+    
+        # Try to fetch WikiArt page
+        url = f'https://www.wikiart.org/en/{slug}'
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, timeout=10, headers=headers)
+            
+            if response.status_code == 200:
+                # Parse the HTML to extract artist information
+                artist_info = parse_wikiart_html(response.text)
+                
+                return jsonify({
+                    'success': True,
+                    'slug': slug,
+                    'html_content': response.text[:10000],  # First 10k chars for preview
+                    'artist_info': artist_info,
+                    'existing_artist': dict(existing_artist) if existing_artist else None
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'WikiArt page not found (status code: {response.status_code})'
+                })
+        except requests.RequestException as e:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to fetch WikiArt page: {str(e)}'
+            })
+            
+    except Exception as e:
+        # Catch any other errors and return JSON response
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        })
     """Process the artist lookup request"""
     try:
         data = request.json
@@ -387,6 +541,9 @@ def get_artwork_details():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+
 
 
 def parse_artwork_details(html_content, artwork_title):
@@ -644,6 +801,8 @@ def parse_artwork_details(html_content, artwork_title):
     return artwork_data
 
 
+
+
 @artist_lookup_bp.route('/download_image', methods=['POST'])
 def download_image_route():
     """Download an image file"""
@@ -657,7 +816,8 @@ def download_image_route():
             return jsonify({'success': False, 'error': 'Missing image URL or ID'})
 
         # Check if the file already exists
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        # Find the base directory by going up one level from the current (templates) directory
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         images_dir = os.path.join(BASE_DIR, "LOCALDB", "images")
         file_ext = os.path.splitext(urlparse(image_url).path)[1] or '.jpg'
         filename = f"{image_id}{file_ext}"
@@ -820,6 +980,28 @@ def submit_all_data():
         
         db = get_db()
         
+        # Clean up JSON fields before insertion
+        # Parse and re-stringify to ensure clean JSON
+        def clean_json_field(field_value, default='[]'):
+            if isinstance(field_value, str):
+                try:
+                    # Parse to validate and clean
+                    parsed = json.loads(field_value)
+                    # Re-stringify with no escaping
+                    return json.dumps(parsed)
+                except:
+                    return default
+            else:
+                # Already an object, just stringify
+                return json.dumps(field_value)
+        
+        # Clean artist data JSON fields
+        artist_aliases_clean = clean_json_field(artist_data.get('artist_aliases'), '[]')
+        images_clean = clean_json_field(artist_data.get('images'), '[]')
+        descriptions_clean = clean_json_field(artist_data.get('descriptions'), '{}')
+        relatedKeywordIds_clean = clean_json_field(artist_data.get('relatedKeywordIds'), '[]')
+        relatedKeywordStrings_clean = clean_json_field(artist_data.get('relatedKeywordStrings'), '[]')
+        
         # Insert or update artist data
         if artist_data.get('entry_id'):
             # Check if updating existing artist
@@ -835,11 +1017,11 @@ def submit_all_data():
                     WHERE entry_id = ?
                 ''', (
                     artist_data['value'],
-                    artist_data['artist_aliases'],
-                    artist_data['images'],
-                    artist_data['descriptions'],
-                    artist_data['relatedKeywordIds'],
-                    artist_data['relatedKeywordStrings'],
+                    artist_aliases_clean,
+                    images_clean,
+                    descriptions_clean,
+                    relatedKeywordIds_clean,
+                    relatedKeywordStrings_clean,
                     artist_data['entry_id']
                 ))
             else:
@@ -854,17 +1036,24 @@ def submit_all_data():
                     artist_data['value'],
                     artist_data['type'],
                     1,  # isArtist
-                    artist_data['artist_aliases'],
-                    artist_data['images'],
-                    artist_data['descriptions'],
-                    artist_data['relatedKeywordIds'],
-                    artist_data['relatedKeywordStrings']
+                    artist_aliases_clean,
+                    images_clean,
+                    descriptions_clean,
+                    relatedKeywordIds_clean,
+                    relatedKeywordStrings_clean
                 ))
         
         # Insert artworks
         artworks_added = 0
         for artwork in selected_artworks:
             try:
+                # Ensure artwork JSON fields are clean strings, not double-encoded
+                artist_names_json = json.dumps(artwork.get('artist_names', []))
+                image_urls_json = json.dumps(artwork.get('image_urls', {}))
+                descriptions_json = json.dumps(artwork.get('descriptions', {}))
+                relatedKeywordIds_json = json.dumps(artwork.get('relatedKeywordIds', []))
+                relatedKeywordStrings_json = json.dumps(artwork.get('relatedKeywordStrings', []))
+                
                 db.execute('''
                     INSERT INTO image_entries (
                         image_id, value, artist_names, image_urls, filename, 
@@ -873,13 +1062,13 @@ def submit_all_data():
                 ''', (
                     artwork['image_id'],
                     artwork['value'],
-                    json.dumps(artwork['artist_names']),
-                    json.dumps(artwork['image_urls']),
+                    artist_names_json,
+                    image_urls_json,
                     artwork['filename'],
                     artwork['rights'],
-                    json.dumps(artwork['descriptions']),
-                    json.dumps(artwork['relatedKeywordIds']),
-                    json.dumps(artwork['relatedKeywordStrings'])
+                    descriptions_json,
+                    relatedKeywordIds_json,
+                    relatedKeywordStrings_json
                 ))
                 artworks_added += 1
             except Exception as e:
@@ -897,7 +1086,7 @@ def submit_all_data():
         return jsonify({'success': False, 'error': str(e)})
 
 def download_image(image_url, image_id):
-    """Download image to LOCALDB/images/ directory"""
+    """Download image to ../LOCALDB/images/ directory"""
     try:
         import urllib.request
         from urllib.parse import urlparse

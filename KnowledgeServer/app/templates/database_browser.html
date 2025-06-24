@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Browser</title>
+    <link rel="stylesheet" href="../static/css/admin_styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>🗄️ Database Browser</h1>
+                <div class="pagination-top" id="pagination-top">
+                    <button class="page-btn" id="prev-btn-top" onclick="changePage(-1)">← Previous</button>
+                    <span class="page-info" id="page-info-top">Page 1</span>
+                    <button class="page-btn" id="next-btn-top" onclick="changePage(1)">Next →</button>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="table-selector">
+                    <button class="table-btn" onclick="switchTable('text_entries')">Text Entries</button>
+                    <button class="table-btn active" onclick="switchTable('image_entries')">Image Entries</button>
+                </div>
+                <div class="stats" id="stats">Loading...</div>
+                <label for="download-size" style="font-size:14px;margin-left:10px;">Download:</label>
+                <select id="download-size" style="margin-left:4px;padding:4px 8px;border-radius:4px;">
+                    <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="all">All</option>
+                </select>
+                <button class="page-btn" id="download-json-btn" onclick="downloadCurrentTableAsJSON()">Download as JSON</button>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div id="table-content">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for detailed view -->
+    <div id="detailModal" class="modal" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTable = 'image_entries';
+        let currentPage = 1;
+        let totalPages = 1;
+        const pageSize = 25;
+        let totalRows = 0;
+        let currentData = null;
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+
+        function switchTable(tableName) {
+            // Update active button
+            document.querySelectorAll('.table-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reset to first page and clear sorting
+            currentTable = tableName;
+            currentPage = 1;
+            sortColumn = null;
+            sortDirection = 'asc';
+            loadData();
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                loadData();
+            }
+        }
+
+        function loadData() {
+            const tableContent = document.getElementById('table-content');
+            tableContent.innerHTML = '<div class="loading">Loading data...</div>';
+            
+            let url = `/api/browse_database?table=${currentTable}&page=${currentPage}&page_size=${pageSize}`;
+            if (sortColumn) {
+                url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentData = data;
+                        displayData(data);
+                        updatePagination(data);
+                        updateStats(data);
+                    } else {
+                        tableContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    }
+                })
+                .catch(error => {
+                    tableContent.innerHTML = `<div class="error">Failed to load data: ${error}</div>`;
+                });
+        }
+
+        function sortBy(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            loadData();
+        }
+
+        function displayData(data) {
+            const tableContent = document.getElementById('table-content');
+            
+            if (!data.rows || data.rows.length === 0) {
+                tableContent.innerHTML = '<div class="empty">No data found</div>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            
+            // Build table headers based on table type
+            if (currentTable === 'text_entries') {
+                html += `
+                    <th onclick="sortBy('entry_id')" class="${sortColumn === 'entry_id' ? 'sorted-' + sortDirection : ''}">ID</th>
+                    <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
+                    <th onclick="sortBy('type')" class="${sortColumn === 'type' ? 'sorted-' + sortDirection : ''}">Type</th>
+                    <th>Images</th>
+                    <th>Related Keywords</th>
+                `;
+            } else {
+                html += `
+                    <th>Image</th>
+                    <th onclick="sortBy('image_id')" class="${sortColumn === 'image_id' ? 'sorted-' + sortDirection : ''}">ID</th>
+                    <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
+                    <th>Artists</th>
+                    <th>Related Keywords</th>
+                `;
+            }
+            
+            html += '</tr></thead><tbody>';
+            
+            // Build table rows
+            data.rows.forEach((row, index) => {
+                html += `<tr onclick="showDetails(${index})">`;
+                
+                if (currentTable === 'text_entries') {
+                    html += `
+                        <td><code>${row.entry_id}</code></td>
+                        <td class="truncate">
+                            ${row.value}
+                            <!-- //$//{row.isArtist ? '<span class="artist-badge">Artist</span>' : ''} -->
+                        </td>
+                        <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
+                        <td>${formatJsonField(row.images, 'array', true)}</td>
+                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
+                    `;
+                } else {
+                    // For image_entries
+                    const imageUrl = getImageUrl(row.image_urls);
+                    html += `
+                        <td onclick="event.stopPropagation()">
+                            ${imageUrl ? `<img src="${imageUrl}" class="image-thumbnail" alt="${row.value}" onclick="showDetails(${index})">` : '-'}
+                        </td>
+                        <td><code>${row.image_id}</code></td>
+                        <td class="truncate">${row.value}</td>
+                        <td>${formatJsonField(row.artist_names, 'array')}</td>
+                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
+                    `;
+                }
+                
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            tableContent.innerHTML = html;
+        }
+
+        function formatJsonField(field, type, isImagesColumn = false) {
+            if (!field || field === '') return '-';
+            
+            try {
+                const parsed = JSON.parse(field);
+                
+                if (type === 'array' && Array.isArray(parsed)) {
+                    if (parsed.length === 0) return '<span class="json-field">[]</span>';
+                    
+                    // Special handling for images column in text_entries
+                    if (isImagesColumn) {
+                        const links = parsed.slice(0, 3).map(id => 
+                            `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
+                        ).join(', ');
+                        const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                        return `<span class="json-field">${links}${more}</span>`;
+                    }   
+                    
+                    const preview = parsed.slice(0, 3).join(', ');
+                    const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                    return `<span class="json-field">${preview}${more}</span>`;
+                } else if (type === 'object' && typeof parsed === 'object') {
+                    const keys = Object.keys(parsed);
+                    return `<span class="json-field">{${keys.length} fields}</span>`;
+                }
+                
+                return `<span class="json-field">${field}</span>`;
+            } catch (e) {
+                return `<span class="json-field">${field.substring(0, 50)}...</span>`;
+            }
+        }
+
+        function getImageUrl(imageUrlsJson) {
+            if (!imageUrlsJson) return null;
+            
+            try {
+                const urls = JSON.parse(imageUrlsJson);
+                // Try to get a small or medium sized image
+                return urls.small || urls.medium || urls.square || urls.normalized || Object.values(urls)[0];
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function updatePagination(data) {
+            totalRows = data.total_rows;
+            totalPages = Math.ceil(totalRows / pageSize);
+            
+            const prevBtnTop = document.getElementById('prev-btn-top');
+            const nextBtnTop = document.getElementById('next-btn-top');
+            const pageInfoTop = document.getElementById('page-info-top');
+            
+            prevBtnTop.disabled = currentPage === 1;
+            nextBtnTop.disabled = currentPage === totalPages;
+            
+            const startRow = (currentPage - 1) * pageSize + 1;
+            const endRow = Math.min(currentPage * pageSize, totalRows);
+            
+            pageInfoTop.textContent = `Page ${currentPage} of ${totalPages} (${startRow}-${endRow} of ${totalRows})`;
+        }
+
+        function updateStats(data) {
+            const stats = document.getElementById('stats');
+            const tableName = currentTable === 'text_entries' ? 'Text Entries' : 'Image Entries';
+            stats.textContent = `${tableName}: ${data.total_rows.toLocaleString()} total records`;
+        }
+
+        // Modal functions
+        function showDetails(index) {
+            const row = currentData.rows[index];
+            const modal = document.getElementById('detailModal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            
+            // Set title
+            modalTitle.textContent = row.value || 'Details';
+            
+            // Build details HTML
+            let detailsHtml = '';
+            
+            if (currentTable === 'text_entries') {
+                detailsHtml = buildTextEntryDetails(row);
+            } else {
+                detailsHtml = buildImageEntryDetails(row);
+            }
+            
+            modalBody.innerHTML = detailsHtml;
+            modal.style.display = 'block';
+        }
+
+        function showDetailsByKeywordId(textId) {
+            fetch('/lookup_entry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    entryId: textId,
+                    type: 'text'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    const modal = document.getElementById('detailModal');
+                    const modalTitle = document.getElementById('modal-title');
+                    const modalBody = document.getElementById('modal-body');
+                    
+                    modalTitle.textContent = data.value || 'Text Entry Details';
+                    modalBody.innerHTML = buildTextEntryDetails(data);
+                    modal.style.display = 'block';
+                } else {
+                    alert('Text entry not found: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error loading text entry: ' + error);
+            });
+        }
+
+        function showImageById(imageId) {
+            fetch('/lookup_entry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    entryId: imageId,
+                    type: 'image'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    const modal = document.getElementById('detailModal');
+                    const modalTitle = document.getElementById('modal-title');
+                    const modalBody = document.getElementById('modal-body');
+                    
+                    modalTitle.textContent = data.value || 'Image Details';
+                    modalBody.innerHTML = buildImageEntryDetails(data);
+                    modal.style.display = 'block';
+                } else {
+                    alert('Image not found: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error loading image: ' + error);
+            });
+        }
+
+        function buildTextEntryDetails(row) {
+            let html = '';
+            
+            html += `<div class="detail-row"><div class="detail-label">Entry ID:</div><div class="detail-value"><code>${row.entry_id}</code></div></div>`;
+            html += `<div class="detail-row"><div class="detail-label">Title/Value:</div><div class="detail-value">${row.value}</div></div>`;
+            
+            if (row.isArtist) {
+                html += `<div class="detail-row"><div class="detail-label">Is Artist:</div><div class="detail-value"><span class="artist-badge">Yes</span></div></div>`;
+            }
+            
+            if (row.type) {
+                html += `<div class="detail-row"><div class="detail-label">Type:</div><div class="detail-value"><span class="type-badge">${row.type}</span></div></div>`;
+            }
+            
+            // JSON fields
+            html += formatDetailJson('Images', row.images, true);
+            html += formatDetailJson('Artist Aliases', row.artist_aliases);
+            html += formatDetailJson('Descriptions', row.descriptions);
+            html += formatDetailJson('Related Keyword IDs', row.relatedKeywordIds, false, true);
+            html += formatDetailJson('Related Keywords', row.relatedKeywordStrings);
+            
+            return html;
+        }
+
+        function buildImageEntryDetails(row) {
+            let html = '';
+            
+            // Try to get the best quality image
+            let bestImageUrl = null;
+            try {
+                const urls = JSON.parse(row.image_urls);
+                bestImageUrl = urls.larger || urls.large || urls.medium || urls.normalized || Object.values(urls)[0];
+            } catch (e) {}
+            
+            if (bestImageUrl) {
+                html += `<div class="detail-row"><div class="detail-label">Image:</div><div class="detail-value"><img src="${bestImageUrl}" class="detail-image" alt="${row.value}"></div></div>`;
+            }
+            
+            html += `<div class="detail-row"><div class="detail-label">Image ID:</div><div class="detail-value"><code>${row.image_id}</code></div></div>`;
+            html += `<div class="detail-row"><div class="detail-label">Title/Value:</div><div class="detail-value">${row.value}</div></div>`;
+            
+            if (row.filename) {
+                html += `<div class="detail-row"><div class="detail-label">Filename:</div><div class="detail-value">${row.filename}</div></div>`;
+            }
+            
+            if (row.rights) {
+                html += `<div class="detail-row"><div class="detail-label">Rights:</div><div class="detail-value">${row.rights}</div></div>`;
+            }
+            
+            // JSON fields
+            html += formatDetailJson('Artists', row.artist_names);
+            html += formatDetailJson('Image URLs', row.image_urls);
+            html += formatDetailJson('Descriptions', row.descriptions);
+            html += formatDetailJson('Related Keyword IDs', row.relatedKeywordIds, false, true);
+            html += formatDetailJson('Related Keywords', row.relatedKeywordStrings);
+            
+            return html;
+        }
+
+        function formatDetailJson(label, jsonString, isImagesColumn = false, isRelatedKeywordIds = false) {
+            if (!jsonString || jsonString === '') {
+                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">-</div></div>`;
+            }
+            
+            try {
+                const parsed = JSON.parse(jsonString);
+
+                if (isImagesColumn) {
+                    const links = parsed.map(id => 
+                        `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
+                    ).join(', ');
+                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
+                }
+                if (isRelatedKeywordIds) {
+                    const links = parsed.map(id => 
+                        `<a href="#" onclick="event.stopPropagation(); showDetailsByKeywordId('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
+                    ).join(', ');
+                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
+                }
+
+                const formatted = JSON.stringify(parsed, null, 2);
+                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value json">${formatted}</div></div>`;
+            } catch (e) {
+                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${jsonString}</div></div>`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function closeModalOnBackdrop(event) {
+            if (event.target === event.currentTarget) {
+                closeModal();
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        function downloadCurrentTableAsJSON() {
+            // Get user-selected download size
+            const sizeSelect = document.getElementById('download-size');
+            let selectedSize = sizeSelect ? sizeSelect.value : "100";
+            let pageSize;
+            if (selectedSize === "all") {
+                pageSize = 1000000;
+            } else {
+                pageSize = parseInt(selectedSize, 10) || 100;
+            }
+
+            let url = `/api/browse_database?table=${currentTable}&page=1&page_size=${pageSize}`;
+            if (sortColumn) {
+                url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+            }
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.rows) {
+                        // Parse JSON-stringified fields so the output is valid JSON
+                        const rows = data.rows.map(row => {
+                            const parsedRow = { ...row };
+                            // Try to parse any field that looks like a JSON array/object string
+                            for (const key in parsedRow) {
+                                if (
+                                    typeof parsedRow[key] === "string" &&
+                                    (
+                                        (parsedRow[key].startsWith("[") && parsedRow[key].endsWith("]")) ||
+                                        (parsedRow[key].startsWith("{") && parsedRow[key].endsWith("}"))
+                                    )
+                                ) {
+                                    try {
+                                        parsedRow[key] = JSON.parse(parsedRow[key]);
+                                    } catch (e) {
+                                        // leave as string if parsing fails
+                                    }
+                                }
+                            }
+                            return parsedRow;
+                        });
+                        const jsonStr = JSON.stringify(rows, null, 2);
+                        const blob = new Blob([jsonStr], { type: "application/json" });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `${currentTable}.json`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        alert("Failed to download data: " + (data.error || "Unknown error"));
+                    }
+                })
+                .catch(error => {
+                    alert("Failed to download data: " + error);
+                });
+        }
+    </script>
+</body>
+</html>

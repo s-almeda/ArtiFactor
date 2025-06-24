@@ -1,7 +1,7 @@
 # index.py
 # run me with './bootstrap.sh' in terminal
 import json
-from flask import Flask, jsonify, request, g
+from flask import Flask, jsonify, request, g, render_template
 # 
 import requests
 
@@ -28,19 +28,6 @@ import pandas as pd
 
 
 print("Mabuhay! Loading...")
-
-
-# # Check if we're inside Docker (set by Docker when running)
-# if os.getenv("RUNNING_IN_DOCKER"):
-#     TEXT_DB_PATH = "/app/LOCALDB/text.db"  
-#     IMAGE_DB_PATH = "/app/LOCALDB/wikiart.db"  
-#     IMAGES_PATH = "/app/LOCALDB/images/"  
-#     MODEL_CACHE_DIR = "/root/.cache/torch/hub"
-# else:
-#     TEXT_DB_PATH = "../../LOCALDB/text.db"
-#     IMAGE_DB_PATH = "../../LOCALDB/wikiart.db"
-#     IMAGES_PATH = "../../images/"
-#     MODEL_CACHE_DIR = os.path.expanduser("~/model_cache/")
 
 # # ----- Load the databases, so we can use the info in them to respond to user requests ----- #
 
@@ -76,15 +63,6 @@ try:
 except sqlite3.Error as e:
     print(f"🚨 ERROR: Failed to connect to Text DB at {DB_PATH}. Error: {e}")
 
-
-
-# def load_sqlite_vec(db):
-#     db.enable_load_extension(True)
-#     sqlite_vec.load(db)
-#     db.enable_load_extension(False)
-#     print("loaded sqlite vector extension...")
-#     return
-
 def get_db():
     """Get a database connection for the current request.
     
@@ -110,6 +88,8 @@ app = Flask(__name__, static_folder='static')
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
+
+
 # Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
 if os.getenv('ADMIN_MODE', '').lower() == 'true':
     from templates.admin import admin_bp
@@ -119,7 +99,105 @@ if os.getenv('ADMIN_MODE', '').lower() == 'true':
     from templates.data_cleaner import data_cleaner_bp
     app.register_blueprint(data_cleaner_bp)
 
+# Add this import at the top of your file if not already there:
+# from flask import render_template, jsonify, request
+
+# Replace your existing "/" route with this new one:
+
 @app.route("/")
+def browse_database():
+    return render_template('database_browser.html')
+
+@app.route("/api/browse_database")
+def api_browse_database():
+    """API endpoint for database browsing with pagination and sorting"""
+    try:
+        # Get query parameters
+        table = request.args.get('table', 'text_entries')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 25))
+        sort_by = request.args.get('sort_by', None)
+        sort_dir = request.args.get('sort_dir', 'asc')
+        
+        # Validate table name
+        if table not in ['text_entries', 'image_entries']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid table name'
+            })
+        
+        # Validate sort direction
+        if sort_dir not in ['asc', 'desc']:
+            sort_dir = 'asc'
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get database connection
+        db = get_db()
+        
+        # Get total count
+        count_cursor = db.execute(f"SELECT COUNT(*) as count FROM {table}")
+        total_rows = count_cursor.fetchone()['count']
+        
+        # Build ORDER BY clause
+        if sort_by:
+            # Validate sort column to prevent SQL injection
+            valid_columns = {
+                'text_entries': ['entry_id', 'value', 'type', 'isArtist'],
+                'image_entries': ['image_id', 'value', 'filename']
+            }
+            
+            if sort_by in valid_columns.get(table, []):
+                order_clause = f"ORDER BY {sort_by} {sort_dir.upper()}"
+            else:
+                order_clause = f"ORDER BY {'entry_id' if table == 'text_entries' else 'image_id'} ASC"
+        else:
+            order_clause = f"ORDER BY {'entry_id' if table == 'text_entries' else 'image_id'} ASC"
+        
+        # Get paginated data
+        if table == 'text_entries':
+            query = f"""
+                SELECT entry_id, value, images, isArtist, type, 
+                       artist_aliases, descriptions, relatedKeywordIds, relatedKeywordStrings
+                FROM text_entries
+                {order_clause}
+                LIMIT ? OFFSET ?
+            """
+        else:
+            query = f"""
+                SELECT image_id, value, artist_names, image_urls, filename,
+                       rights, descriptions, relatedKeywordIds, relatedKeywordStrings
+                FROM image_entries
+                {order_clause}
+                LIMIT ? OFFSET ?
+            """
+        
+        cursor = db.execute(query, (page_size, offset))
+        
+        # Convert rows to list of dicts
+        rows = []
+        for row in cursor.fetchall():
+            row_dict = dict(row)
+            rows.append(row_dict)
+        
+        return jsonify({
+            'success': True,
+            'table': table,
+            'page': page,
+            'page_size': page_size,
+            'total_rows': total_rows,
+            'rows': rows
+        })
+        
+    except Exception as e:
+        print(f"ERROR in api_browse_database: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route("/status")
 def hello_world():
     print("User connected...")
     
@@ -537,59 +615,6 @@ def lookup_text(query_text, top_k=5):
     print(f"Returning {len(results)} matches for query: '{query_text}'")
     return results
     
-    # ---- PROCESS THE REQUEST ---- #
-    query_text = request.json.get('query')
-    if not query_text:
-        return jsonify({"error": "No query text provided"}), 400
-        
-    top_k = request.json.get('top_k', 5)
-    print(f"Query text: {query_text}")
-    print(f"Top K: {top_k}")
-
-    # Extract features from query text
-    query_features = helpers.extract_text_features(query_text)
-    print(f"Query features shape: {query_features.shape}")
-    
-    # ---- LOOK UP SIMILAR TEXTS ---- #
-    db = get_db()
-
-    # Find the most similar text entries
-    similar_texts_df = helpers.find_most_similar_texts(query_features, db, top_k=top_k)
-    print(f"Found {len(similar_texts_df)} similar texts")
-
-    # Get detailed information for each match
-    results = []
-    
-    for idx, row in similar_texts_df.iterrows():
-        # Fetch the full record from the database
-        query = "SELECT * FROM text_entries WHERE entry_id = ?"
-        cursor = db.execute(query, [row['entry_id']])
-        db_row = cursor.fetchone()
-        
-        if db_row:
-            db_row_dict = dict(db_row)
-            
-            # Build the result with parsed JSON fields
-            result_entry = {
-                "entry_id": db_row_dict["entry_id"],
-                "value": db_row_dict["value"],
-                "distance": row['distance'],  # Add the similarity distance
-                "images": helpers.safe_json_loads(db_row_dict.get("images", "[]"), default=[]),
-                "isArtist": db_row_dict.get("isArtist", 0),
-                "type": db_row_dict.get("type"),
-                "artist_aliases": helpers.safe_json_loads(db_row_dict.get("artist_aliases", "[]"), default=[]) 
-                    if db_row_dict.get("isArtist") == 1 else [],
-                "descriptions": helpers.safe_json_loads(db_row_dict.get("descriptions", "{}"), default={}),
-                "relatedKeywordIds": helpers.safe_json_loads(db_row_dict.get("relatedKeywordIds", "[]"), default=[]),
-                "relatedKeywordStrings": helpers.safe_json_loads(db_row_dict.get("relatedKeywordStrings", "[]"), default=[])
-            }
-            
-            results.append(result_entry)
-            print(f"Match: '{result_entry['value']}' (distance: {result_entry['distance']:.4f})")
-    
-    print(f"Returning {len(results)} matches for query: '{query_text}'")
-    return jsonify(results)
-
 
 
 

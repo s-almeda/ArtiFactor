@@ -25,14 +25,15 @@ from PIL import Image
 import sqlite_vec
 import sqlean as sqlite3
 
-LOCALDB = "LOCALDB"
+# LOCALDB = "LOCALDB"
 
 def update_embeddings():
     # Configure logging
     logging.basicConfig(level=logging.INFO)
 
     # Connect to SQLite database
-    db_path = os.path.join(LOCALDB, "knowledgebase.db")
+    # db_path = os.path.join(LOCALDB, "knowledgebase.db")
+    db_path = ("knowledgebase.db")
     conn = sqlite3.connect(db_path)
 
     conn.enable_load_extension(True)
@@ -136,7 +137,7 @@ def update_embeddings():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    images_folder = os.path.join(LOCALDB, "images")
+    images_folder = os.path.join(os.getcwd(), "images")
 
     for image_id, value, filename in image_entries:
         # Skip if already in `vec_image_features`
@@ -180,15 +181,16 @@ def update_embeddings():
     logging.info("Closed the database connection.")
 
 
-        # Log updated entries
-        if updated_text_entries:
-            logging.info(f"Updated {len(updated_text_entries)} text entries: {', '.join(updated_text_entries)}.")
-        else:
-            logging.info("No new text entries.")
+    # Log updated entries
+    if updated_text_entries:
+        logging.info(f"Updated {len(updated_text_entries)} text entries: {', '.join(updated_text_entries)}.")
+    else:
+        logging.info("No new text entries.")
 
-        if updated_image_entries:
-            logging.info(f"Updated {len(updated_image_entries)} image entries: {', '.join(updated_image_entries)}.")
-        else:
-            logging.info("No new image entries.")
+    if updated_image_entries:
+        logging.info(f"Updated {len(updated_image_entries)} image entries: {', '.join(updated_image_entries)}.")
+    else:
+        logging.info("No new image entries.")
+
 if __name__ == "__main__":
     update_embeddings()
