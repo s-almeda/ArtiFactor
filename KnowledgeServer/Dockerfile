@@ -21,6 +21,7 @@ COPY app/helperfunctions.py .
 COPY app/index.py .
 COPY app/templates/ templates/
 COPY app/static/ static/
+COPY app/config.py .
 
 # Ensure bootstrap.sh is executable
 RUN chmod +x bootstrap.sh

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map API Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            background-color: #cce5ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+        
+        #results {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Map API Check</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="n">Number of images:</label>
+                <input type="number" id="n" value="50" min="2" max="1000">
+            </div>
+            
+            <div class="control-group">
+                <label for="method">Embedding method:</label>
+                <select id="method">
+                    <option value="clip">CLIP (multimodal)</option>
+                    <option value="resnet">ResNet50 (image only)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="n_neighbors">UMAP n_neighbors:</label>
+                <input type="number" id="n_neighbors" min="2" max="100" placeholder="default 5">
+            </div>
+            <div class="control-group">
+                <label for="min_dist">UMAP min_dist:</label>
+                <input type="number" id="min_dist" min="0" max="1" step="0.01" placeholder="default 0.5">
+            </div>
+            <div class="control-group">
+                <label for="random_state">UMAP random_state:</label>
+                <input type="number" id="random_state" min="0" max="999999" placeholder="default 42">
+            </div>
+        </div>
+        
+        <button id="testBtn" onclick="testMapAPI()">Test Map API</button>
+        
+        <div id="status"></div>
+        <div id="timer" style="margin-top:8px;font-size:14px;color:#666;display:none;"></div>
+        
+        <div id="results">
+            <h3>Results</h3>
+            <div class="stats" id="stats"></div>
+            <div id="graph-container" style="margin-top:30px;">
+                <canvas id="map-graph" width="600" height="400" style="background:#fafafa;border:1px solid #ddd;border-radius:8px;"></canvas>
+            </div>
+            <details>
+                <summary>View Raw Response</summary>
+                <pre id="response"></pre>
+            </details>
+        </div>
+    </div>
+    
+    <script>
+        function drawGraph(imagePoints) {
+            const canvas = document.getElementById('map-graph');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Find min/max for scaling
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            imagePoints.forEach(pt => {
+                if (pt.x < minX) minX = pt.x;
+                if (pt.x > maxX) maxX = pt.x;
+                if (pt.y < minY) minY = pt.y;
+                if (pt.y > maxY) maxY = pt.y;
+            });
+
+            // Add padding
+            const pad = 30;
+            const plotW = canvas.width - pad * 2;
+            const plotH = canvas.height - pad * 2;
+
+            // Draw points
+            imagePoints.forEach(pt => {
+                // Scale to canvas
+                const x = pad + ((pt.x - minX) / (maxX - minX)) * plotW;
+                const y = pad + ((pt.y - minY) / (maxY - minY)) * plotH;
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = "#4CAF50";
+                ctx.globalAlpha = 0.8;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Optional: Draw image thumbnail on hover
+                // (see below for hover logic)
+            });
+
+            // Tooltip logic
+            let hoverIdx = null;
+            canvas.onmousemove = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                hoverIdx = null;
+                imagePoints.forEach((pt, i) => {
+                    const x = pad + ((pt.x - minX) / (maxX - minX)) * plotW;
+                    const y = pad + ((pt.y - minY) / (maxY - minY)) * plotH;
+                    if (Math.hypot(mx - x, my - y) < 8) {
+                        hoverIdx = i;
+                    }
+                });
+                drawGraph(imagePoints); // redraw to clear previous tooltip
+                if (hoverIdx !== null) {
+                    const pt = imagePoints[hoverIdx];
+                    // Draw tooltip
+                    ctx.save();
+                    ctx.font = "13px Arial";
+                    ctx.fillStyle = "#fff";
+                    ctx.strokeStyle = "#333";
+                    ctx.lineWidth = 1;
+                    let label = pt.artworkData.value || pt.entryId;
+                    let artist = "";
+                    try {
+                        const names = JSON.parse(pt.artworkData.artist_names);
+                        artist = Array.isArray(names) ? names.join(", ") : names;
+                    } catch { artist = pt.artworkData.artist_names; }
+                    const text = `${label}\n${artist}`;
+                    const lines = text.split('\n');
+                    const tw = Math.max(...lines.map(l => ctx.measureText(l).width));
+                    const th = lines.length * 18 + 10;
+                    let tx = mx + 10, ty = my - th - 10;
+                    if (tx + tw + 20 > canvas.width) tx = canvas.width - tw - 20;
+                    if (ty < 0) ty = my + 10;
+                    ctx.beginPath();
+                    ctx.rect(tx, ty, tw + 20, th);
+                    ctx.fillStyle = "#222";
+                    ctx.globalAlpha = 0.92;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                    ctx.strokeStyle = "#fff";
+                    ctx.stroke();
+                    ctx.fillStyle = "#fff";
+                    lines.forEach((l, i) => {
+                        ctx.fillText(l, tx + 10, ty + 22 + i * 18 - 10);
+                    });
+                    ctx.restore();
+                }
+            };
+            canvas.onmouseleave = function() {
+                drawGraph(imagePoints);
+            };
+        }
+
+        let timerInterval = null;
+        let timerStart = null;
+
+        function startTimer() {
+            timerStart = Date.now();
+            const timerDiv = document.getElementById('timer');
+            timerDiv.style.display = 'block';
+            timerDiv.textContent = "Elapsed: 0.00s";
+            timerInterval = setInterval(() => {
+                const elapsed = ((Date.now() - timerStart) / 1000).toFixed(2);
+                timerDiv.textContent = `Elapsed: ${elapsed}s`;
+            }, 50);
+        }
+
+        function stopTimer(finalText) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            const timerDiv = document.getElementById('timer');
+            if (finalText) {
+                timerDiv.textContent = finalText;
+            }
+        }
+
+        async function testMapAPI() {
+            const btn = document.getElementById('testBtn');
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            const responseDiv = document.getElementById('response');
+            const statsDiv = document.getElementById('stats');
+            const timerDiv = document.getElementById('timer');
+
+            // Get parameters
+            const n = document.getElementById('n').value;
+            const method = document.getElementById('method').value; // "clip" or "resnet"
+            const n_neighbors = document.getElementById('n_neighbors').value;
+            const min_dist = document.getElementById('min_dist').value;
+            const random_state = document.getElementById('random_state').value;
+
+            // Build query string
+            let query = `n=${n}&method=${method}&debug=true`;
+            if (n_neighbors) query += `&n_neighbors=${n_neighbors}`;
+            if (min_dist) query += `&min_dist=${min_dist}`;
+            if (random_state) query += `&random_state=${random_state}`;
+
+            btn.disabled = true;
+            status.className = 'loading';
+            status.textContent = `Testing Map API with ${n} images using ${method.toUpperCase()} embeddings...`;
+            status.style.display = 'block';
+            results.style.display = 'none';
+            timerDiv.style.display = 'block';
+            timerDiv.textContent = "Elapsed: 0.00s";
+            startTimer();
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch(`/generate_prototype_map?${query}`);
+                const data = await response.json();
+
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                stopTimer(`Total time: ${elapsed}s`);
+
+                if (data.success) {
+                    status.className = 'success';
+                    status.textContent = `Success! Generated map with ${data.count} points in ${elapsed} seconds.`;
+
+                    statsDiv.innerHTML = `
+                        <div class="stat-box">
+                            <div class="stat-label">Points Generated</div>
+                            <div class="stat-value">${data.count}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Method</div>
+                            <div class="stat-value">${data.method ? data.method.toUpperCase() : ''}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Source</div>
+                            <div class="stat-value">${data.source || 'N/A'}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Not Found</div>
+                            <div class="stat-value">${data.not_found ? data.not_found.length : 0}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">UMAP Params</div>
+                            <div class="stat-value">${JSON.stringify(data.umap_params || {})}</div>
+                        </div>
+                    `;
+
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
+                    results.style.display = 'block';
+
+                    // Draw the graph
+                    if (data.imagePoints && data.imagePoints.length > 1) {
+                        drawGraph(data.imagePoints);
+                    }
+                } else {
+                    status.className = 'error';
+                    status.textContent = `Error: ${data.error}`;
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
+                    results.style.display = 'block';
+                    // Clear graph
+                    const canvas = document.getElementById('map-graph');
+                    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                }
+            } catch (error) {
+                stopTimer();
+                status.className = 'error';
+                status.textContent = `Network error: ${error.message}`;
+                // Clear graph
+                const canvas = document.getElementById('map-graph');
+                if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Test on Enter key
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('testBtn').disabled) {
+                testMapAPI();
+            }
+        });
+    </script>
+</body>
+</html>

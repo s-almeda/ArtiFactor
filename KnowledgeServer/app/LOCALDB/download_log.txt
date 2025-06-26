@@ -1,1 +1,21 @@
-Download log started at Tue Jun 10 20:08:56 PDT 2025
+Download log started at Tue Jun 24 18:03:20 PDT 2025
+PARTIAL: w_fa0a441c9aa848c4b2d21b5 - Downloaded but DB update failed
+PARTIAL: w_541ae85b42464355a4f6186 - Downloaded but DB update failed
+PARTIAL: w_9d900f32663f40a99dfb006 - Downloaded but DB update failed
+PARTIAL: w_522592841d7443e09a65826 - Downloaded but DB update failed
+PARTIAL: w_17cd61fa3af044518ee058f - Downloaded but DB update failed
+PARTIAL: w_192a68beb1854e86b08ba1a - Downloaded but DB update failed
+PARTIAL: w_d723aa559f734c1896645a6 - Downloaded but DB update failed
+PARTIAL: w_0d1f8fc31a734189848f6fe - Downloaded but DB update failed
+PARTIAL: w_89958268e73447d1b967717 - Downloaded but DB update failed
+PARTIAL: w_61d747705cdb4828865fb2b - Downloaded but DB update failed
+PARTIAL: w_9b308626ece247e5b424326 - Downloaded but DB update failed
+PARTIAL: w_f7c18261681a4a4299ecb49 - Downloaded but DB update failed
+PARTIAL: w_f20aa817934d4b56a42061e - Downloaded but DB update failed
+PARTIAL: w_6bfcf49ff220416abb8ad31 - Downloaded but DB update failed
+PARTIAL: w_64280d3c66f247e6bef23f3 - Downloaded but DB update failed
+PARTIAL: w_5fcc2986040d48a8ab92c0e - Downloaded but DB update failed
+PARTIAL: w_a5cc6b59ac8f41b2929cd4f - Downloaded but DB update failed
+PARTIAL: w_064b59f21265477cbdd50c0 - Downloaded but DB update failed
+PARTIAL: w_818f0cf25cac49ecbeb67db - Downloaded but DB update failed
+PARTIAL: w_babc86850d8248968891bc4 - Downloaded but DB update failed

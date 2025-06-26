@@ -24,6 +24,8 @@ import torchvision.transforms as transforms
 from PIL import Image
 import sqlite_vec
 import sqlean as sqlite3
+from transformers import CLIPModel, CLIPProcessor
+import json
 
 # LOCALDB = "LOCALDB"
 
@@ -174,6 +176,155 @@ def update_embeddings():
         
         logging.info(f"✅ Inserted features for image_id {image_id}: {value}.")
 
+    
+    
+    # --- CLIP MULTIMODAL FEATURES ---
+    logging.info("Updating CLIP multimodal features...")
+
+    # Create virtual table if it doesn't exist
+    cursor.execute('''
+    CREATE VIRTUAL TABLE IF NOT EXISTS vec_clip_features USING vec0(
+        image_id TEXT PRIMARY KEY,
+        embedding float[1024])
+    ''')
+
+    # Load CLIP model
+    logging.info("Loading CLIP model...")
+    clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    clip_model.to(device)
+    clip_model.eval()
+    logging.info("Loaded CLIP model.")
+
+    # Track updated CLIP entries
+    updated_clip_entries = []
+
+    # Process each image entry
+    cursor.execute('''
+        SELECT i.image_id, i.value, i.filename, i.artist_names, i.descriptions, i.relatedKeywordStrings
+        FROM image_entries i
+    ''')
+    clip_candidates = cursor.fetchall()
+    logging.info(f"Found {len(clip_candidates)} images to process for CLIP.")
+
+    for image_id, title, filename, artist_names_json, descriptions_json, keywords_json in clip_candidates:
+        # Skip if already processed
+        cursor.execute('SELECT 1 FROM vec_clip_features WHERE image_id = ?', (image_id,))
+        if cursor.fetchone():
+            logging.info(f"Skipping image_id {image_id} (CLIP features already exist).")
+            continue
+
+        if not filename:
+            logging.warning(f"Skipping image_id {image_id} due to missing filename.")
+            continue
+
+        image_path = os.path.join(images_folder, filename)
+        if not os.path.exists(image_path):
+            logging.warning(f"❌ - Image file {image_path} not found. Skipping.")
+            continue
+
+        try:
+            # Load image
+            image = Image.open(image_path).convert("RGB")
+            
+            # Build text representation
+            text_parts = []
+            
+            # Add title
+            if title:
+                text_parts.append(title)
+            
+            # Add artist names and fetch artist info
+            if artist_names_json:
+                try:
+                    artist_names = json.loads(artist_names_json)
+                    if artist_names:
+                        text_parts.append(f"by {', '.join(artist_names[:3])}")
+                        
+                        # Look up each artist in text_entries
+                        for artist_name in artist_names[:2]:  # Limit to first 2
+                            cursor.execute('''
+                                SELECT descriptions FROM text_entries 
+                                WHERE LOWER(value) = LOWER(?) AND isArtist = 1
+                            ''', (artist_name,))
+                            artist_row = cursor.fetchone()
+                            if artist_row and artist_row[0]:
+                                try:
+                                    artist_desc = json.loads(artist_row[0])
+                                    # Extract all values from artist description
+                                    for source, content in artist_desc.items():
+                                        if isinstance(content, dict):
+                                            for key, value in content.items():
+                                                if isinstance(value, str) and value.strip():
+                                                    text_parts.append(f"{key}: {value}")
+                                except json.JSONDecodeError:
+                                    pass
+                except json.JSONDecodeError:
+                    pass
+            
+            # Add artwork descriptions
+            if descriptions_json:
+                try:
+                    desc = json.loads(descriptions_json)
+                    for source, content in desc.items():
+                        if isinstance(content, dict):
+                            for key, value in content.items():
+                                if isinstance(value, str) and value.strip():
+                                    text_parts.append(f"{key}: {value}")
+                        elif isinstance(content, str) and content.strip():
+                            text_parts.append(content)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Add keywords
+            if keywords_json:
+                try:
+                    keywords = json.loads(keywords_json)
+                    if keywords[:5]:
+                        text_parts.append(' '.join(keywords[:5]))
+                except json.JSONDecodeError:
+                    pass
+            
+            # Combine text (limit length for CLIP)
+            combined_text = ' '.join(text_parts)
+            if len(combined_text) > 200:
+                combined_text = combined_text[:197] + "..."
+            
+            # Process with CLIP
+            inputs = clip_processor(text=combined_text, images=image, return_tensors="pt", 
+                                  padding=True, truncation=True, max_length=77)
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            
+            with torch.no_grad():
+                outputs = clip_model(**inputs)
+                
+                # Get normalized embeddings
+                image_features = outputs.image_embeds
+                text_features = outputs.text_embeds
+                
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                
+                # Concatenate features
+                combined_features = torch.cat([image_features, text_features], dim=-1)
+                combined_features = combined_features.cpu().numpy().squeeze()
+            
+            # Insert into database
+            cursor.execute('''
+                INSERT INTO vec_clip_features (image_id, embedding)
+                VALUES (?, ?)
+            ''', (image_id, combined_features.tobytes()))
+            
+            updated_clip_entries.append(title or image_id)
+            logging.info(f"✅ Inserted CLIP features for {image_id}: {title}")
+            
+        except Exception as e:
+            logging.error(f"Error processing CLIP features for {image_id}: {e}")
+            continue
+
+
+    
+    
     # Commit and close
     conn.commit()
     logging.info("Committed changes to the database.")
@@ -191,6 +342,13 @@ def update_embeddings():
         logging.info(f"Updated {len(updated_image_entries)} image entries: {', '.join(updated_image_entries)}.")
     else:
         logging.info("No new image entries.")
+    
+    # At the end, log the CLIP updates:
+    if updated_clip_entries:
+        logging.info(f"Updated {len(updated_clip_entries)} CLIP entries.")
+    else:
+        logging.info("No new CLIP entries.")
+    
 
 if __name__ == "__main__":
     update_embeddings()

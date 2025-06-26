@@ -21,29 +21,30 @@ import sqlean as sqlite3
 
 import helperfunctions as helpers # helper functions including preprocess_text
 
-import re, os, ast
+import re, os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import pandas as pd
+
+# Replace the path definitions with:
+from config import BASE_DIR, DB_PATH, IMAGES_PATH, MODEL_CACHE_DIR, TRANSFORMERS_CACHE_DIR
+
+# Remove the old definitions and use the imported ones
 
 #todo, incorporate exact matches into keyword checking too
 
 
 print("Mabuhay! Loading...")
 
-# # ----- Load the databases, so we can use the info in them to respond to user requests ----- #
 
-# The database paths inside the container will always be:
-MODEL_CACHE_DIR = "/root/.cache/torch/hub"
+# Debugging: Print paths, which are imported from config.py
 
-# Get the absolute path to the /app directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # This gets "/app"
+print(f"✅ Running in Docker: {os.environ.get('RUNNING_IN_DOCKER', 'false').lower() == 'true'}")
+print(f"✅ Base directory: {BASE_DIR}")
+print(f"✅ Model cache: {MODEL_CACHE_DIR}")
+print(f"✅ Transformers cache: {TRANSFORMERS_CACHE_DIR}")
+print(f"✅ Using database: {DB_PATH}")
+print(f"✅ Using images: {IMAGES_PATH}")
 
-# Define paths relative to the correct base directory
-DB_PATH = os.path.join(BASE_DIR, "LOCALDB", "knowledgebase.db")
-IMAGES_PATH = os.path.join(BASE_DIR, "LOCALDB", "images")
-
-# Debugging: Print paths
-print(f"✅ Using text and image database file: {DB_PATH}")
-print(f"✅ Using Images Path: {IMAGES_PATH}")
 # Check if files exist
 if not os.path.exists(DB_PATH):
     print(f"🚨 ERROR: DB not found at {DB_PATH}")
@@ -85,9 +86,17 @@ print("Done! Time to run the app...")
 app = Flask(__name__, static_folder='static')
 
 
+# Add API routes for artwork similarity space mapping functionalities
+from templates.map_api import map_api_bp
+app.register_blueprint(map_api_bp)
+
+
+
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
+
+
 
 
 # Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents

@@ -31,6 +31,7 @@ echo "Running Docker container..."
 docker run -d -p 8080:8080 \
     -v "$LOCALDB_PATH:/app/LOCALDB" \
     -v "$HOME/model_cache:/root/.cache/torch/hub" \
+    -v "$HOME/transformers_cache:/root/.cache/transformers" \
     -e RUNNING_IN_DOCKER=true \
     --name $IMAGE_NAME $FULL_IMAGE_PATH
 
