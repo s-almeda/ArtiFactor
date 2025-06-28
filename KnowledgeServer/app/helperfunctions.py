@@ -14,6 +14,8 @@ from io import BytesIO
 from PIL import (Image, UnidentifiedImageError)
 
 
+
+
 # --- imports for using ResNet50  --- #
 import torch
 import torchvision.transforms as transforms
@@ -21,6 +23,9 @@ from torchvision.models import resnet50, ResNet50_Weights
 
 # -- imports for using CLIP -- #
 from transformers import CLIPProcessor, CLIPModel
+
+# -- for using KMeans clustering -- #
+from sklearn.cluster import KMeans
 
 
 # The database paths inside the container will always be:
@@ -186,6 +191,28 @@ def reduce_to_2d_umap(embeddings, n_neighbors=5, min_dist=0.5, random_state=42):
 def compute_cosine_similarity(vec1, vec2):
     """Compute cosine similarity between two vectors."""
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+
+def apply_kmeans_clustering(coordinates_2d, k):
+    """
+    Run k-means clustering on 2D coordinates.
+    
+    Args:
+        coordinates_2d: numpy array of shape (n_samples, 2)
+        k: number of clusters
+    
+    Returns:
+        numpy array of cluster labels
+    """
+    # Adjust k if we have fewer points than clusters
+    n_samples = coordinates_2d.shape[0]
+    k = min(k, n_samples)
+    
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    cluster_labels = kmeans.fit_predict(coordinates_2d)
+    
+    return cluster_labels
+
 
 # ====== Functions for retrieving stuff from the database ======
 

@@ -40,3 +40,6 @@ dist-ssr
 /backend/database.db
 backend/database.db
 
+
+.cache
+KnowledgeServer/app/generated_maps/*
