@@ -10,7 +10,7 @@ import json
 import os
 import helperfunctions as hf
 from index import get_db
-from config import IMAGES_PATH
+# from config import IMAGES_PATH
 from PIL import Image
 import numpy as np
 from config import BASE_DIR
@@ -249,26 +249,21 @@ def add_clustering_to_map_data(map_response, coordinates_2d, k, dprint):
     Add clustering information to existing map response.
     """
     dprint(f"\nApplying k-means clustering with k={k}...")
-    
-    # Apply k-means clustering
-    from sklearn.cluster import KMeans
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    cluster_labels = kmeans.fit_predict(coordinates_2d)
-    
+
+    # Use helper function for clustering
+    cluster_labels = hf.apply_kmeans_clustering(coordinates_2d, k)
+
     # Generate zones with proper radius calculation
     zones = []
     for cluster_id in range(k):
         cluster_mask = cluster_labels == cluster_id
         cluster_coords = coordinates_2d[cluster_mask]
-        
+
         if len(cluster_coords) > 0:
-            # Calculate center
             center = cluster_coords.mean(axis=0)
-            
-            # Calculate radius (distance to furthest point * 1.2 for padding)
             distances = np.sqrt(((cluster_coords - center) ** 2).sum(axis=1))
             radius = np.percentile(distances, 90) * 1.2 if len(distances) > 0 else 0.1
-            
+
             zones.append({
                 'cluster_id': int(cluster_id),
                 'label': f'Zone {cluster_id + 1}',
@@ -279,24 +274,22 @@ def add_clustering_to_map_data(map_response, coordinates_2d, k, dprint):
                 'radius': float(radius),
                 'point_count': int(cluster_mask.sum())
             })
-    
+
     # Add cluster info and local positions to each image point
     for idx, point in enumerate(map_response['imagePoints']):
         cluster_id = int(cluster_labels[idx])
         zone = zones[cluster_id]
-        
-        # Calculate local position relative to zone center
+
         global_x = point['x']
         global_y = point['y']
         local_x = (global_x - zone['center']['x']) / zone['radius'] if zone['radius'] > 0 else 0
         local_y = (global_y - zone['center']['y']) / zone['radius'] if zone['radius'] > 0 else 0
-        
-        # Normalize to unit circle if outside
+
         local_dist = np.sqrt(local_x**2 + local_y**2)
         if local_dist > 1:
             local_x /= local_dist
             local_y /= local_dist
-        
+
         point['clusterInfo'] = {
             'cluster_id': cluster_id,
             'local_position': {
@@ -304,16 +297,15 @@ def add_clustering_to_map_data(map_response, coordinates_2d, k, dprint):
                 'y': float(local_y)
             }
         }
-    
-    # Add similarity map to response (not clustering)
+
     map_response['similarityMap'] = {
         'enabled': True,
         'k': k,
         'zones': zones
     }
-    
+
     dprint(f"✓ Added similarity map with {len(zones)} zones")
-    
+
     return map_response
 
 @map_api_bp.route('/add_clusters_to_map', methods=['POST'])
