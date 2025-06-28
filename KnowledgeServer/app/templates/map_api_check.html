@@ -143,7 +143,7 @@
         <div class="controls">
             <div class="control-group">
                 <label for="n">Number of images:</label>
-                <input type="number" id="n" value="50" min="2" max="1000">
+                <input type="number" id="n" value="600" min="2" max="1000">
             </div>
             
             <div class="control-group">
@@ -156,11 +156,11 @@
 
             <div class="control-group">
                 <label for="n_neighbors">UMAP n_neighbors:</label>
-                <input type="number" id="n_neighbors" min="2" max="100" placeholder="default 5">
+                <input type="number" id="n_neighbors" min="2" max="1000" value="500" placeholder="default 500">
             </div>
             <div class="control-group">
                 <label for="min_dist">UMAP min_dist:</label>
-                <input type="number" id="min_dist" min="0" max="1" step="0.01" placeholder="default 0.5">
+                <input type="number" id="min_dist" min="0" max="1" step="0.01" value="0.9" placeholder="default 0.9">
             </div>
             <div class="control-group">
                 <label for="random_state">UMAP random_state:</label>
@@ -185,8 +185,28 @@
             </details>
         </div>
     </div>
+
+    <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+        <h3 style="margin-bottom: 15px; color: #333;">Clustering</h3>
+        <div class="controls">
+            <div class="control-group">
+                <label for="k">Number of clusters (k):</label>
+                <input type="number" id="k" value="5" min="2" max="25">
+            </div>
+        </div>
+        <button id="clusterBtn" onclick="addClustering()" disabled style="background-color: #2196F3;">Add Clustering</button>
+    </div>
     
     <script>
+
+        let currentMapData = null;
+        const clusterColors = [
+            '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff6348',
+            '#ff7675', '#74b9ff', '#0984e3', '#00b894', '#00cec9', '#fdcb6e', '#e17055', '#fd79a8', '#6c5ce7', '#a29bfe',
+            '#2d3436', '#636e72', '#ddd', '#fab1a0', '#e84393', '#00b894', '#6c5ce7', '#fd79a8', '#fdcb6e', '#55a3ff'
+        ];
+
+
         function drawGraph(imagePoints) {
             const canvas = document.getElementById('map-graph');
             if (!canvas) return;
@@ -246,6 +266,7 @@
                     // Draw tooltip
                     ctx.save();
                     ctx.font = "13px Arial";
+                    ctx.textAlign = "left"; // Fix: left-align text and background
                     ctx.fillStyle = "#fff";
                     ctx.strokeStyle = "#333";
                     ctx.lineWidth = 1;
@@ -262,6 +283,7 @@
                     let tx = mx + 10, ty = my - th - 10;
                     if (tx + tw + 20 > canvas.width) tx = canvas.width - tw - 20;
                     if (ty < 0) ty = my + 10;
+                    // Draw background rectangle (aligned with text)
                     ctx.beginPath();
                     ctx.rect(tx, ty, tw + 20, th);
                     ctx.fillStyle = "#222";
@@ -270,7 +292,9 @@
                     ctx.globalAlpha = 1.0;
                     ctx.strokeStyle = "#fff";
                     ctx.stroke();
+                    // Draw text (left-aligned inside rectangle)
                     ctx.fillStyle = "#fff";
+                    ctx.textAlign = "left";
                     lines.forEach((l, i) => {
                         ctx.fillText(l, tx + 10, ty + 22 + i * 18 - 10);
                     });
@@ -338,7 +362,7 @@
             const startTime = Date.now();
 
             try {
-                const response = await fetch(`/generate_prototype_map?${query}`);
+                const response = await fetch(`/generate_initial_map?${query}`);
                 const data = await response.json();
 
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -358,10 +382,6 @@
                             <div class="stat-value">${data.method ? data.method.toUpperCase() : ''}</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-label">Source</div>
-                            <div class="stat-value">${data.source || 'N/A'}</div>
-                        </div>
-                        <div class="stat-box">
                             <div class="stat-label">Not Found</div>
                             <div class="stat-value">${data.not_found ? data.not_found.length : 0}</div>
                         </div>
@@ -374,6 +394,10 @@
                     responseDiv.textContent = JSON.stringify(data, null, 2);
                     results.style.display = 'block';
 
+                    // Store map data and enable clustering
+                    currentMapData = data;
+                    document.getElementById('clusterBtn').disabled = false;
+                    
                     // Draw the graph
                     if (data.imagePoints && data.imagePoints.length > 1) {
                         drawGraph(data.imagePoints);
@@ -405,6 +429,115 @@
                 testMapAPI();
             }
         });
+
+
+
+        function drawClusteredGraph(imagePoints, zones) {
+            const canvas = document.getElementById('map-graph');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Find min/max for scaling (same as before)
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            imagePoints.forEach(pt => {
+                if (pt.x < minX) minX = pt.x;
+                if (pt.x > maxX) maxX = pt.x;
+                if (pt.y < minY) minY = pt.y;
+                if (pt.y > maxY) maxY = pt.y;
+            });
+
+            const pad = 30;
+            const plotW = canvas.width - pad * 2;
+            const plotH = canvas.height - pad * 2;
+
+            // Draw points with cluster colors
+            imagePoints.forEach(pt => {
+                const x = pad + ((pt.x - minX) / (maxX - minX)) * plotW;
+                const y = pad + ((pt.y - minY) / (maxY - minY)) * plotH;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                
+                // Use cluster color if available
+                if (pt.clusterInfo) {
+                    ctx.fillStyle = clusterColors[pt.clusterInfo.cluster_id % clusterColors.length];
+                } else {
+                    ctx.fillStyle = "#4CAF50";
+                }
+                
+                ctx.globalAlpha = 0.8;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // Draw zone labels
+            if (zones) {
+                zones.forEach(zone => {
+                    const x = pad + ((zone.center.x - minX) / (maxX - minX)) * plotW;
+                    const y = pad + ((zone.center.y - minY) / (maxY - minY)) * plotH;
+                    
+                    ctx.font = "14px Arial";
+                    ctx.fillStyle = "#000";
+                    ctx.textAlign = "center";
+                    ctx.fillText(zone.label, x, y - 15);
+                });
+            }
+        }
+
+        async function addClustering() {
+            if (!currentMapData) {
+                alert('Please generate a base map first!');
+                return;
+            }
+
+            const btn = document.getElementById('clusterBtn');
+            const status = document.getElementById('status');
+            const k = document.getElementById('k').value;
+
+            btn.disabled = true;
+            status.className = 'loading';
+            status.textContent = `Adding clustering with k=${k}...`;
+            status.style.display = 'block';
+
+            try {
+                const response = await fetch('/add_clusters_to_map', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        mapData: currentMapData,
+                        k: parseInt(k),
+                        debug: true
+                    })
+                });
+
+                const clusteredData = await response.json();
+
+                if (clusteredData.success !== false) {
+                    status.className = 'success';
+                    status.textContent = `Success! Added ${clusteredData.clustering?.zones?.length || k} clusters.`;
+                    
+                    // Update the visualization
+                    drawClusteredGraph(clusteredData.imagePoints, clusteredData.clustering?.zones);
+                    
+                    // Update the response display
+                    document.getElementById('response').textContent = JSON.stringify(clusteredData, null, 2);
+                } else {
+                    status.className = 'error';
+                    status.textContent = `Error: ${clusteredData.error}`;
+                }
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = `Network error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
