@@ -129,10 +129,34 @@
             margin-bottom: 5px;
         }
         
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
+        .section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            max-width: 200px;
+        }
+        
+        .results-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
         }
     </style>
 </head>
@@ -156,7 +180,7 @@
 
             <div class="control-group">
                 <label for="n_neighbors">UMAP n_neighbors:</label>
-                <input type="number" id="n_neighbors" min="2" max="1000" value="500" placeholder="default 500">
+                <input type="number" id="n_neighbors" min="2" max="1000" value="50" placeholder="default 50">
             </div>
             <div class="control-group">
                 <label for="min_dist">UMAP min_dist:</label>
@@ -196,6 +220,18 @@
         </div>
         <button id="clusterBtn" onclick="addClustering()" disabled style="background-color: #2196F3;">Add Clustering</button>
     </div>
+    <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+        <h3 style="margin-bottom: 15px; color: #333;">Voronoi Diagram</h3>
+        <p style="color: #666; margin-bottom: 15px;">Add a Voronoi diagram to the existing map data</p>
+        <div class="controls">
+            <div class="control-group">
+                <label for="voronoi_k">Number of regions (k):</label>
+                <input type="number" id="voronoi_k" value="10" min="2" max="50">
+            </div>
+        </div>
+        <button id="voronoiBtn" onclick="addVoronoi()" disabled style="background-color: #9C27B0;">Add Voronoi Diagram</button>
+    </div>
+    
     
     <script>
 
@@ -394,9 +430,10 @@
                     responseDiv.textContent = JSON.stringify(data, null, 2);
                     results.style.display = 'block';
 
-                    // Store map data and enable clustering
+                    // Store map data and enable clustering and voronoi
                     currentMapData = data;
                     document.getElementById('clusterBtn').disabled = false;
+                    document.getElementById('voronoiBtn').disabled = false;
                     
                     // Draw the graph
                     if (data.imagePoints && data.imagePoints.length > 1) {
@@ -429,7 +466,6 @@
                 testMapAPI();
             }
         });
-
 
 
         function drawClusteredGraph(imagePoints, zones) {
@@ -538,6 +574,279 @@
                 btn.disabled = false;
             }
         }
+        function drawVoronoiGraph(imagePoints, regions) {
+    const canvas = document.getElementById('map-graph');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Find min/max for scaling
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    imagePoints.forEach(pt => {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+    });
+
+    const pad = 30;
+    const plotW = canvas.width - pad * 2;
+    const plotH = canvas.height - pad * 2;
+
+    // Draw Voronoi regions (using new regions format)
+    if (regions && regions.length > 0) {
+        regions.forEach((region, idx) => {
+            if (region.vertices && region.vertices.length > 2) {
+                ctx.beginPath();
+                
+                // Scale vertices to canvas
+                const scaledVertices = region.vertices.map(v => ({
+                    x: pad + ((v[0] - minX) / (maxX - minX)) * plotW,
+                    y: pad + ((v[1] - minY) / (maxY - minY)) * plotH
+                }));
+                
+                // Draw region polygon
+                ctx.moveTo(scaledVertices[0].x, scaledVertices[0].y);
+                for (let i = 1; i < scaledVertices.length; i++) {
+                    ctx.lineTo(scaledVertices[i].x, scaledVertices[i].y);
+                }
+                ctx.closePath();
+                
+                // Fill with light color
+                ctx.fillStyle = clusterColors[idx % clusterColors.length] + '20'; // Add transparency
+                ctx.fill();
+                
+                // Stroke with darker color
+                ctx.strokeStyle = clusterColors[idx % clusterColors.length];
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
+    }
+
+    // Draw points on top of cells
+    imagePoints.forEach(pt => {
+        const x = pad + ((pt.x - minX) / (maxX - minX)) * plotW;
+        const y = pad + ((pt.y - minY) / (maxY - minY)) * plotH;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = "#333";
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+}
+        
+    </script>
+
+    </div>
+
+    <div class="container">
+        <!-- Voronoi Map Test Section -->
+        <div class="section">
+            <h3>🔷 Test Voronoi Map Generation</h3>
+            <p>Generate a Voronoi diagram map from image embeddings</p>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="voronoi_n">Number of Images (n):</label>
+                    <input type="number" id="voronoi_n" value="25" min="5" max="1000">
+                </div>
+                
+                <div class="control-group">
+                    <label for="voronoi_method">Embedding Method:</label>
+                    <select id="voronoi_method">
+                        <option value="clip">CLIP</option>
+                        <option value="resnet">ResNet50</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="voronoi_min_dist">UMAP Min Distance:</label>
+                    <input type="number" id="voronoi_min_dist" value="0.5" min="0.01" max="2" step="0.1">
+                </div>
+                
+                <div class="control-group">
+                    <label for="voronoi_n_neighbors">UMAP Neighbors:</label>
+                    <input type="number" id="voronoi_n_neighbors" value="50" min="5" max="500">
+                </div>
+                
+                <div class="control-group">
+                    <label for="voronoi_k_full">Number of regions (k):</label>
+                    <input type="number" id="voronoi_k_full" value="10" min="2" max="100">
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="voronoi_random_state">Random State (optional):</label>
+                    <input type="number" id="voronoi_random_state" placeholder="42">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="voronoi_random" checked> Randomize Image Selection
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="voronoi_disk" checked> Use Disk Images
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="voronoi_debug"> Enable Debug Output
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="voronoi_cache"> Use Cache
+                    </label>
+                </div>
+            </div>
+            
+            <button onclick="testVoronoiMap()">
+                🔷 Generate Voronoi Map
+            </button>
+            
+            <div id="voronoi_results" class="results-container" style="display: none;">
+                <h4>Voronoi Map Results:</h4>
+                <pre id="voronoi_output"></pre>
+            </div>
+        </div>
+    
+    <script>
+    function testVoronoiMap() {
+        const n = document.getElementById('voronoi_n').value;
+        const method = document.getElementById('voronoi_method').value;
+        const minDist = document.getElementById('voronoi_min_dist').value;
+        const nNeighbors = document.getElementById('voronoi_n_neighbors').value;
+        const k = document.getElementById('voronoi_k_full').value;
+        const randomState = document.getElementById('voronoi_random_state').value;
+        const random = document.getElementById('voronoi_random').checked;
+        const disk = document.getElementById('voronoi_disk').checked;
+        const debug = document.getElementById('voronoi_debug').checked;
+        const cache = document.getElementById('voronoi_cache').checked;
+        
+        // Build URL with parameters
+        const params = new URLSearchParams({
+            n: n,
+            method: method,
+            min_dist: minDist,
+            n_neighbors: nNeighbors,
+            k: k,
+            random: random.toString(),
+            disk: disk.toString(),
+            debug: debug.toString(),
+            cache: cache.toString()
+        });
+        
+        // Add random_state only if provided
+        if (randomState) {
+            params.append('random_state', randomState);
+        }
+        
+        const url = `/generate_voronoi_map?${params.toString()}`;
+        
+        console.log('Testing Voronoi map with URL:', url);
+        
+        // Show loading state
+        const resultsDiv = document.getElementById('voronoi_results');
+        const outputPre = document.getElementById('voronoi_output');
+        resultsDiv.style.display = 'block';
+        outputPre.textContent = 'Generating Voronoi map... This may take a moment.';
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Voronoi map response:', data);
+                
+                // Format the response for display
+                const summary = {
+                    success: data.success,
+                    method: data.generationParams?.method || data.method,
+                    total_points: data.count,
+                    voronoi_regions: data.regions?.length || 0,
+                    k: data.generationParams?.k || 0,
+                    precomputed_embeddings: data.precomputed_count,
+                    not_found: data.not_found?.length || 0,
+                    umap_params: data.generationParams?.umap_params || data.umap_params,
+                    algorithm: data.generationParams?.algorithm
+                };
+                
+                outputPre.textContent = JSON.stringify(summary, null, 2);
+                
+                if (data.success) {
+                    console.log(`✅ Generated ${data.regions?.length || 0} Voronoi regions from ${data.count} points with k=${data.generationParams?.k}`);
+                } else {
+                    console.error('❌ Voronoi map generation failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error testing Voronoi map:', error);
+                outputPre.textContent = `Error: ${error.message}`;
+            });
+        }
+
+
+        async function addVoronoi() {
+            if (!currentMapData) {
+                alert('Please generate a base map first!');
+                return;
+            }
+
+            const btn = document.getElementById('voronoiBtn');
+            const status = document.getElementById('status');
+            const k = document.getElementById('voronoi_k').value;
+
+            btn.disabled = true;
+            status.className = 'loading';
+            status.textContent = `Adding Voronoi diagram with k=${k}...`;
+            status.style.display = 'block';
+
+            try {
+                const response = await fetch('/add_voronoi_to_map?debug=true', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        imagePoints: currentMapData.imagePoints,
+                        k: parseInt(k)
+                    })
+                });
+
+                const voronoiData = await response.json();
+
+                if (voronoiData.success !== false) {
+                    status.className = 'success';
+                    const regionCount = voronoiData.regions?.length || 0;
+                    status.textContent = `Success! Added Voronoi diagram with ${regionCount} regions (k=${voronoiData.generationParams?.k}).`;
+                    
+                    // Update the response display
+                    document.getElementById('response').textContent = JSON.stringify(voronoiData, null, 2);
+                    
+                    // Update visualization to show Voronoi cells
+                    if (voronoiData.regions) {
+                        drawVoronoiGraph(voronoiData.imagePoints, voronoiData.regions);
+                    }
+                } else {
+                    status.className = 'error';
+                    status.textContent = `Error: ${voronoiData.error}`;
+                }
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = `Network error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    
     </script>
 </body>
 </html>

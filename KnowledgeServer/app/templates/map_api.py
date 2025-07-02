@@ -17,6 +17,82 @@ from config import BASE_DIR
 MAPS_DIR = os.path.join(BASE_DIR, 'generated_maps')
 os.makedirs(MAPS_DIR, exist_ok=True)
 
+def sort_vertices_clockwise(vertices):
+    """
+    Sort vertices of a polygon in clockwise order.
+    
+    Args:
+        vertices: List of [x, y] coordinate pairs
+        
+    Returns:
+        List of [x, y] coordinate pairs sorted clockwise
+    """
+    if len(vertices) < 3:
+        return vertices
+    
+    # Calculate centroid
+    cx = sum(v[0] for v in vertices) / len(vertices)
+    cy = sum(v[1] for v in vertices) / len(vertices)
+    
+    # Sort by angle from centroid
+    def angle_from_center(vertex):
+        import math
+        return math.atan2(vertex[1] - cy, vertex[0] - cx)
+    
+    # Sort clockwise (negative angle sort for clockwise)
+    sorted_vertices = sorted(vertices, key=angle_from_center, reverse=True)
+    return sorted_vertices
+
+def calculate_centroid(vertices):
+    """
+    Calculate the centroid of a polygon defined by vertices.
+    
+    Args:
+        vertices: List of [x, y] coordinate pairs
+        
+    Returns:
+        [x, y] coordinate pair representing the centroid
+    """
+    if not vertices:
+        return [0, 0]
+    
+    x_sum = sum(v[0] for v in vertices)
+    y_sum = sum(v[1] for v in vertices)
+    n = len(vertices)
+    
+    return [x_sum / n, y_sum / n]
+
+def clip_infinite_voronoi_region(vor, point_idx, bounding_box):
+    """
+    Clip an infinite Voronoi region to a bounding box.
+    
+    Args:
+        vor: scipy.spatial.Voronoi object
+        point_idx: Index of the point whose region we're clipping
+        bounding_box: Dict with keys 'min_x', 'max_x', 'min_y', 'max_y'
+        
+    Returns:
+        List of [x, y] coordinate pairs representing the clipped region vertices
+    """
+    import numpy as np
+    
+    # Get the region for this point
+    region_idx = vor.point_region[point_idx]
+    region = vor.regions[region_idx]
+    
+    if not region or -1 in region:
+        # This is an infinite region, create a bounded version
+        # For simplicity, return the bounding box corners
+        return [
+            [bounding_box['min_x'], bounding_box['min_y']],
+            [bounding_box['max_x'], bounding_box['min_y']],
+            [bounding_box['max_x'], bounding_box['max_y']],
+            [bounding_box['min_x'], bounding_box['max_y']]
+        ]
+    else:
+        # Finite region, just return the vertices
+        return [vor.vertices[i].tolist() for i in region]
+
 # Define the blueprint
 map_api_bp = Blueprint('map_api', __name__)
 
@@ -46,6 +122,7 @@ def handle_initial_map_request():
     - debug: enable debug output (default: 'false')
     - random: randomize selection (default: 'false')
     - clustering: enable clustering (default: 'false')
+    - min_dist: UMAP min_dist (default: 0.9)
     - k: number of clusters (default: 5, only used if clustering=true)
     - cache: use cached results (default: 'false')
     
@@ -573,6 +650,315 @@ def format_image_points(processed_data, coordinates_2d):
             }
         })
     return points
+
+
+@map_api_bp.route('/generate_voronoi_map', methods=['GET'])
+def handle_voronoi_map_request():
+    """
+    Handles a request for a Voronoi diagram map.
+    
+    Expected URL parameters:
+    - n: number of images (default: 50)
+    - method: embedding method (default: 'clip')
+    - disk: use disk images (default: 'true')
+    - debug: enable debug output (default: 'false')
+    - random: randomize selection (default: 'false')
+    - min_dist: UMAP min_dist (default: 0.9)
+    - cache: use cached results (default: 'false')
+    - k: number of Voronoi regions (default: 10)
+    
+    Returns simplified JSON response with Voronoi diagram data.
+    """
+    print("Received request for Voronoi map generation...")
+    
+    try:
+        # Import scipy for Voronoi
+        from scipy.spatial import Voronoi
+        
+        # ---- PROCESS THE REQUEST ---- #
+        n = int(request.args.get('n', 100))
+        method = request.args.get('method', 'clip')
+        use_disk = request.args.get('disk', 'true').lower() == 'true'
+        debug = request.args.get('debug', 'false').lower() == 'true'
+        random = request.args.get('random', 'false').lower() == 'true'
+        cache = request.args.get('cache', 'false').lower() == 'true'
+        k = int(request.args.get('k', 10))  # Number of Voronoi regions
+
+        # UMAP params
+        n_neighbors = int(request.args.get('n_neighbors', 500))
+        min_dist = float(request.args.get('min_dist', 0.9))
+        random_state = request.args.get('random_state', None)
+        if random_state:
+            random_state = int(random_state)
+
+        print(f"Parameters: n={n}, method={method}, voronoi=true, k={k}")
+        
+        def dprint(*args, **kwargs):
+            if debug:
+                print(*args, **kwargs)
+
+        # Cache handling
+        if cache:
+            dprint(f"Using cache for Voronoi map generation")
+            min_dist_str = str(min_dist).replace('.', '_')
+            cache_suffix = f"_n{n}_method_{method}_nn{n_neighbors}_dist{min_dist_str}_k{k}_voronoi"
+            cache_filename = f"voronoi_map_data{cache_suffix}.json"
+            cache_path = os.path.join(MAPS_DIR, cache_filename)
+            
+            if os.path.exists(cache_path):
+                dprint(f"Loading cached Voronoi results from {cache_filename}")
+                with open(cache_path, 'r') as f:
+                    return jsonify(json.load(f))
+
+        dprint(f"\n=== Starting Voronoi map generation ===")
+        
+        db = get_db()
+        
+        # 1. Generate base map data
+        base_data = generate_base_map_data(
+            db, n, method, use_disk, random, dprint,
+            n_neighbors=n_neighbors, min_dist=min_dist, random_state=random_state
+        )
+        if not base_data['success']:
+            return jsonify(base_data)
+        
+        # 2. Build image points from processed data
+        dprint(f"\nBuilding image points from processed data...")
+        image_points = format_image_points(
+            base_data['processed_data'], 
+            base_data['coordinates_2d']
+        )
+
+        # 3. Generate Voronoi diagram
+        dprint(f"\nGenerating Voronoi diagram with k={k} regions...")
+        voronoi_data = generate_voronoi_diagram(image_points, k, dprint)
+
+        # 4. Build simplified response
+        voronoi_response = {
+            'success': True,
+            'imagePoints': image_points,  # Now includes regionId
+            'regions': format_voronoi_regions(voronoi_data),
+            'generationParams': {
+                'method': method,
+                'k': k,
+                'n': len(image_points),
+                'umap_params': {
+                    'n_neighbors': n_neighbors,
+                    'min_dist': min_dist,
+                    'random_state': random_state
+                },
+                'algorithm': 'k-means + Voronoi'
+            },
+            'count': len(image_points)
+        }
+        
+        # 5. Save to cache
+        if cache:
+            dprint(f"Saving Voronoi results to cache: {cache_filename}")
+            with open(cache_path, 'w') as f:
+                json.dump(voronoi_response, f, indent=2)
+            dprint(f"Saved Voronoi results to {cache_filename}")
+        
+        # 6. Return the final response
+        dprint(f"\n=== Voronoi map generation complete ===")
+        return jsonify(voronoi_response)
+    
+    except Exception as e:
+        print(f"Error during Voronoi map generation: {e}")
+        if request.args.get('debug', 'false').lower() == 'true':
+            import traceback
+            traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# Simplify the generate_voronoi_diagram function to add regionId directly
+def generate_voronoi_diagram(image_points, k, dprint):
+    """
+    Generate Voronoi diagram from image points using k-means clustering first.
+    This function now adds regionId directly to image points.
+    """
+    try:
+        from scipy.spatial import Voronoi
+        from scipy.cluster.vq import kmeans, vq
+        import numpy as np
+        
+        dprint(f"Generating Voronoi diagram for {len(image_points)} points with k={k} regions...")
+        
+        # Extract coordinates as numpy array
+        points = np.array([[p['x'], p['y']] for p in image_points], dtype=np.float64)
+        dprint(f"Extracted coordinates shape: {points.shape}")
+        
+        # Step 1: Apply k-means clustering with k-means++ initialization
+        dprint(f"Running k-means clustering with k={k} (using k-means++ initialization)...")
+        
+        # Use scipy's kmeans which implements k-means++ initialization by default
+        centroids, distortion = kmeans(points, k, iter=50, thresh=1e-05)
+        dprint(f"K-means converged with distortion: {distortion:.4f}")
+        dprint(f"Final centroids:\n{centroids}")
+        
+        # Assign each point to nearest centroid
+        cluster_labels, distances = vq(points, centroids)
+        dprint(f"Assigned {len(points)} points to {k} clusters")
+        
+        # Step 2: Create bounding box for Voronoi diagram
+        min_x, min_y = points.min(axis=0)
+        max_x, max_y = points.max(axis=0)
+        
+        # Add padding to bounding box
+        padding = 0.2
+        width = max_x - min_x
+        height = max_y - min_y
+        bounding_box = {
+            'min_x': min_x - padding * width,
+            'max_x': max_x + padding * width,
+            'min_y': min_y - padding * height,
+            'max_y': max_y + padding * height
+        }
+        dprint(f"Bounding box: {bounding_box}")
+        
+        # Step 3: Add boundary points to ensure all Voronoi regions are bounded
+        boundary_margin = 0.5
+        boundary_points = np.array([
+            [bounding_box['min_x'] - boundary_margin * width, bounding_box['min_y'] - boundary_margin * height],
+            [bounding_box['max_x'] + boundary_margin * width, bounding_box['min_y'] - boundary_margin * height],
+            [bounding_box['max_x'] + boundary_margin * width, bounding_box['max_y'] + boundary_margin * height],
+            [bounding_box['min_x'] - boundary_margin * width, bounding_box['max_y'] + boundary_margin * height]
+        ])
+        
+        # Combine k-means centroids with boundary points for Voronoi generation
+        voronoi_points = np.vstack([centroids, boundary_points])
+        dprint(f"Creating Voronoi diagram from {len(centroids)} centroids + {len(boundary_points)} boundary points")
+        
+        # Step 4: Generate Voronoi diagram
+        vor = Voronoi(voronoi_points)
+        dprint(f"Voronoi diagram created with {len(vor.regions)} regions")
+        
+        # Step 5: Process Voronoi cells for the k centroids (ignore boundary point regions)
+        cells = []
+        for i in range(k):
+            region_idx = vor.point_region[i]
+            region = vor.regions[region_idx]
+            
+            if not region or -1 in region:
+                vertices = clip_infinite_voronoi_region(vor, i, bounding_box)
+            else:
+                vertices = [vor.vertices[j].tolist() for j in region]
+            
+            if len(vertices) >= 3:
+                vertices = sort_vertices_clockwise(vertices)
+                centroid = calculate_centroid(vertices)
+                
+                # Get list of image IDs in this cluster
+                image_ids = []
+                for j, label in enumerate(cluster_labels):
+                    if label == i:
+                        image_ids.append(image_points[j]['entryId'])
+                
+                cells.append({
+                    'id': i,
+                    'vertices': vertices,
+                    'centroid': centroid,
+                    'imageIds': image_ids,
+                    'pointCount': len(image_ids)
+                })
+        
+        # Step 6: Add regionId to image points (simplified)
+        for i, point in enumerate(image_points):
+            cluster_id = int(cluster_labels[i])
+            point['regionId'] = cluster_id
+        
+        voronoi_data = {
+            'cells': cells,
+            'k': k,
+            'algorithm': 'k-means + Voronoi'
+        }
+        
+        dprint(f"✓ Generated {len(cells)} bounded Voronoi regions from k-means centroids")
+        
+        return voronoi_data
+        
+    except Exception as e:
+        dprint(f"Error generating Voronoi diagram: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'cells': [],
+            'error': str(e),
+            'algorithm': 'k-means + Voronoi (failed)'
+        }
+
+# Add a simple formatting function for regions
+def format_voronoi_regions(voronoi_data):
+    """Format Voronoi regions for simplified response."""
+    regions = []
+    for cell in voronoi_data.get('cells', []):
+        regions.append({
+            'id': cell['id'],
+            'vertices': cell['vertices'],
+            'centroid': cell['centroid'],
+            'imageIds': cell['imageIds'],
+            'pointCount': cell['pointCount']
+        })
+    return regions
+
+
+@map_api_bp.route('/add_voronoi_to_map', methods=['POST'])
+def handle_add_voronoi_to_map():
+    """
+    Add Voronoi regions to existing image points.
+    
+    Expected JSON:
+    {
+        "imagePoints": [...],  // Array of points with x, y coordinates
+        "k": 10               // Number of regions
+    }
+    """
+    try:
+        if not request.json:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        image_points = request.json.get('imagePoints', [])
+        k = request.json.get('k')
+        debug = request.args.get('debug', 'false').lower() == 'true'
+        
+        if not image_points:
+            return jsonify({"error": "No imagePoints provided"}), 400
+        if not k:
+            return jsonify({"error": "No k value provided"}), 400
+        
+        def dprint(*args, **kwargs):
+            if debug:
+                print(*args, **kwargs)
+        
+        dprint(f"Adding Voronoi regions to {len(image_points)} points with k={k}")
+        
+        # Clear any existing regionId
+        for point in image_points:
+            point.pop('regionId', None)
+        
+        # Generate Voronoi diagram
+        voronoi_data = generate_voronoi_diagram(image_points, k, dprint)
+        
+        # Build simplified response
+        response = {
+            'success': True,
+            'imagePoints': image_points,  # Now includes regionId
+            'regions': format_voronoi_regions(voronoi_data),
+            'generationParams': {
+                'k': k,
+                'algorithm': 'k-means + Voronoi'
+            },
+            'count': len(image_points)
+        }
+        
+        return jsonify(response)
+    
+    except Exception as e:
+        if debug:
+            import traceback
+            traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 
 
 # Error handlers
