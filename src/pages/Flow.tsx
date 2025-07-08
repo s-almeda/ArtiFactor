@@ -513,14 +513,27 @@ useOnViewportChange({
           setEdges(edges);
           setViewport(viewport);
         } else {
-          console.log("No canvas found in browser storage. Creating a new one for the logged out user...");
-          setNodes([]);
-          setEdges([]);
-          addTextWithKeywordsNode("your text here. click the pencil icon in the top right to edit. Right-Click, or use Alt+Click to generate new nodes.", "user", { x: 0, y: 0 });
-          setViewport({ x: 0, y: 0, zoom: 1 });
-          quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
-        }
-        setattemptedQuickLoad(true);
+          console.log("No canvas found in browser storage. Loading default canvas data...");
+          // Fetch the default canvas data from the public folder
+          fetch("/default_canvas_data.json")
+            .then((res) => res.json())
+            .then((defaultCanvas) => {
+              const { nodes = [], edges = [], viewport = { x: 0, y: 0, zoom: 1 } } = defaultCanvas;
+              setNodes(nodes);
+              setEdges(edges);
+              setViewport(viewport);
+              quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
+            })
+            .catch((err) => {
+              console.error("Failed to load default canvas data:", err);
+              // fallback: create a single default node
+              setNodes([]);
+              setEdges([]);
+              addTextWithKeywordsNode("your text here. click the pencil icon in the top right to edit. Right-Click, or use Alt+Click to generate new nodes.", "user", { x: 0, y: 0 });
+              setViewport({ x: 0, y: 0, zoom: 1 });
+              quickSaveToBrowser(canvasToObject(), "browser", "browserCanvas");
+            });
+        }  setattemptedQuickLoad(true);
         return;
       }
       if (loginStatus === "logged in" && userID) { //were logged in!
