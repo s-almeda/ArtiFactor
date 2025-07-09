@@ -26,6 +26,7 @@ import sqlite_vec
 import sqlean as sqlite3
 from transformers import CLIPModel, CLIPProcessor
 import json
+import requests
 
 # LOCALDB = "LOCALDB"
 
@@ -141,19 +142,57 @@ def update_embeddings():
 
     images_folder = os.path.join(os.getcwd(), "images")
 
-    for image_id, value, filename in image_entries:
+    for image_id, value, image_urls, filename in image_entries:
         # Skip if already in `vec_image_features`
         cursor.execute('SELECT 1 FROM vec_image_features WHERE image_id = ?', (image_id,))
         if cursor.fetchone():
             logging.info(f"Skipping image_id {image_id}: {value} (already indexed).")
             continue
 
-        if not filename:
-            logging.warning(f"Skipping image_id {image_id} due to missing filename.")
-            continue
+        image_path = None
 
-        image_path = os.path.join(images_folder, filename)
-        if not os.path.exists(image_path):
+        # Try to use filename if present and file exists
+        if filename:
+            image_path_candidate = os.path.join(images_folder, filename)
+            if os.path.exists(image_path_candidate):
+                image_path = image_path_candidate
+
+        # If image_path is still None, try to use image_urls to download
+        if not image_path:
+            image_url = None
+            if image_urls:
+                try:
+                    urls = json.loads(image_urls)
+                    # Priority order for image sizes
+                    priority_keys = ["small", "medium", "medium_rectangle", "normalized", "large", "larger"]
+                    for key in priority_keys:
+                        if key in urls and urls[key]:
+                            image_url = urls[key]
+                            break
+                except Exception as e:
+                    logging.warning(f"Could not parse image_urls for image_id {image_id}: {e}")
+
+            if image_url:
+                # Generate a filename from image_id and url extension
+                ext = os.path.splitext(image_url)[1] or ".jpg"
+                filename = f"{image_id}{ext}"
+                image_path = os.path.join(images_folder, filename)
+                # Download the image if not already present
+                if not os.path.exists(image_path):
+                    try:
+                        response = requests.get(image_url, timeout=10)
+                        response.raise_for_status()
+                        with open(image_path, "wb") as f:
+                            f.write(response.content)
+                        logging.info(f"Downloaded image for image_id {image_id} from {image_url}")
+                    except Exception as e:
+                        logging.warning(f"❌ - Failed to download image for image_id {image_id} from {image_url}: {e}")
+                        continue
+            else:
+                logging.warning(f"Skipping image_id {image_id} due to missing filename and valid image_urls.")
+                continue
+
+        if not image_path or not os.path.exists(image_path):
             logging.warning(f"❌ - Image file {image_path} not found. Skipping.")
             continue
 
