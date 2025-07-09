@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="/static/staging_review.css">
 </head>
 <body>
+    <div class="description-container" id="artwork_descriptions_${idx}_${awidx}">
+        ${renderDescriptions(artwork.descriptions || {}, `artwork_${awidx}_descriptions`)}
+    </div>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-clipboard-check"></i> Staging Review</h1>
@@ -51,59 +54,198 @@
         </div>
     </div>
 
+
 <script>
-let stagingData = null;
+
+let artistFiles = [];
+let allArtistData = [];
+let currentArtistIdx = 0;
+let artistData = null;
+
+// Holds the summary stats for all artists
+let allArtistsStats = {
+    totalArtists: 0,
+    newArtists: 0,
+    totalArtworks: 0,
+    newArtworks: 0
+};
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadStagingData();
+    loadArtistFiles();
     document.querySelector('.close').onclick = function() {
         document.getElementById('artistModal').style.display = 'none';
     };
 });
 
-async function loadStagingData() {
+async function loadArtistFiles() {
     try {
-        const response = await fetch('/staging_review/load_staging_data');
+        const response = await fetch('/staging_review/list_artist_files');
+        const result = await response.json();
+        if (result.success && result.files.length > 0) {
+            artistFiles = result.files;
+            // Preload all artist data for stats
+            allArtistData = await Promise.all(
+                artistFiles.map(f =>
+                    fetch(`/staging_review/load_artist_data/${f.filename}`)
+                        .then(r => r.json())
+                        .then(res => res.success ? res.data : null)
+                )
+            );
+            computeAllArtistsStats();
+            renderArtistNav();
+            loadArtistData(0);
+        } else {
+            showError('No artist files found.');
+        }
+    } catch (error) {
+        showError('Failed to load artist file list: ' + error.message);
+    }
+}
+
+
+function updateSummaryStats() {
+    document.getElementById('total-artists').textContent = allArtistsStats.totalArtists;
+    document.getElementById('new-artists').textContent = allArtistsStats.newArtists;
+    document.getElementById('total-artworks').textContent = allArtistsStats.totalArtworks;
+    document.getElementById('new-artworks').textContent = allArtistsStats.newArtworks;
+    document.getElementById('summary-container').style.display = 'block';
+}
+
+function computeAllArtistsStats() {
+    // Only count non-null loaded artist data
+    const validArtists = allArtistData.filter(d => d && d.artist);
+    allArtistsStats.totalArtists = validArtists.length;
+    allArtistsStats.newArtists = validArtists.filter(d => !d.artist.is_existing).length;
+    allArtistsStats.totalArtworks = validArtists.reduce((sum, d) => sum + (d.artworks ? d.artworks.length : 0), 0);
+    allArtistsStats.newArtworks = validArtists.reduce((sum, d) =>
+        sum + (d.artworks ? d.artworks.filter(aw => !aw.is_existing).length : 0), 0
+    );
+    updateSummaryStats();
+}
+
+// Call updateSummaryStats() after any change that affects the stats, e.g. after removing or approving/rejecting an artist file.
+// For example, after removing an artist file:
+async function removeArtistFile() {
+    if (!confirm('Are you sure you want to remove this artist file?')) return;
+    const file = artistFiles[currentArtistIdx];
+    try {
+        const response = await fetch(`/staging_review/remove_artist_file/${file.filename}`, { method: 'DELETE' });
         const result = await response.json();
         if (result.success) {
-            stagingData = result.data;
-            displayStagingData();
+            artistFiles.splice(currentArtistIdx, 1);
+            allArtistData.splice(currentArtistIdx, 1);
+            computeAllArtistsStats();
+            if (artistFiles.length === 0) {
+                document.getElementById('artist-list').innerHTML = '';
+                showError('No artist files left.');
+                return;
+            }
+            if (currentArtistIdx >= artistFiles.length) currentArtistIdx = artistFiles.length - 1;
+            renderArtistNav();
+            loadArtistData(currentArtistIdx);
         } else {
             showError(result.error);
         }
     } catch (error) {
-        showError('Failed to load staging data: ' + error.message);
+        showError('Failed to remove artist file: ' + error.message);
     }
 }
 
-function displayStagingData() {
+function renderArtistNav() {
+    // Always re-render the nav bar for correct state
+    let navHtml = '<div id="artist-nav" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">';
+    navHtml += `<button id="prevBtn" type="button" ${currentArtistIdx===0?'disabled':''}>&lt; Prev</button>`;
+    navHtml += `<span style="font-weight:bold;">Artist: </span>`;
+    navHtml += `<select id="artistSelect">`;
+    artistFiles.forEach((f, i) => {
+        let artistName = (allArtistData[i] && allArtistData[i].artist && allArtistData[i].artist.name) ? allArtistData[i].artist.name : f.name;
+        navHtml += `<option value="${i}" ${i === currentArtistIdx ? 'selected' : ''}>${artistName}</option>`;
+    });
+    navHtml += '</select>';
+    navHtml += `<button id="nextBtn" type="button" ${currentArtistIdx===artistFiles.length-1?'disabled':''}>Next &gt;</button>`;
+    navHtml += '</div>';
+
+    // Replace or insert the nav bar
+    const existingNav = document.getElementById('artist-nav');
+    if (existingNav) {
+        existingNav.outerHTML = navHtml;
+    } else {
+        document.getElementById('summary-container').insertAdjacentHTML('beforebegin', navHtml);
+    }
+
+    // Set up event handlers after DOM update
+    setTimeout(() => {
+        document.getElementById('prevBtn').onclick = prevArtist;
+        document.getElementById('nextBtn').onclick = nextArtist;
+        document.getElementById('artistSelect').onchange = function() { gotoArtist(this.value); };
+    }, 0);
+}
+
+function prevArtist() {
+    if (currentArtistIdx > 0) {
+        loadArtistData(currentArtistIdx - 1);
+    }
+}
+function nextArtist() {
+    if (currentArtistIdx < artistFiles.length - 1) {
+        loadArtistData(currentArtistIdx + 1);
+    }
+}
+function gotoArtist(idx) {
+    idx = Number(idx);
+    if (idx !== currentArtistIdx && idx >= 0 && idx < artistFiles.length) {
+        loadArtistData(idx);
+    } else {
+        // Even if same, update dropdown selection to reflect current
+        renderArtistNav();
+    }
+}
+
+async function loadArtistData(idx) {
+    currentArtistIdx = idx;
+    document.getElementById('loading').style.display = '';
+    document.getElementById('artist-list').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    try {
+        const file = artistFiles[idx];
+        const response = await fetch(`/staging_review/load_artist_data/${file.filename}`);
+        const result = await response.json();
+        if (result.success) {
+            artistData = result.data;
+            renderArtistNav(); // Always update nav to reflect current selection
+            displayArtistData();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to load artist data: ' + error.message);
+    }
+}
+
+function displayArtistData() {
     document.getElementById('loading').style.display = 'none';
-    if (!stagingData) {
-        showError('No staging data available');
+    if (!artistData) {
+        showError('No artist data available');
         return;
     }
-    // Display summary statistics
-    const summary = stagingData.summary || {};
-    document.getElementById('total-artists').textContent = summary.total_artists || 0;
-    document.getElementById('new-artists').textContent = summary.new_artists || 0;
-    document.getElementById('total-artworks').textContent = stagingData.metadata?.total_artworks || 0;
-    document.getElementById('new-artworks').textContent = summary.total_new_artworks || 0;
-    document.getElementById('summary-container').style.display = 'block';
+    updateSummaryStats();
     displayArtistList();
 }
 
 function displayArtistList() {
     const artistList = document.getElementById('artist-list');
     artistList.innerHTML = '';
-    if (!stagingData.artists || stagingData.artists.length === 0) {
-        artistList.innerHTML = '<p class="loading">No artists found in staging data</p>';
+    if (!artistData.artist) {
+        artistList.innerHTML = '<p class="loading">No artist found in this file</p>';
         artistList.style.display = 'block';
         return;
     }
-    stagingData.artists.forEach((artist, idx) => {
-        const artistForm = createArtistForm(artist, idx);
-        artistList.appendChild(artistForm);
-    });
+    // Only one artist per file
+    const artistForm = createArtistForm({
+        ...artistData.artist,
+        artworks: artistData.artworks || []
+    }, 0);
+    artistList.appendChild(artistForm);
     artistList.style.display = 'block';
 }
 
@@ -134,44 +276,68 @@ function createArtistForm(artist, idx) {
     </div>`;
 
     let artistKeywords = [];
-    if (artist.RelatedKeywordStrings) {
-        try { artistKeywords = JSON.parse(artist.RelatedKeywordStrings); } catch (e) { artistKeywords = []; }
+    if (artist.relatedKeywordStrings || artist.RelatedKeywordStrings) {
+        try { artistKeywords = JSON.parse(artist.relatedKeywordStrings || artist.RelatedKeywordStrings); } catch (e) { artistKeywords = []; }
     } else if (artist.keywords) {
         artistKeywords = artist.keywords;
     }
     let allKeywords = new Set(artistKeywords);
     (artist.artworks || []).forEach(aw => {
         let awKeywords = [];
-        if (aw.RelatedKeywordStrings) {
-            try { awKeywords = JSON.parse(aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
+        if (aw.relatedKeywordStrings || aw.RelatedKeywordStrings) {
+            try { awKeywords = JSON.parse(aw.relatedKeywordStrings || aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
         } else if (aw.keywords) {
             awKeywords = aw.keywords;
         }
         awKeywords.forEach(k => allKeywords.add(k));
     });
     allKeywords = Array.from(allKeywords);
-    function renderDescriptions(descObj, prefix) {
+    function renderDescriptions(descObj, prefix, isNested = false) {
         if (!descObj || typeof descObj !== 'object') return '';
         let html = '';
+        
+        // Check if this is a top-level descriptions object (contains sources)
+        const isTopLevel = !isNested;
+        
         for (const [key, value] of Object.entries(descObj)) {
-            if (typeof value === 'object' && value !== null) {
-                html += `<div style='margin-left:1em;'><b>${key}:</b><br>${renderDescriptions(value, `${prefix}[${key}]`)}</div>`;
+            if (typeof value === 'object' && value !== null && isTopLevel) {
+                // This is a source (like "artsy", "wikiart")
+                html += `<div class="description-source" style="margin-top: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <strong>Source:</strong>
+                        <input type="text" name="${prefix}_source_${key}" value="${key}" class="source-name-input" placeholder="Source name" style="font-weight: bold;">
+                    </div>
+                    <div class="description-container">
+                        ${renderDescriptions(value, `${prefix}[${key}]`, true)}
+                    </div>
+                </div>`;
             } else {
-                html += `<label>${key}:<br><textarea name="${prefix}[${key}]" style="width:48%; min-width:180px; max-width:48%;" rows="2">${value || ''}</textarea></label><br>`;
+                // This is a field within a source
+                html += `<div class="description-field" style="margin-bottom: 4px;">
+                    <div class="field-name-value" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" name="${prefix}_field_${key}" value="${key}" class="field-name-input" placeholder="Field name" style="width: 120px; font-size: 0.9em;">
+                        <textarea name="${prefix}[${key}]" class="field-value-input" rows="1" placeholder="Field value" style="flex: 1; font-size: 0.9em;">${value || ''}</textarea>
+                    </div>
+                </div>`;
             }
         }
+        
+
+        
         return html;
     }
     html += `<div class="artist-details">
         <div class="detail-section">
             <h4>Artist Info</h4>
             <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
-            <label>Skip this artist: <input type="checkbox" name="skip_artist"></label><br>
-            <label>Keywords:<br>
-                ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist_${idx}`, new Set(artistKeywords))}
-                <div style="margin-top:4px;"><input type="text" name="add_artist_keyword" placeholder="Add keyword" style="width:40%"> <button type="button" onclick="addArtistKeyword(this.form, ${idx})">Add</button></div>
-            </label><br>
-            <div><b>Descriptions:</b><br>${renderDescriptions(artist.descriptions || {}, 'artist_descriptions')}</div>
+            <button type="button" class="btn btn-danger" style="margin-bottom:8px;" onclick="removeArtistFile()">Remove this artist file</button><br>
+            <div class="keywords-descriptions-container">
+                <div class="keywords-section">
+                    <label>Keywords:</label>
+                    ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist_${idx}`, new Set(artistKeywords))}
+                    <div style="margin-top:4px;"><input type="text" name="add_artist_keyword" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtistKeyword(this.form, ${idx})">Add</button></div>
+                </div>
+            </div>
         </div>
         <div class="detail-section">
             <h4>Database Info</h4>
@@ -183,6 +349,12 @@ function createArtistForm(artist, idx) {
                     </div>`
                 }
             </div>
+                            <div class="descriptions-section">
+                    <b>Descriptions:</b>
+                    <div class="description-container" id="artist_descriptions_${idx}">
+                        ${renderDescriptions(artist.descriptions || {}, 'artist_descriptions')}
+                    </div>
+                </div>
         </div>
     </div>`;
 
@@ -194,10 +366,10 @@ function createArtistForm(artist, idx) {
         const status = aw.is_existing ? 'To Update (ID: ' + (aw.existing_id || '') + ')' : 'New!';
         const statusClass = aw.is_existing ? 'update-icon' : 'new-icon';
         const imageUrl = aw.image_urls?.medium || aw.image_urls?.large || aw.image_urls?.small || '';
-        const imagePreview = imageUrl ? `<img src="${imageUrl}" alt="${aw.title}" style="width:140px;height:140px;object-fit:cover;border-radius:4px;margin-left:8px;vertical-align:middle;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNmOGY5ZmEiLz48L3N2Zz4='">` : '';
+        const imagePreview = imageUrl ? `<img src="${imageUrl}" alt="${aw.value || aw.title || ''}" style="width:140px;height:140px;object-fit:cover;border-radius:4px;margin-left:8px;vertical-align:middle;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNmOGY5ZmEiLz48L3N2Zz4='">` : '';
         let awKeywords = [];
-        if (aw.RelatedKeywordStrings) {
-            try { awKeywords = JSON.parse(aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
+        if (aw.relatedKeywordStrings || aw.RelatedKeywordStrings) {
+            try { awKeywords = JSON.parse(aw.relatedKeywordStrings || aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
         } else if (aw.keywords) {
             awKeywords = aw.keywords;
         }
@@ -205,28 +377,40 @@ function createArtistForm(artist, idx) {
         allArtworkKeywords = Array.from(allArtworkKeywords);
         let artworkDescriptionsHtml = '';
         if (aw.descriptions && typeof aw.descriptions === 'object') {
-            artworkDescriptionsHtml = `<div><b>Descriptions:</b><br>${renderDescriptions(aw.descriptions, `artwork_${awidx}_descriptions`)}</div>`;
+            artworkDescriptionsHtml = `<b>Descriptions:</b>
+                <div class="description-container" id="artwork_descriptions_${idx}_${awidx}">
+                    ${renderDescriptions(aw.descriptions, `artwork_${awidx}_descriptions`)}
+                </div>`;
         }
         html += `<div class="artwork-card" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <span class="${statusClass}">${status}</span>
-                <span style="font-size:0.9em;color:#888;">image_id: ${aw.image_id || ''}</span>
+            <div class="artwork-info">
+                <div class="artwork-header">
+                    <span class="${statusClass}">${status}</span>
+                    <span style="font-size:0.9em;color:#888;">image_id: ${aw.image_id || ''}</span>
+                </div>
+                <div class="artwork-fields">
+                    <label>Title: <input type="text" name="artwork_title_${awidx}" value="${aw.value || aw.title || ''}" style="width:100%"></label>
+                    <label>Date: <input type="text" name="artwork_date_${awidx}" value="${aw.descriptions?.wikiart?.date ||aw.descriptions?.artsy?.date || aw.date || aw.year || ''}" style="width:100%"></label>
+                    <label>Image URL: <input type="text" name="artwork_image_${awidx}" value="${imageUrl}" style="width:100%"></label>
+                    <label>Remove: <input type="checkbox" name="remove_artwork_${awidx}"></label>
+                    <div class="keywords-descriptions-container">
+                        <div class="keywords-section">
+                            <label>Keywords:</label>
+                            ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${idx}_${awidx}`, new Set(awKeywords))}
+                            <div style="margin-top:4px;"><input type="text" name="add_artwork_keyword_${awidx}" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtworkKeyword(this.form, ${idx}, ${awidx})">Add</button></div>
+                        </div>
+                        <div class="descriptions-section">
+                            ${artworkDescriptionsHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="artwork-image">
                 ${imagePreview}
             </div>
-            <label>Title: <input type="text" name="artwork_title_${awidx}" value="${aw.title || ''}" style="width:60%"></label><br>
-            <label>Year: <input type="text" name="artwork_year_${awidx}" value="${aw.year || ''}" style="width:30%"></label><br>
-            <label>Image URL: <input type="text" name="artwork_image_${awidx}" value="${imageUrl}" style="width:60%"></label><br>
-            <label>Remove: <input type="checkbox" name="remove_artwork_${awidx}"></label><br>
-            <label>Keywords:<br>
-                ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${idx}_${awidx}`, new Set(awKeywords))}
-                <div style="margin-top:4px;"><input type="text" name="add_artwork_keyword_${awidx}" placeholder="Add keyword" style="width:40%"> <button type="button" onclick="addArtworkKeyword(this.form, ${idx}, ${awidx})">Add</button></div>
-            </label><br>
-            ${artworkDescriptionsHtml}
         </div>`;
     });
-    html += `</div>
-        <button type="button" class="btn btn-primary" onclick="addArtworkRow(${idx})">Add Artwork</button>
-    </div>`;
+
 
     html += `<div class="actions" style="margin-top:10px;">
         <button type="button" class="btn btn-success" onclick="submitArtistForm(event, ${idx})"><i class="fas fa-check"></i> Approve</button>
@@ -248,49 +432,104 @@ function createArtistForm(artist, idx) {
     return form;
 }
 
-function addArtworkRow(artistIdx) {
-    const artworksDiv = document.getElementById(`artworks_${artistIdx}`);
-    const awidx = artworksDiv.querySelectorAll('.artwork-card').length;
-    const artist = stagingData.artists[artistIdx];
-    let allKeywords = new Set(artist.keywords || []);
-    (artist.artworks || []).forEach(aw => (aw.keywords || []).forEach(k => allKeywords.add(k)));
-    allKeywords = Array.from(allKeywords);
-    const html = `<div class=\"artwork-card\" style=\"margin-bottom:10px;\">
-        <label>Title: <input type=\"text\" name=\"artwork_title_${awidx}\" value=\"\" style=\"width:60%\"></label><br>
-        <label>Year: <input type=\"text\" name=\"artwork_year_${awidx}\" value=\"\" style=\"width:30%\"></label><br>
-        <label>Image URL: <input type=\"text\" name=\"artwork_image_${awidx}\" value=\"\" style=\"width:60%\"></label><br>
-        <label>Remove: <input type=\"checkbox\" name=\"remove_artwork_${awidx}\"></label><br>
-        <label>Keywords:<br>
-            ${renderKeywordCheckboxes([], allKeywords, `artwork_${artistIdx}_${awidx}`, new Set())}
-            <div style=\"margin-top:4px;\"><input type=\"text\" name=\"add_artwork_keyword_${awidx}\" placeholder=\"Add keyword\" style=\"width:40%\"> <button type=\"button\" onclick=\"addArtworkKeyword(this.form, ${artistIdx}, ${awidx})\">Add</button></div>
-        </label>
-    </div>`;
-    artworksDiv.insertAdjacentHTML('beforeend', html);
-}
 
-window.addArtistKeyword = function(form, artistIdx) {
+window.addArtistKeyword = async function(form, artistIdx) {
     const input = form.querySelector('input[name="add_artist_keyword"]');
     if (!input || !input.value.trim()) return;
-    const kw = input.value.trim();
-    const group = input.parentElement.parentElement.querySelector('.checkbox-group');
-    if (group && !Array.from(group.querySelectorAll('input[type=checkbox]')).some(cb => cb.value === kw)) {
-        const i = group.querySelectorAll('input[type=checkbox]').length;
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        div.style.gap = '6px';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.name = `artist_kw_${i}`;
-        checkbox.value = kw;
-        checkbox.checked = true;
-        const label = document.createElement('label');
-        label.textContent = kw;
-        div.appendChild(checkbox);
-        div.appendChild(label);
-        group.insertBefore(div, input.parentElement);
+    
+    const query = input.value.trim();
+    const button = input.nextElementSibling;
+    const originalText = button.textContent;
+    
+    // Show loading state
+    button.textContent = 'Searching...';
+    button.disabled = true;
+    
+    try {
+        // Call the lookup_text API
+        const response = await fetch('/lookup_text', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: query,
+                top_k: 10
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to search keywords');
+        }
+        
+        const results = await response.json();
+        
+        // Filter to only keyword entries (isArtist = 0)
+        const keywordResults = results.filter(result => 
+            result.isArtist === 0 || result.isArtist === '0'
+        );
+        
+        if (keywordResults.length === 0) {
+            alert('No relevant keywords found for: ' + query);
+            return;
+        }
+        
+        // Add new keywords to the checkbox group
+        const group = input.parentElement.parentElement.querySelector('.checkbox-group');
+        const existingKeywords = new Set(
+            Array.from(group.querySelectorAll('input[type=checkbox]')).map(cb => cb.value)
+        );
+        
+        let addedCount = 0;
+        keywordResults.forEach(result => {
+            const keyword = result.value;
+            const distance = result.distance;
+            
+            // Only add if not already present and distance indicates relevance
+            if (!existingKeywords.has(keyword) && distance < 0.9) {
+                const i = group.querySelectorAll('input[type=checkbox]').length;
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '6px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `artist_${artistIdx}_kw_${i}`;
+                checkbox.name = `artist_kw_${i}`;
+                checkbox.value = keyword;
+                checkbox.checked = false; // Don't auto-check search results
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', checkbox.id);
+                label.textContent = `${keyword} (${distance.toFixed(3)})`;
+                label.style.fontSize = '0.9em';
+                label.style.color = '#666';
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                group.insertBefore(div, input.parentElement);
+                
+                existingKeywords.add(keyword);
+                addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            alert(`Added ${addedCount} new keyword options. Check the ones you want to include.`);
+        } else {
+            alert('No new relevant keywords found.');
+        }
+        
+    } catch (error) {
+        console.error('Error searching keywords:', error);
+        alert('Error searching for keywords: ' + error.message);
+    } finally {
+        // Restore button state
+        button.textContent = originalText;
+        button.disabled = false;
+        input.value = '';
     }
-    input.value = '';
 }
 
 window.addArtworkKeyword = function(form, artistIdx, awidx) {
@@ -318,6 +557,7 @@ window.addArtworkKeyword = function(form, artistIdx, awidx) {
     input.value = '';
 }
 
+
 async function submitArtistForm(event, artistIdx) {
     event.preventDefault();
     const form = event.target.closest('form');
@@ -342,6 +582,53 @@ async function submitArtistForm(event, artistIdx) {
             updatedArtist.keywords.push(v);
         }
     }
+    function processDescriptions(formData, prefix) {
+        const descriptions = {};
+        const fieldMappings = new Map(); // Map original field names to new field names
+        const sourceMappings = new Map(); // Map original source names to new source names
+        
+        // First pass: collect all field name changes
+        for (let [k, v] of formData.entries()) {
+            if (k.startsWith(`${prefix}_field_`)) {
+                const originalField = k.replace(`${prefix}_field_`, '');
+                fieldMappings.set(originalField, v);
+            }
+            if (k.startsWith(`${prefix}_source_`)) {
+                const originalSource = k.replace(`${prefix}_source_`, '');
+                sourceMappings.set(originalSource, v);
+            }
+        }
+        
+        // Second pass: process actual description values with renamed fields
+        for (let [k, v] of formData.entries()) {
+            if (k.startsWith(prefix) && k.includes('[') && k.includes(']')) {
+                // Parse the nested path
+                let path = k.replace(prefix, '').replace(/^\[|\]$/g, '');
+                const pathParts = path.split('][');
+                
+                // Apply source renaming
+                if (pathParts.length >= 1 && sourceMappings.has(pathParts[0])) {
+                    pathParts[0] = sourceMappings.get(pathParts[0]);
+                }
+                
+                // Apply field renaming  
+                if (pathParts.length >= 2 && fieldMappings.has(pathParts[1])) {
+                    pathParts[1] = fieldMappings.get(pathParts[1]);
+                }
+                
+                // Build the nested object
+                let current = descriptions;
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    if (!current[pathParts[i]]) current[pathParts[i]] = {};
+                    current = current[pathParts[i]];
+                }
+                current[pathParts[pathParts.length - 1]] = v;
+            }
+        }
+        
+        return descriptions;
+    }
+    
     function setNested(obj, path, value) {
         const parts = path.replace(/^\w+_descriptions/, '').replace(/\]\[/g, '.').replace(/\[|\]/g, '').split('.').filter(Boolean);
         let cur = obj;
@@ -351,31 +638,30 @@ async function submitArtistForm(event, artistIdx) {
         }
         cur[parts[parts.length - 1]] = value;
     }
-    updatedArtist.descriptions = {};
-    for (let [k, v] of formData.entries()) {
-        if (k.startsWith('artist_descriptions')) {
-            setNested(updatedArtist.descriptions, k, v);
-        }
-    }
+    
+    // Process artist descriptions with renamed fields
+    updatedArtist.descriptions = processDescriptions(formData, 'artist_descriptions');
     let awidx = 0;
     while (formData.has(`artwork_title_${awidx}`)) {
         if (!formData.get(`remove_artwork_${awidx}`)) {
             const aw = {
                 ...((artist.artworks && artist.artworks[awidx]) || {}),
-                title: formData.get(`artwork_title_${awidx}`),
-                year: formData.get(`artwork_year_${awidx}`),
+                value: formData.get(`artwork_title_${awidx}`),  // Use 'value' to match database structure
                 image_urls: { medium: formData.get(`artwork_image_${awidx}`) },
                 keywords: [],
                 descriptions: {}
             };
+            // Process artwork descriptions with renamed fields
+            aw.descriptions = processDescriptions(formData, `artwork_${awidx}_descriptions`);
+            // Add date to descriptions.wikiart if provided
+            const dateValue = formData.get(`artwork_date_${awidx}`);
+            if (dateValue) {
+                if (!aw.descriptions.wikiart) aw.descriptions.wikiart = {};
+                aw.descriptions.wikiart.date = dateValue;
+            }
             for (let [k, v] of formData.entries()) {
                 if (k.startsWith(`artwork_${awidx}_kw_`)) {
                     aw.keywords.push(v);
-                }
-            }
-            for (let [k, v] of formData.entries()) {
-                if (k.startsWith(`artwork_${awidx}_descriptions`)) {
-                    setNested(aw.descriptions, k.replace(`artwork_${awidx}_`, ''), v);
                 }
             }
             updatedArtist.artworks.push(aw);
@@ -430,9 +716,6 @@ function showError(message) {
     errorDiv.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
 }
-</script>
-    };
-};
 </script>
 </body>
 </html>

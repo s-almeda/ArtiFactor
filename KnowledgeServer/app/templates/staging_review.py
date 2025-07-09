@@ -146,10 +146,21 @@ def get_artist_details(artist_slug):
                             keywords = row_dict['keywords']
                     except Exception:
                         pass
+                    # Extract date from descriptions if available
+                    date_value = ''
+                    if 'descriptions' in row_dict and row_dict['descriptions']:
+                        try:
+                            import ast
+                            descriptions = ast.literal_eval(row_dict['descriptions']) if isinstance(row_dict['descriptions'], str) else row_dict['descriptions']
+                            if isinstance(descriptions, dict) and 'wikiart' in descriptions and 'date' in descriptions['wikiart']:
+                                date_value = descriptions['wikiart']['date']
+                        except Exception:
+                            pass
+                    
                 processed_artworks.append({
                     'staging_data': {
-                        'title': row_dict.get('title', ''),
-                        'year': row_dict.get('year', ''),
+                        'value': row_dict.get('value', ''),  # Use 'value' instead of 'title'
+                        'date': date_value,  # Extract from descriptions.wikiart.date
                         'image_id': row_dict.get('image_id', ''),
                         'image_urls': {'medium': row_dict.get('image_url', '')},
                         'keywords': keywords,
@@ -320,3 +331,54 @@ def reject_artist():
             'success': False,
             'error': str(e)
         })
+    
+# New: List all per-artist JSON files
+@staging_review_bp.route('/list_artist_files')
+def list_artist_files():
+    """Return a list of all per-artist staging JSON files (sorted by name)"""
+    files = glob.glob(os.path.join(STAGING_DIR, 'staging_artist_*.json'))
+    files.sort()
+    artist_files = []
+    for f in files:
+        try:
+            with open(f, 'r', encoding='utf-8') as jf:
+                data = json.load(jf)
+                slug = data.get('metadata', {}).get('slug') or os.path.basename(f)
+                name = data.get('metadata', {}).get('artist') or slug
+                artist_files.append({
+                    'filename': os.path.basename(f),
+                    'slug': slug,
+                    'name': name
+                })
+        except Exception as e:
+            continue
+    return jsonify({'success': True, 'files': artist_files})
+
+# New: Load a specific artist JSON file by filename
+@staging_review_bp.route('/load_artist_data/<filename>')
+def load_artist_data(filename):
+    """Load a specific per-artist JSON file by filename"""
+    safe_name = os.path.basename(filename)
+    file_path = os.path.join(STAGING_DIR, safe_name)
+    if not os.path.exists(file_path):
+        return jsonify({'success': False, 'error': 'File not found'})
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# New: Remove a specific artist JSON file by filename
+@staging_review_bp.route('/remove_artist_file/<filename>', methods=['DELETE'])
+def remove_artist_file(filename):
+    """Remove a specific per-artist JSON file by filename"""
+    safe_name = os.path.basename(filename)
+    file_path = os.path.join(STAGING_DIR, safe_name)
+    if not os.path.exists(file_path):
+        return jsonify({'success': False, 'error': 'File not found'})
+    try:
+        os.remove(file_path)
+        return jsonify({'success': True, 'message': f'Artist file {safe_name} removed successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
