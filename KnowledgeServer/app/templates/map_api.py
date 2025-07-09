@@ -144,9 +144,11 @@ def handle_initial_map_request():
         # UMAP params with new defaults
         n_neighbors = int(request.args.get('n_neighbors', 500))
         min_dist = float(request.args.get('min_dist', 0.9))
-        random_state = request.args.get('random_state', None)
-        if random_state:
+        random_state = request.args.get('random_state', '42')
+        if random_state and random_state.strip():
             random_state = int(random_state)
+        else:
+            random_state = 42
 
         print(f"Parameters: n={n}, method={method}, clustering={enable_clustering}, k={k}")
         
@@ -232,7 +234,7 @@ def handle_initial_map_request():
             traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
-def generate_base_map_data(db, n, method, use_disk, random, dprint, n_neighbors=500, min_dist=0.9, random_state=None):
+def generate_base_map_data(db, n, method, use_disk, random, dprint, n_neighbors=500, min_dist=0.9, random_state=42):
     """
     Extract embeddings and process data for n images.
     Returns dict with: embeddings, processed_data, stats, success, coordinates_2d
@@ -294,7 +296,7 @@ def generate_base_map_data(db, n, method, use_disk, random, dprint, n_neighbors=
     umap_params = {}
     if n_neighbors: umap_params['n_neighbors'] = int(n_neighbors)
     if min_dist: umap_params['min_dist'] = float(min_dist)  
-    if random_state is not None and random_state != '':
+    if random_state is not None:
         umap_params['random_state'] = int(random_state)
 
     coordinates_2d = hf.reduce_to_2d_umap(embeddings_array, **umap_params)
@@ -666,6 +668,7 @@ def handle_voronoi_map_request():
     - min_dist: UMAP min_dist (default: 0.9)
     - cache: use cached results (default: 'false')
     - k: number of Voronoi regions (default: 10)
+    - kmeans_iter: number of k-means iterations (default: 50)
     
     Returns simplified JSON response with Voronoi diagram data.
     """
@@ -687,9 +690,14 @@ def handle_voronoi_map_request():
         # UMAP params
         n_neighbors = int(request.args.get('n_neighbors', 500))
         min_dist = float(request.args.get('min_dist', 0.9))
-        random_state = request.args.get('random_state', None)
-        if random_state:
+        random_state = request.args.get('random_state', '42')
+        if random_state and random_state.strip():
             random_state = int(random_state)
+        else:
+            random_state = 42
+        
+        # K-means params
+        kmeans_iter = int(request.args.get('kmeans_iter', 50))
 
         print(f"Parameters: n={n}, method={method}, voronoi=true, k={k}")
         
@@ -731,7 +739,7 @@ def handle_voronoi_map_request():
 
         # 3. Generate Voronoi diagram
         dprint(f"\nGenerating Voronoi diagram with k={k} regions...")
-        voronoi_data = generate_voronoi_diagram(image_points, k, dprint)
+        voronoi_data = generate_voronoi_diagram(image_points, k, dprint, kmeans_iter=kmeans_iter)
 
         # 4. Build simplified response
         voronoi_response = {
@@ -746,6 +754,9 @@ def handle_voronoi_map_request():
                     'n_neighbors': n_neighbors,
                     'min_dist': min_dist,
                     'random_state': random_state
+                },
+                'kmeans_params': {
+                    'iterations': kmeans_iter
                 },
                 'algorithm': 'k-means + Voronoi'
             },
@@ -771,10 +782,16 @@ def handle_voronoi_map_request():
         return jsonify({"error": str(e)}), 500
 
 # Simplify the generate_voronoi_diagram function to add regionId directly
-def generate_voronoi_diagram(image_points, k, dprint):
+def generate_voronoi_diagram(image_points, k, dprint, kmeans_iter=50):
     """
     Generate Voronoi diagram from image points using k-means clustering first.
     This function now adds regionId directly to image points.
+    
+    Args:
+        image_points: List of image point dictionaries with x, y coordinates
+        k: Number of clusters/regions
+        dprint: Debug print function
+        kmeans_iter: Number of k-means iterations (default: 50)
     """
     try:
         from scipy.spatial import Voronoi
@@ -788,10 +805,10 @@ def generate_voronoi_diagram(image_points, k, dprint):
         dprint(f"Extracted coordinates shape: {points.shape}")
         
         # Step 1: Apply k-means clustering with k-means++ initialization
-        dprint(f"Running k-means clustering with k={k} (using k-means++ initialization)...")
+        dprint(f"Running k-means clustering with k={k} (using k-means++ initialization, {kmeans_iter} iterations)...")
         
         # Use scipy's kmeans which implements k-means++ initialization by default
-        centroids, distortion = kmeans(points, k, iter=50, thresh=1e-05)
+        centroids, distortion = kmeans(points, k, iter=kmeans_iter, thresh=1e-05)
         dprint(f"K-means converged with distortion: {distortion:.4f}")
         dprint(f"Final centroids:\n{centroids}")
         
@@ -911,6 +928,10 @@ def handle_add_voronoi_to_map():
         "imagePoints": [...],  // Array of points with x, y coordinates
         "k": 10               // Number of regions
     }
+    
+    Expected URL parameters:
+    - debug: enable debug output (default: 'false')
+    - kmeans_iter: number of k-means iterations (default: 50)
     """
     try:
         if not request.json:
@@ -918,6 +939,7 @@ def handle_add_voronoi_to_map():
         
         image_points = request.json.get('imagePoints', [])
         k = request.json.get('k')
+        kmeans_iter = int(request.args.get('kmeans_iter', 50))  # Get from URL params
         debug = request.args.get('debug', 'false').lower() == 'true'
         
         if not image_points:
@@ -929,14 +951,14 @@ def handle_add_voronoi_to_map():
             if debug:
                 print(*args, **kwargs)
         
-        dprint(f"Adding Voronoi regions to {len(image_points)} points with k={k}")
+        dprint(f"Adding Voronoi regions to {len(image_points)} points with k={k}, kmeans_iter={kmeans_iter}")
         
         # Clear any existing regionId
         for point in image_points:
             point.pop('regionId', None)
         
         # Generate Voronoi diagram
-        voronoi_data = generate_voronoi_diagram(image_points, k, dprint)
+        voronoi_data = generate_voronoi_diagram(image_points, k, dprint, kmeans_iter=kmeans_iter)
         
         # Build simplified response
         response = {
@@ -945,6 +967,9 @@ def handle_add_voronoi_to_map():
             'regions': format_voronoi_regions(voronoi_data),
             'generationParams': {
                 'k': k,
+                'kmeans_params': {
+                    'iterations': kmeans_iter
+                },
                 'algorithm': 'k-means + Voronoi'
             },
             'count': len(image_points)

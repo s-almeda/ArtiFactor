@@ -228,6 +228,10 @@
                 <label for="voronoi_k">Number of regions (k):</label>
                 <input type="number" id="voronoi_k" value="10" min="2" max="50">
             </div>
+            <div class="control-group">
+                <label for="voronoi_kmeans_iter_main">K-means iterations:</label>
+                <input type="number" id="voronoi_kmeans_iter_main" value="50" min="10" max="500">
+            </div>
         </div>
         <button id="voronoiBtn" onclick="addVoronoi()" disabled style="background-color: #9C27B0;">Add Voronoi Diagram</button>
     </div>
@@ -637,6 +641,31 @@
         ctx.lineWidth = 2;
         ctx.stroke();
     });
+
+    // Draw centroids for each Voronoi region
+    if (regions && regions.length > 0) {
+        regions.forEach((region, idx) => {
+            if (region.centroid && region.centroid.length === 2) {
+                const cx = pad + ((region.centroid[0] - minX) / (maxX - minX)) * plotW;
+                const cy = pad + ((region.centroid[1] - minY) / (maxY - minY)) * plotH;
+                
+                // Draw centroid as a larger circle with different style
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = clusterColors[idx % clusterColors.length];
+                ctx.fill();
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Add a small white center dot for clarity
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+            }
+        });
+    }
 }
         
     </script>
@@ -676,6 +705,11 @@
                 <div class="control-group">
                     <label for="voronoi_k_full">Number of regions (k):</label>
                     <input type="number" id="voronoi_k_full" value="10" min="2" max="100">
+                </div>
+                
+                <div class="control-group">
+                    <label for="voronoi_kmeans_iter">K-means iterations:</label>
+                    <input type="number" id="voronoi_kmeans_iter" value="50" min="10" max="500">
                 </div>
             </div>
             
@@ -727,6 +761,7 @@
         const minDist = document.getElementById('voronoi_min_dist').value;
         const nNeighbors = document.getElementById('voronoi_n_neighbors').value;
         const k = document.getElementById('voronoi_k_full').value;
+        const kmeansIter = document.getElementById('voronoi_kmeans_iter').value;
         const randomState = document.getElementById('voronoi_random_state').value;
         const random = document.getElementById('voronoi_random').checked;
         const disk = document.getElementById('voronoi_disk').checked;
@@ -740,6 +775,7 @@
             min_dist: minDist,
             n_neighbors: nNeighbors,
             k: k,
+            kmeans_iter: kmeansIter,
             random: random.toString(),
             disk: disk.toString(),
             debug: debug.toString(),
@@ -773,6 +809,7 @@
                     total_points: data.count,
                     voronoi_regions: data.regions?.length || 0,
                     k: data.generationParams?.k || 0,
+                    kmeans_iterations: data.generationParams?.kmeans_iter || 'default',
                     precomputed_embeddings: data.precomputed_count,
                     not_found: data.not_found?.length || 0,
                     umap_params: data.generationParams?.umap_params || data.umap_params,
@@ -803,6 +840,7 @@
             const btn = document.getElementById('voronoiBtn');
             const status = document.getElementById('status');
             const k = document.getElementById('voronoi_k').value;
+            const kmeansIter = document.getElementById('voronoi_kmeans_iter_main').value;
 
             btn.disabled = true;
             status.className = 'loading';
@@ -817,7 +855,8 @@
                     },
                     body: JSON.stringify({
                         imagePoints: currentMapData.imagePoints,
-                        k: parseInt(k)
+                        k: parseInt(k),
+                        kmeans_iter: parseInt(kmeansIter)
                     })
                 });
 

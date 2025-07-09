@@ -1,0 +1,12 @@
+/* staging_review.css */
+.keyword-search-results {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    max-height: 160px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #ccc;
+    width: 60%;
+    left: 0;
+}

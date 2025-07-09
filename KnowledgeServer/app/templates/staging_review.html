@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staging Review - WikiArt Data</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/staging_review.css">
+    <script src="/static/staging_review.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-clipboard-check"></i> Staging Review</h1>
+            <p>Review scraped WikiArt data before committing to database</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading staging data...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="summary-container" style="display: none;">
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div id="total-artists" class="stat-value">0</div>
+                    <div class="stat-label">Total Artists</div>
+                </div>
+                <div class="stat-card">
+                    <div id="new-artists" class="stat-value">0</div>
+                    <div class="stat-label">New Artists</div>
+                </div>
+                <div class="stat-card">
+                    <div id="total-artworks" class="stat-value">0</div>
+                    <div class="stat-label">Total Artworks</div>
+                </div>
+                <div class="stat-card">
+                    <div id="new-artworks" class="stat-value">0</div>
+                    <div class="stat-label">New Artworks</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="artist-list" class="artist-list" style="display: none;">
+            <!-- Artists will be rendered as editable forms here -->
+        </div>
+    </div>
+
+    <!-- Artist Details Modal -->
+    <div id="artistModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-content">
+                <!-- Modal content will be populated here -->
+    <link rel="stylesheet" href="/static/staging_review.css">
+    <script src="/static/staging_review.js"></script>
+            }
+        }
+
+        // Close modal with close button
+        document.querySelector('.close').onclick = closeModal;
+    </script>
+</body>
+</html>

@@ -1,0 +1,3764 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-09T02:19:10.242926",
+    "download_enabled": false,
+    "limit": 30,
+    "total_processed": 0,
+    "total_artists": 3,
+    "total_artworks": 42,
+    "new_artists_count": 1,
+    "new_artworks_count": 28,
+    "total_database_operations": 29
+  },
+  "artists": [
+    {
+      "name": "Pablo Picasso",
+      "slug": "pablo-picasso",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_aliases": [],
+      "descriptions": {
+        "wikiart": {
+          "birth": "October 25, 1881",
+          "birthPlace": "Málaga, Spain",
+          "death": "April 8, 1973",
+          "deathPlace": "Mougins, France",
+          "nationality": "Spanish",
+          "art_movement": "Cubism, Post-Impressionism, Surrealism",
+          "painting_school": "École de Paris",
+          "field": "painting, sculpture, drawing, lithography, graphics",
+          "influenced_by": "Marc Chagall, Henri Rousseau, El Greco, Francisco Goya, Paul Gauguin, Paul Cezanne, Henri Matisse, Auguste Rodin, Nicolas Poussin, Pierre-Auguste Renoir, Rembrandt, Diego Velazquez, Antoine Watteau, Jean Auguste Dominique Ingres, Matthias Grünewald",
+          "influenced_on": "Marc Chagall, Amedeo Modigliani, Willem de Kooning, Jasper Johns, Arshile Gorky, Lee Krasner, Jackson Pollock, Robert Delaunay, Piet Mondrian, Karel Appel, Balcomb Greene, Francis Bacon, David Alfaro Siqueiros, Salvador Dali, Tamara de Lempicka, Vilhelm Lundstrom, Alan Tellez, Beauford Delaney, Russ Warren, David Chethlahe Paladin, Cubism, Surrealism, Pop Art, Conceptual Art",
+          "art_institution": "Real Academia de Bellas Artes de San Fernando, Madrid, Spain",
+          "friends_and_co-workers": "Georges Braque, Constantin Brâncuși, Man Ray, Max Jacob, Amedeo Modigliani, Christopher Wood, Mykhailo Boychuk, C. R. W. Nevinson, Valentine Hugo, Lee Miller, Juan Gris, Jacqueline Lamba",
+          "name": "Pablo Picasso",
+          "article_excerpt": "Pablo Picasso (/pɪˈkɑːsoʊ, -ˈkæsoʊ/; Spanish: [ˈpaβlo piˈkaso]; 25 October 1881 – 8 April 1973) was a Spanish painter, sculptor, printmaker, ceramicist, stage designer, poet and playwright who spent most of his adult life in France. Regarded as one of the most influential artists of the 20th century, he is known for co-founding the Cubist movement, the invention of constructed sculpture, the co-invention of collage, and for the wide variety of styles that he helped develop and explore. Among his most famous works are the proto-Cubist Les Demoiselles d'Avignon (1907), and Guernica (1937), a dramatic portrayal of the bombing of Guernica by the German and Italian airforces.",
+          "wikipediaLink": "https://en.wikipedia.org/wiki/Pablo_Picasso"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "artworks": [
+        {
+          "title": "Child with dove",
+          "image_id": "w_9a57ee1e7fe840a1a6b2072",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads4.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg",
+            "medium": "https://uploads5.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg!Large.jpg",
+            "small": "https://uploads5.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_9a57ee1e7fe840a1a6b2072.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1901",
+              "style": "Post-Impressionism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"5266f798275b241c89000272\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Childhood\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/child-with-dove-1901",
+          "year": "1901"
+        },
+        {
+          "title": "The old blind guitarist",
+          "image_id": "w_5aa18d0eacd74dc5859f447",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads1.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg",
+            "medium": "https://uploads2.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg!Large.jpg",
+            "small": "https://uploads2.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_5aa18d0eacd74dc5859f447.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1903",
+              "style": "Expressionism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/the-old-blind-guitarist-1903",
+          "year": "1903"
+        },
+        {
+          "title": "Girl on the ball",
+          "image_id": "w_8dbff8329ed14c21b865301",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads5.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg",
+            "medium": "https://uploads6.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg!Large.jpg",
+            "small": "https://uploads6.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_8dbff8329ed14c21b865301.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1905",
+              "style": "Expressionism, Symbolism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/girl-on-the-ball-1905",
+          "year": "1905"
+        },
+        {
+          "title": "The girls of Avignon",
+          "image_id": "w_8c26aa72d4ed43dba9dee79",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads1.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg",
+            "medium": "https://uploads2.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg!Large.jpg",
+            "small": "https://uploads2.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_8c26aa72d4ed43dba9dee79.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1907",
+              "style": "Cubism",
+              "genre": "nude painting (nu)",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/the-girls-of-avignon-1907",
+          "year": "1907"
+        },
+        {
+          "title": "Portrait of Ambroise Vollard",
+          "image_id": "w_9c4852e2be9d4c2599ef24a",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg",
+            "medium": "https://uploads8.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg!Blog.jpg",
+            "small": "https://uploads0.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_9c4852e2be9d4c2599ef24a.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1910",
+              "style": "Analytical Cubism",
+              "genre": "portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/portrait-of-ambroise-vollard-1910",
+          "year": "1910"
+        },
+        {
+          "title": "Portrait of woman in d`hermine pass (Olga)",
+          "image_id": "w_60a937f8db4e4cf4b28d404",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg",
+            "medium": "https://uploads8.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg!Blog.jpg",
+            "small": "https://uploads0.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_60a937f8db4e4cf4b28d404.jpg",
+          "rights": "Public domain US",
+          "descriptions": {
+            "wikiart": {
+              "date": "1923",
+              "style": "Surrealism",
+              "genre": "portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/untitled-1937-8",
+          "year": "1923"
+        },
+        {
+          "title": "Figures at the Seaside",
+          "image_id": "w_4a5fa0f2ca0348a2a998a5f",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads2.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg",
+            "medium": "https://uploads2.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg!Blog.jpg",
+            "small": "https://uploads3.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_4a5fa0f2ca0348a2a998a5f.jpg",
+          "rights": "Pablo Picasso",
+          "descriptions": {
+            "wikiart": {
+              "date": "1931",
+              "style": "Surrealism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"4dc1c5fc2df37f22f00018f7\", \"530621088b3b8165f60001e6\", \"4d90d195dcdd5f44a50000b5\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"The Artist's Studio\", \"Contemporary Impressionist\", \"Waterscapes\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/figures-at-the-seaside-1931",
+          "year": "1931"
+        },
+        {
+          "title": "Guernica",
+          "image_id": "w_0486d928be6f47988278ba0",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg",
+            "medium": "https://uploads0.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg!Large.jpg",
+            "small": "https://uploads0.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_0486d928be6f47988278ba0.jpg",
+          "rights": "Pablo Picasso",
+          "descriptions": {
+            "wikiart": {
+              "date": "1937",
+              "style": "Cubism, Surrealism",
+              "genre": "allegorical painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"518ba7fd9c0dedda83000235\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Atmospheric Landscapes\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/guernica-1937",
+          "year": "1937"
+        },
+        {
+          "title": "Portrait of Dora Maar",
+          "image_id": "w_3a9f199cca7341da961d394",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads3.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg",
+            "medium": "https://uploads3.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg!Blog.jpg",
+            "small": "https://uploads4.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_3a9f199cca7341da961d394.jpg",
+          "rights": "Pablo Picasso",
+          "descriptions": {
+            "wikiart": {
+              "date": "1937",
+              "style": "Surrealism",
+              "genre": "portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"564fa5b5864d8267380003e2\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Old Master Influenced Fantasy\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/portrait-of-dora-maar-1937-1",
+          "year": "1937"
+        },
+        {
+          "title": "Cat catching a bird",
+          "image_id": "w_f4beb6e32e0d4ab7a25091b",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Pablo Picasso"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg",
+            "medium": "https://uploads3.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg!Portrait.jpg",
+            "small": "https://uploads0.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_f4beb6e32e0d4ab7a25091b.jpg",
+          "rights": "Pablo Picasso",
+          "descriptions": {
+            "wikiart": {
+              "date": "1939",
+              "style": "Surrealism",
+              "genre": "animal painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+          "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+          "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/cat-catching-a-bird-1939",
+          "year": "1939"
+        }
+      ]
+    },
+    {
+      "name": "Vincent van Gogh",
+      "slug": "vincent-van-gogh",
+      "is_existing": true,
+      "existing_id": "4d8b92944eb68a1b2c000264",
+      "artist_aliases": [
+        {
+          "name": "Vincent van Gogh",
+          "sortable_name": "van Gogh Vincent",
+          "last": "Gogh",
+          "first": "Vincent",
+          "slug": "vincent-van-gogh"
+        }
+      ],
+      "descriptions": {
+        "artsy": {
+          "birth": "1853",
+          "death": "1890",
+          "hometown": "Zundert, Netherlands",
+          "location": "Arles, France, Saint-Rémy, France and Auvers-sur-Oise, France",
+          "nationality": "Dutch",
+          "gender": "male",
+          "description": ""
+        },
+        "wikiart": {
+          "birth": "March 30, 1853",
+          "birthPlace": "Zundert, Netherlands",
+          "death": "July 29, 1890",
+          "deathPlace": "Auvers-sur-Oise, France",
+          "nationality": "Dutch",
+          "art_movement": "Post-Impressionism",
+          "field": "painting",
+          "influenced_by": "Hugo van der Goes, Anton Mauve, Paul Gauguin, Jean-Francois Millet, Alfred Sisley, Jacob van Ruisdael, Luke Fildes, Rembrandt, Jean-Baptiste-Simeon Chardin",
+          "influenced_on": "Egon Schiele, Edvard Munch, Max Pechstein, Piet Mondrian, Francis Bacon, Mikhail Larionov, Leon Tarasewicz, Fernando García Ponce, Max Oppenheimer, Charles E. Burchfield, Beauford Delaney, Jan Mankes",
+          "art_institution": "Royal Academy of Fine Arts, Antwerp, Belgium",
+          "friends_and_co-workers": "Paul Gauguin, Charles Laval",
+          "family_and_relatives": "Anton Mauve",
+          "name": "Vincent van Gogh",
+          "article_excerpt": "Vincent Willem van Gogh (Dutch: [ˈvɪnsɛnt ˈʋɪləm vɑn ˈɣɔx] ( listen); 30 March 1853 – 29 July 1890) was a Dutch Post-Impressionist painter who is among the most famous and influential figures in the history of Western art. In just over a decade he created about 2,100 artworks, including around 860 oil paintings, most of them in the last two years of his life. They include landscapes, still lifes, portraits and self-portraits, and are characterised by bold colours and dramatic, impulsive and expressive brushwork that contributed to the foundations of modern art. His suicide at 37 followed years of mental illness and poverty.",
+          "wikipediaLink": "https://en.wikipedia.org/wiki/Vincent_van_Gogh"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\", \"4e60374fe890b1000125c530\", \"4e03896fd5d7f60001003d07\", \"4dc7edcd8101da00010001eb\", \"4e5708cb5dca140001003aa3\", \"4d90d195dcdd5f44a50000b6\", \"5006eae315cbf00002000aa9\", \"4d90d194dcdd5f44a5000092\", \"4d90d193dcdd5f44a500007d\", \"4e0ce83a87b7d10001004315\", \"51b662538b3b8190570001e2\", \"4f2c60d5848eb256491a50ff\", \"4dcdf920522d6e00010042ca\", \"4d90d18edcdd5f44a5000010\", \"552ed4217261692af7620c00\", \"4d90d193dcdd5f44a500007e\", \"4d90d192dcdd5f44a5000065\", \"4e66d48cb607460001125c58\", \"4dc7ebb432e67b000100012f\", \"4dc7f1ddb1783b0001000266\", \"4d90d193dcdd5f44a500007f\", \"4e663d39d726df00010002f9\", \"4d90d18fdcdd5f44a5000016\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\", \"France\", \"Gestural\", \"Impasto\", \"Individual Portrait\", \"Interiors\", \"Irregular Curvilinear Forms\", \"Isolation/Alienation\", \"Landscapes\", \"Large Brushstrokes/Loose Brushwork\", \"Late 19th Century\", \"Light as Subject\", \"Nature\", \"Painting\", \"Passage\", \"Portrait\", \"Post-Impressionism\", \"Provocative\", \"Rural Life\", \"Self-Portrait\", \"Still Life\", \"The Netherlands\", \"Work on Paper\"]",
+      "artworks": [
+        {
+          "title": "The Potato Eaters",
+          "image_id": "w_b9ae82afcf4b4260845b19a",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads2.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg",
+            "medium": "https://uploads2.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg!Blog.jpg",
+            "small": "https://uploads3.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_b9ae82afcf4b4260845b19a.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1885",
+              "style": "Realism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/the-potato-eaters-1885-1",
+          "year": "1885"
+        },
+        {
+          "title": "Paul Gauguin's Armchair",
+          "image_id": "w_46ba991147554990947626e",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads6.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg",
+            "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg!Large.jpg",
+            "small": "https://uploads7.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_46ba991147554990947626e.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1888",
+              "style": "Post-Impressionism",
+              "genre": "still life",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/paul-gauguin-s-armchair-1888",
+          "year": "1888"
+        },
+        {
+          "title": "Red Vineyards at Arles",
+          "image_id": "w_2f9843777be94d6b936d2f8",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads5.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg",
+            "medium": "https://uploads6.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg!Large.jpg",
+            "small": "https://uploads6.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_2f9843777be94d6b936d2f8.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1888",
+              "style": "Post-Impressionism",
+              "genre": "landscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/red-vineyards-at-arles-1888",
+          "year": "1888"
+        },
+        {
+          "title": "Sower with Setting Sun",
+          "image_id": "w_38f04b8dfc944cd5b11f022",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads7.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg",
+            "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg!Blog.jpg",
+            "small": "https://uploads8.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_38f04b8dfc944cd5b11f022.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1888",
+              "style": "Post-Impressionism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\", \"530621088b3b8165f60001e6\", \"4d90d192dcdd5f44a5000063\", \"4e4d87e8fdcf0a000100bff2\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\", \"Contemporary Impressionist\", \"Pointillism\", \"Intentionally Exposed Canvas\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/sower-with-setting-sun-1888-3",
+          "year": "1888"
+        },
+        {
+          "title": "Still Life - Vase with Fifteen Sunflowers",
+          "image_id": "w_5bd8732562eb44d9b710bff",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads6.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg",
+            "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg!Large.jpg",
+            "small": "https://uploads7.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_5bd8732562eb44d9b710bff.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1888",
+              "style": "Post-Impressionism",
+              "genre": "flower painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1",
+          "year": "1888"
+        },
+        {
+          "title": "Irises",
+          "image_id": "w_d337a6840e3e49059a2179c",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg",
+            "medium": "https://uploads0.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg!Large.jpg",
+            "small": "https://uploads0.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_d337a6840e3e49059a2179c.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1889",
+              "style": "Post-Impressionism",
+              "genre": "landscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/irises-1889",
+          "year": "1889"
+        },
+        {
+          "title": "Landscape with House and Ploughman",
+          "image_id": "w_0b81067a0cb14c3eb2fa421",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads2.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg",
+            "medium": "https://uploads2.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg!Blog.jpg",
+            "small": "https://uploads3.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_0b81067a0cb14c3eb2fa421.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1889",
+              "style": "Cloisonnism",
+              "genre": "landscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/landscape-with-house-and-ploughman-1889",
+          "year": "1889"
+        },
+        {
+          "title": "Self Portrait with Bandaged Ear",
+          "image_id": "w_304d452d2e4941f5ae76a18",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads5.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg",
+            "medium": "https://uploads6.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg!Large.jpg",
+            "small": "https://uploads6.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_304d452d2e4941f5ae76a18.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1889",
+              "style": "Post-Impressionism",
+              "genre": "self-portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/self-portrait-with-bandaged-ear-1889",
+          "year": "1889"
+        },
+        {
+          "title": "The Starry Night",
+          "image_id": "w_5277deddc83a42ba9b04815",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads2.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg",
+            "medium": "https://uploads3.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg!Large.jpg",
+            "small": "https://uploads3.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_5277deddc83a42ba9b04815.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1889",
+              "style": "Post-Impressionism",
+              "genre": "cloudscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\", \"530621088b3b8165f60001e6\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\", \"Contemporary Impressionist\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/the-starry-night-1889",
+          "year": "1889"
+        },
+        {
+          "title": "Portrait of Doctor Gachet",
+          "image_id": "w_356cb668775548c58ebc02e",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg",
+            "medium": "https://uploads8.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg!Blog.jpg",
+            "small": "https://uploads0.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_356cb668775548c58ebc02e.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1890",
+              "style": "Post-Impressionism",
+              "genre": "portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+          "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/portrait-of-doctor-gachet-1890",
+          "year": "1890"
+        },
+        {
+          "title": "Self-Portrait with Bandaged Ear",
+          "image_id": "4eb077c25fb415000100dd91",
+          "is_existing": true,
+          "existing_id": "4eb077c25fb415000100dd91",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/small.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/tall.jpg"
+          },
+          "filename": "4eb077c25fb415000100dd91_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1889",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "The Courtauld Gallery, London",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Selfportraitbandagedear.jpeg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "50b98fe08c65b4a57600012c",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4d90d193dcdd5f44a500007c",
+            "4e5708cb5dca140001003aa3",
+            "4d90d194dcdd5f44a5000092",
+            "51b662538b3b8190570001e2",
+            "4dcdf9e7522d6e00010042d0",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "50b98fba0a77d5469100011f",
+            "4d90d193dcdd5f44a500007e",
+            "4d90d192dcdd5f44a5000065",
+            "4dc7f1ddb1783b0001000266",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "Face",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Human Figure",
+            "Individual Portrait",
+            "Isolation/Alienation",
+            "Late 19th Century",
+            "Medical/Health",
+            "Oil Painting",
+            "Painting",
+            "People at Home",
+            "Portrait",
+            "Post-Impressionism",
+            "Self-Portrait",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Self-Portrait",
+          "image_id": "506c89b2d207d80002001296",
+          "is_existing": true,
+          "existing_id": "506c89b2d207d80002001296",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/normalized.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/tall.jpg"
+          },
+          "filename": "506c89b2d207d80002001296_medium.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1889",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Musee d'Orsay, Paris",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4d90d193dcdd5f44a500007c",
+            "51f18d0e275b24a84d00063a",
+            "4e5708cb5dca140001003aa3",
+            "4d90d194dcdd5f44a5000092",
+            "51b662538b3b8190570001e2",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d193dcdd5f44a500007e",
+            "4d90d192dcdd5f44a5000065",
+            "4dc7f1ddb1783b0001000266",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Human Figure",
+            "Iconic Works of Art History",
+            "Individual Portrait",
+            "Isolation/Alienation",
+            "Late 19th Century",
+            "Oil Painting",
+            "Painting",
+            "Portrait",
+            "Post-Impressionism",
+            "Self-Portrait",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "The Postman Joseph Roulin",
+          "image_id": "506c9581d207d8000200138d",
+          "is_existing": true,
+          "existing_id": "506c9581d207d8000200138d",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/tall.jpg"
+          },
+          "filename": "506c9581d207d8000200138d_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1888",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Rijksmuseum Kroeller-Mueller, Otterlo",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Portrait_of_Joseph_Roulin_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4d90d193dcdd5f44a500007c",
+            "51f18d0e275b24a84d00063a",
+            "4e5708cb5dca140001003aa3",
+            "51b662538b3b8190570001e2",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d193dcdd5f44a500007e",
+            "4d90d192dcdd5f44a5000065",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Human Figure",
+            "Iconic Works of Art History",
+            "Individual Portrait",
+            "Late 19th Century",
+            "Oil Painting",
+            "Painting",
+            "Portrait",
+            "Post-Impressionism",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Doctor Paul Gachet (1828-1909)",
+          "image_id": "506c958a3445b400020011eb",
+          "is_existing": true,
+          "existing_id": "506c958a3445b400020011eb",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/tall.jpg"
+          },
+          "filename": "506c958a3445b400020011eb_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1890",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Musée d'Orsay, Paris",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Dr_Paul_Gachet_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4d90d193dcdd5f44a500007c",
+            "4e5708cb5dca140001003aa3",
+            "4d90d194dcdd5f44a5000092",
+            "51b662538b3b8190570001e2",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d193dcdd5f44a500007e",
+            "4d90d192dcdd5f44a5000065",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Human Figure",
+            "Individual Portrait",
+            "Isolation/Alienation",
+            "Late 19th Century",
+            "Oil Painting",
+            "Painting",
+            "Portrait",
+            "Post-Impressionism",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "A Wheatfield, with Cypresses",
+          "image_id": "5075a193e640c30002000bb7",
+          "is_existing": true,
+          "existing_id": "5075a193e640c30002000bb7",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/square.jpg"
+          },
+          "filename": "5075a193e640c30002000bb7_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1889",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "The National Gallery, London",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Wheat_Field_with_Cypresses_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "4e0ce81239bed00001005a74",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4d90d196dcdd5f44a50000cb",
+            "4e60374fe890b1000125c530",
+            "4dc7edcd8101da00010001eb",
+            "4d90d194dcdd5f44a5000092",
+            "4d90d193dcdd5f44a500007d",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "4dcdf920522d6e00010042ca",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d192dcdd5f44a5000065",
+            "4dc7ebb432e67b000100012f",
+            "4e5ff520e890b10001073a72",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "Bright and Vivid Colors",
+            "Figurative Art",
+            "Figurative Painting",
+            "Flora",
+            "France",
+            "Impasto",
+            "Isolation/Alienation",
+            "Landscapes",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Nature",
+            "Oil Painting",
+            "Painting",
+            "Post-Impressionism",
+            "Rural Life",
+            "The Fantastic",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Starry Night, Arles",
+          "image_id": "5084459a4467430002000273",
+          "is_existing": true,
+          "existing_id": "5084459a4467430002000273",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/medium.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/tall.jpg"
+          },
+          "filename": "5084459a4467430002000273_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1888",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Musée d'Orsay, Paris",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "4e60374fe890b1000125c530",
+            "4d90d193dcdd5f44a500007c",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "4dcdf920522d6e00010042ca",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d192dcdd5f44a5000065",
+            "4e600aed9755740001002acb",
+            "4dc7ebb432e67b000100012f",
+            "4e663d39d726df00010002f9",
+            "5036a9f69da54500020004ac",
+            "4d90d195dcdd5f44a50000b5"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "19th Century",
+            "France",
+            "Human Figure",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Nature",
+            "Painting",
+            "Post-Impressionism",
+            "Reflections",
+            "Rural Life",
+            "The Netherlands",
+            "Water",
+            "Waterscapes"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Starry Night",
+          "image_id": "521e6928275b24041a00084c",
+          "is_existing": true,
+          "existing_id": "521e6928275b24041a00084c",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/tall.jpg"
+          },
+          "filename": "521e6928275b24041a00084c_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1889",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "The Museum of Modern Art, New York",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "56539404ebad647f5493ac0f",
+            "505b5a9b930ad000020008e0",
+            "4d90d195dcdd5f44a50000bc",
+            "520baa99a09a678af00000cc",
+            "4f0613b2848eb27bc6003b2c",
+            "4e60374fe890b1000125c530",
+            "4e03896fd5d7f60001003d07",
+            "51f18d0e275b24a84d00063a",
+            "4dc7edcd8101da00010001eb",
+            "4d90d193dcdd5f44a500007d",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "4e259578944193000100631d",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "552ed4217261692af7620c00",
+            "4d90d192dcdd5f44a5000065",
+            "4d90d193dcdd5f44a5000082",
+            "4dc7ebb432e67b000100012f",
+            "521b85ffa09a671b30000149",
+            "4e663d39d726df00010002f9",
+            "521e0422139b21c452000616"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "1860–1969",
+            "Abstract versus Figurative Art",
+            "Dynamism",
+            "Figurative Art",
+            "Flatness",
+            "France",
+            "Gestural",
+            "Iconic Works of Art History",
+            "Impasto",
+            "Landscapes",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Movement",
+            "Oil Painting",
+            "Painting",
+            "Passage",
+            "Post-Impressionism",
+            "Representations of Architecture",
+            "Rural Life",
+            "Skyscapes",
+            "The Netherlands",
+            "Times of Day"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Japonaiserie: Flowering Plum Tree",
+          "image_id": "521e6eb3139b21d4dc00080b",
+          "is_existing": true,
+          "existing_id": "521e6eb3139b21d4dc00080b",
+          "artist_names": [
+            "Vincent van Gogh"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/tall.jpg"
+          },
+          "filename": "521e6eb3139b21d4dc00080b_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1887",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Vincent van Gogh Museum, Amsterdam",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Bloeiende_pruimenboomgaard-_naar_Hiroshige_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92944eb68a1b2c000264",
+            "51b662628b3b8149ed0002e8",
+            "505b5a9b930ad000020008e0",
+            "4e0ce81239bed00001005a74",
+            "4e0ce7a587b7d100010042dc",
+            "4e8e17313aac3f0001276e2b",
+            "4e0ce8655695820001004166",
+            "4d90d195dcdd5f44a50000bc",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4d90d196dcdd5f44a50000cb",
+            "4e60374fe890b1000125c530",
+            "51f18d0e275b24a84d00063a",
+            "4dc7edcd8101da00010001eb",
+            "4db85c704f6b2471d7000081",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4dcdf920522d6e00010042ca",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d192dcdd5f44a5000065",
+            "4ef104481c23d400010063ec",
+            "4e663d39d726df00010002f9"
+          ],
+          "keyword_strings": [
+            "Vincent van Gogh",
+            "19th Century",
+            "Abstract versus Figurative Art",
+            "Bright and Vivid Colors",
+            "Color Gradient",
+            "Cross-Cultural Dialogue",
+            "Dense Composition",
+            "Dynamism",
+            "Figurative Art",
+            "Figurative Painting",
+            "Flora",
+            "France",
+            "Iconic Works of Art History",
+            "Impasto",
+            "Japonisme",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Nature",
+            "Oil Painting",
+            "Painting",
+            "Post-Impressionism",
+            "Text",
+            "The Netherlands"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        }
+      ]
+    },
+    {
+      "name": "Claude Monet",
+      "slug": "claude-monet",
+      "is_existing": true,
+      "existing_id": "4d8b92774eb68a1b2c000134",
+      "artist_aliases": [
+        {
+          "name": "Claude Monet",
+          "sortable_name": "Monet Claude",
+          "last": "Monet",
+          "first": "Claude",
+          "slug": "claude-monet"
+        }
+      ],
+      "descriptions": {
+        "artsy": {
+          "birth": "1840",
+          "death": "1926",
+          "hometown": "Paris, France",
+          "location": "Giverny, France",
+          "nationality": "French",
+          "gender": "male",
+          "description": "Claude Monet, born Oscar Claude Monet (14 November 1840  5 December 1926) was a founder of French impressionist painting, and the most consistent and prolific practitioner of the movement's philosophy of expressing one's perceptions before nature, especially as applied to plein-airlandscape painting. The term Impressionism is derived from the title of his painting Impression, Sunrise (Impression, soleil levant)."
+        },
+        "wikiart": {
+          "birth": "November 14, 1840",
+          "birthPlace": "Paris, France",
+          "death": "December 5, 1926",
+          "deathPlace": "Giverny, France",
+          "nationality": "French",
+          "art_movement": "Impressionism",
+          "field": "painting",
+          "influenced_by": "Gustave Courbet, Charles-Francois Daubigny, John Constable, J.M.W. Turner, Jean-Francois Millet, Alfred Sisley, Jacob van Ruisdael, Johannes Vermeer",
+          "influenced_on": "Childe Hassam, Robert Delaunay, Wassily Kandinsky, Frank W. Benson, Frederick McCubbin, Theodore Robinson",
+          "teachers": "Eugene Boudin, Charles Gleyre",
+          "friends_and_co-workers": "Alfred Sisley, Pierre-Auguste Renoir, Camille Pissarro, Edouard Manet, Frederic Bazille, Martín Rico y Ortega, Gustave Caillebotte, Johan Jongkind, Theodore Robinson, Lucien Pissarro",
+          "name": "Claude Monet",
+          "article_excerpt": "Oscar-Claude Monet (/moʊˈneɪ/; French: [klod mɔnɛ]; 14 November 1840 – 5 December 1926) was a founder of French Impressionist painting, and the most consistent and prolific practitioner of the movement's philosophy of expressing one's perceptions before nature, especially as applied to plein air landscape painting. The term \"Impressionism\" is derived from the title of his painting Impression, soleil levant (Impression, Sunrise), which was exhibited in 1874 in the first of the independent exhibitions mounted by Monet and his associates as an alternative to the Salon de Paris.",
+          "wikipediaLink": "https://en.wikipedia.org/wiki/Claude_Monet"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4e60374fe890b1000125c530\", \"4e0ce7536df5b40001005508\", \"4d90d193dcdd5f44a500007c\", \"4dc7edcd8101da00010001eb\", \"4d90d191dcdd5f44a500004e\", \"4e5708cb5dca140001003aa3\", \"4d90d193dcdd5f44a500007d\", \"4e0ce83a87b7d10001004315\", \"51b662538b3b8190570001e2\", \"4fec76fd81f8f10001002004\", \"4f2c60d5848eb256491a50ff\", \"4dcdf920522d6e00010042ca\", \"52407dc4b202a36093000271\", \"504f74d047c6a40002000420\", \"4d90d18edcdd5f44a5000010\", \"4e03893ff59f48000100448e\", \"4d90d193dcdd5f44a5000082\", \"4e5f948912c5db0001385a2c\", \"521e0422139b21c452000616\", \"4d90d195dcdd5f44a50000b5\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"France\", \"Haze\", \"Human Figure\", \"Impasto\", \"Impressionism\", \"Individual Portrait\", \"Landscapes\", \"Large Brushstrokes/Loose Brushwork\", \"Late 19th Century\", \"Leisure\", \"Light as Subject\", \"Nature\", \"Nautical\", \"Oil Painting\", \"Painting\", \"Repetition\", \"Representations of Architecture\", \"Scenes of Everyday Life\", \"Times of Day\", \"Waterscapes\"]",
+      "artworks": [
+        {
+          "title": "Women in the garden",
+          "image_id": "w_ebefc2d4ff87456aa0ab5e9",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads2.wikiart.org/00475/images/claude-monet/rf-2773.jpg",
+            "medium": "https://uploads2.wikiart.org/00475/images/claude-monet/rf-2773.jpg!Blog.jpg",
+            "small": "https://uploads3.wikiart.org/00475/images/claude-monet/rf-2773.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_ebefc2d4ff87456aa0ab5e9.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1866",
+              "style": "Impressionism",
+              "genre": "genre painting",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"530621088b3b8165f60001e6\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Contemporary Impressionist\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/women-in-the-garden",
+          "year": "1866"
+        },
+        {
+          "title": "Impression, sunrise",
+          "image_id": "w_72ab91a054c14bc7832ac12",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg",
+            "medium": "https://uploads0.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg!Large.jpg",
+            "small": "https://uploads0.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_72ab91a054c14bc7832ac12.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1872",
+              "style": "Impressionism",
+              "genre": "cityscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"530621088b3b8165f60001e6\", \"5730c4cc139b216eeb003081\", \"4d90d193dcdd5f44a500007b\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Contemporary Impressionist\", \"Cityscapes and City Scenes\", \"Cityscapes\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/impression-sunrise",
+          "year": "1872"
+        },
+        {
+          "title": "Autumn on the Seine at Argenteuil",
+          "image_id": "w_969c79ece527428e924e273",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads7.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg",
+            "medium": "https://uploads8.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg!Large.jpg",
+            "small": "https://uploads8.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_969c79ece527428e924e273.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1873",
+              "style": "Impressionism",
+              "genre": "landscape"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/autumn-on-the-seine-at-argenteuil",
+          "year": "1873"
+        },
+        {
+          "title": "Camille Monet and a Child in the Artist’s Garden in Argenteuil",
+          "image_id": "w_e0aa5036be644239bc1df7a",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg",
+            "medium": "https://uploads0.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg!Large.jpg",
+            "small": "https://uploads0.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_e0aa5036be644239bc1df7a.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1875",
+              "style": "Impressionism",
+              "genre": "portrait",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/madame-monet-and-child",
+          "year": "1875"
+        },
+        {
+          "title": "Haystacks at Giverny",
+          "image_id": "w_9e2647614f804b65a66c4a3",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads3.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg",
+            "medium": "https://uploads3.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg!Blog.jpg",
+            "small": "https://uploads4.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_9e2647614f804b65a66c4a3.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1884",
+              "style": "Impressionism",
+              "genre": "landscape"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/haystacks-at-giverny",
+          "year": "1884"
+        },
+        {
+          "title": "Haystack at Giverny",
+          "image_id": "w_59d4d7d8c6634b24b6258e8",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads7.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg",
+            "medium": "https://uploads8.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg!Large.jpg",
+            "small": "https://uploads8.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_59d4d7d8c6634b24b6258e8.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1886",
+              "style": "Impressionism",
+              "genre": "landscape",
+              "medium": "oil, canvas"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4e4d87e8fdcf0a000100bff2\", \"530621088b3b8165f60001e6\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Intentionally Exposed Canvas\", \"Contemporary Impressionist\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/haystack-at-giverny-1886",
+          "year": "1886"
+        },
+        {
+          "title": "Poplars at Giverny",
+          "image_id": "w_9d724956100541199187f25",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads1.wikiart.org/images/claude-monet/poplars-at-giverny.jpg",
+            "medium": "https://uploads2.wikiart.org/images/claude-monet/poplars-at-giverny.jpg!Large.jpg",
+            "small": "https://uploads2.wikiart.org/images/claude-monet/poplars-at-giverny.jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_9d724956100541199187f25.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1887",
+              "style": "Impressionism",
+              "genre": "landscape"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/poplars-at-giverny",
+          "year": "1887"
+        },
+        {
+          "title": "Antibes in the Morning",
+          "image_id": "w_363ed8d1246b433c9e57056",
+          "is_existing": false,
+          "existing_id": null,
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://uploads8.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg",
+            "medium": "https://uploads0.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg!Large.jpg",
+            "small": "https://uploads0.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg!PinterestSmall.jpg"
+          },
+          "filename": "w_363ed8d1246b433c9e57056.jpg",
+          "rights": "Public domain",
+          "descriptions": {
+            "wikiart": {
+              "date": "1888",
+              "style": "Impressionism",
+              "genre": "landscape"
+            }
+          },
+          "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+          "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+          "wikiart_url": "https://www.wikiart.org/en/claude-monet/antibes-in-the-morning",
+          "year": "1888"
+        },
+        {
+          "title": "La Gare Saint Lazare",
+          "image_id": "5033edb6946de10002000150",
+          "is_existing": true,
+          "existing_id": "5033edb6946de10002000150",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/tall.jpg"
+          },
+          "filename": "5033edb6946de10002000150_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1877",
+              "category": "Painting",
+              "medium": "Oil on Canvas",
+              "collecting_institution": "Musée d'Orsay",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_The_Saint-Lazare_Station_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "4e4ec2464c2606000104bff1",
+            "4dc7ee1332e67b000100013c",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4e0ce7536df5b40001005508",
+            "51f18d0e275b24a84d00063a",
+            "4d90d191dcdd5f44a500004e",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4d90d193dcdd5f44a5000082",
+            "4e4ec03c5fbc570001002fc9"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "19th Century",
+            "City Scenes",
+            "En plein air",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Haze",
+            "Iconic Works of Art History",
+            "Impressionism",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Oil Painting",
+            "Painting",
+            "Representations of Architecture",
+            "Urbanization"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Blue Water Lilies",
+          "image_id": "50733beeddc3fc0002000190",
+          "is_existing": true,
+          "existing_id": "50733beeddc3fc0002000190",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/tall.jpg"
+          },
+          "filename": "50733beeddc3fc0002000190_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1916-1919",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Musée d'Orsay, Paris",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_Blue_Water_Lilies_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "4e0ce8655695820001004166",
+            "4dc7ee1332e67b000100013c",
+            "4d90d196dcdd5f44a50000cb",
+            "4e60374fe890b1000125c530",
+            "4d90d191dcdd5f44a500004e",
+            "4e0ce83a87b7d10001004315",
+            "4dcdf920522d6e00010042ca",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "51a7c0998b3b81d4620006c4",
+            "5036a9f69da54500020004ac"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "Dense Composition",
+            "En plein air",
+            "Flora",
+            "France",
+            "Impressionism",
+            "Large Brushstrokes/Loose Brushwork",
+            "Nature",
+            "Oil Painting",
+            "Painting",
+            "Pastel Colors",
+            "Water"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "The Beach at Sainte-Adresse",
+          "image_id": "507db13c05878f0002002a1d",
+          "is_existing": true,
+          "existing_id": "507db13c05878f0002002a1d",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/square.jpg"
+          },
+          "filename": "507db13c05878f0002002a1d_small.jpg",
+          "rights": "Source: Wikimedia Commons / Public Domain",
+          "descriptions": {
+            "artsy": {
+              "date": "1867",
+              "category": "Painting",
+              "medium": "Oil on canvas",
+              "collecting_institution": "Art Institute of Chicago",
+              "description": "",
+              "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_The_Beach_at_Sainte-Adresse_-_Google_Art_Project.jpg)"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "4dc7ee1332e67b000100013c",
+            "50b990a10a77d54691000122",
+            "4e60374fe890b1000125c530",
+            "4e0ce7536df5b40001005508",
+            "4d90d193dcdd5f44a500007c",
+            "4dc7edcd8101da00010001eb",
+            "4d90d191dcdd5f44a500004e",
+            "4d90d193dcdd5f44a500007d",
+            "4e0ce83a87b7d10001004315",
+            "4ef3a92290c5f60001001505",
+            "4dcdf920522d6e00010042ca",
+            "52407dc4b202a36093000271",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "4e03893ff59f48000100448e",
+            "4d90d193dcdd5f44a5000082",
+            "4dc7ebb432e67b000100012f",
+            "4e5f948912c5db0001385a2c",
+            "5036a9f69da54500020004ac",
+            "4d90d195dcdd5f44a50000b5"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "19th Century",
+            "En plein air",
+            "Figures in Nature",
+            "France",
+            "Haze",
+            "Human Figure",
+            "Impasto",
+            "Impressionism",
+            "Landscapes",
+            "Large Brushstrokes/Loose Brushwork",
+            "Modes of Transportation",
+            "Nature",
+            "Nautical",
+            "Oil Painting",
+            "Painting",
+            "Repetition",
+            "Representations of Architecture",
+            "Rural Life",
+            "Scenes of Everyday Life",
+            "Water",
+            "Waterscapes"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Wheatstacks, Snow Effect, Morning (Meules, Effet de Neige, Le Matin)",
+          "image_id": "532880d70bb6d607520000ff",
+          "is_existing": true,
+          "existing_id": "532880d70bb6d607520000ff",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/large.jpg",
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/medium_rectangle.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/tall.jpg"
+          },
+          "filename": "532880d70bb6d607520000ff_small.jpg",
+          "rights": "Courtesy Getty Trust Open Content Program",
+          "descriptions": {
+            "artsy": {
+              "date": "1891",
+              "category": "",
+              "medium": "Oil on canvas",
+              "collecting_institution": "",
+              "description": "",
+              "additional_information": "Unframed: 64.8 x 99.7 cm (25 1/2 x 39 1/4 in.), Framed: 88.6 x 123.2 x 7.9 cm (34 7/8 x 48 1/2 x 3 1/8 in.).  France, Europe"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "518ba7fd9c0dedda83000235",
+            "4dc7ee1332e67b000100013c",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4e0ce7536df5b40001005508",
+            "4d90d191dcdd5f44a500004e",
+            "4d90d193dcdd5f44a500007d",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "4dcdf920522d6e00010042ca",
+            "4d90d18edcdd5f44a5000010",
+            "4e03893ff59f48000100448e",
+            "521e0422139b21c452000616"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "Atmospheric Landscapes",
+            "En plein air",
+            "Figurative Painting",
+            "France",
+            "Haze",
+            "Impressionism",
+            "Landscapes",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Nature",
+            "Painting",
+            "Repetition",
+            "Times of Day"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "Sunrise (Marine)",
+          "image_id": "532880e30bb6d6075200010d",
+          "is_existing": true,
+          "existing_id": "532880e30bb6d6075200010d",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/large.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/medium.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/tall.jpg"
+          },
+          "filename": "532880e30bb6d6075200010d_small.jpg",
+          "rights": "Courtesy Getty Trust Open Content Program",
+          "descriptions": {
+            "artsy": {
+              "date": "1873",
+              "category": "",
+              "medium": "Oil on canvas",
+              "collecting_institution": "",
+              "description": "",
+              "additional_information": "Unframed: 50.2 x 61 cm (19 3/4 x 24 in.), Framed: 67.3 x 78.4 x 6.4 cm (26 1/2 x 30 7/8 x 2 1/2 in.).  France, Europe"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "518ba7fd9c0dedda83000235",
+            "4e4ec2464c2606000104bff1",
+            "4dc7ee1332e67b000100013c",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4e0ce7536df5b40001005508",
+            "4d90d191dcdd5f44a500004e",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "4ef3a92290c5f60001001505",
+            "52407dc4b202a36093000271",
+            "4d90d18edcdd5f44a5000010",
+            "4e600aed9755740001002acb",
+            "521e0422139b21c452000616",
+            "4d90d195dcdd5f44a50000b5"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "Atmospheric Landscapes",
+            "City Scenes",
+            "En plein air",
+            "Figurative Painting",
+            "France",
+            "Haze",
+            "Impressionism",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Modes of Transportation",
+            "Nautical",
+            "Painting",
+            "Reflections",
+            "Times of Day",
+            "Waterscapes"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        },
+        {
+          "title": "The Portal of Rouen Cathedral in Morning Light",
+          "image_id": "532880f20bb6d6075200011b",
+          "is_existing": true,
+          "existing_id": "532880f20bb6d6075200011b",
+          "artist_names": [
+            "Claude Monet"
+          ],
+          "image_urls": {
+            "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/large_rectangle.jpg",
+            "larger": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/larger.jpg",
+            "medium": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/medium.jpg",
+            "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/medium_rectangle.jpg",
+            "normalized": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/normalized.jpg",
+            "small": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/small.jpg",
+            "square": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/square.jpg",
+            "tall": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/tall.jpg"
+          },
+          "filename": "532880f20bb6d6075200011b_small.jpg",
+          "rights": "Courtesy Getty Trust Open Content Program",
+          "descriptions": {
+            "artsy": {
+              "date": "1894",
+              "category": "",
+              "medium": "Oil on canvas",
+              "collecting_institution": "",
+              "description": "",
+              "additional_information": "Unframed: 100.3 x 65.1 cm (39 1/2 x 25 5/8 in.), Framed: 113.3 x 77.5 x 5.7 cm (44 5/8 x 30 1/2 x 2 1/4 in.).  France, Europe"
+            }
+          },
+          "keyword_ids": [
+            "4d8b92774eb68a1b2c000134",
+            "56539404ebad647f5493ac0f",
+            "51b662628b3b8149ed0002e8",
+            "4dc7ee1332e67b000100013c",
+            "520baa99a09a678af00000cc",
+            "4fbabaa5be12d400010007c4",
+            "4e60374fe890b1000125c530",
+            "4e0ce7536df5b40001005508",
+            "4d90d191dcdd5f44a500004e",
+            "4e0ce83a87b7d10001004315",
+            "51b662538b3b8190570001e2",
+            "4f2c60d5848eb256491a50ff",
+            "504f74d047c6a40002000420",
+            "4d90d18edcdd5f44a5000010",
+            "507478a6c9aa95000200176e",
+            "4d90d193dcdd5f44a5000082",
+            "521e0422139b21c452000616"
+          ],
+          "keyword_strings": [
+            "Claude Monet",
+            "1860–1969",
+            "19th Century",
+            "En plein air",
+            "Figurative Art",
+            "Figurative Painting",
+            "France",
+            "Haze",
+            "Impressionism",
+            "Large Brushstrokes/Loose Brushwork",
+            "Late 19th Century",
+            "Light as Subject",
+            "Oil Painting",
+            "Painting",
+            "Related to Religion",
+            "Representations of Architecture",
+            "Times of Day"
+          ],
+          "wikiart_url": "",
+          "year": ""
+        }
+      ]
+    }
+  ],
+  "artworks": [
+    {
+      "title": "Child with dove",
+      "image_id": "w_9a57ee1e7fe840a1a6b2072",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads4.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg",
+        "medium": "https://uploads5.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg!Large.jpg",
+        "small": "https://uploads5.wikiart.org/images/pablo-picasso/child-with-dove-1901.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_9a57ee1e7fe840a1a6b2072.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1901",
+          "style": "Post-Impressionism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"5266f798275b241c89000272\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Childhood\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/child-with-dove-1901",
+      "year": "1901"
+    },
+    {
+      "title": "The old blind guitarist",
+      "image_id": "w_5aa18d0eacd74dc5859f447",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads1.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg",
+        "medium": "https://uploads2.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg!Large.jpg",
+        "small": "https://uploads2.wikiart.org/00198/images/pablo-picasso/old-guitarist-chicago.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_5aa18d0eacd74dc5859f447.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1903",
+          "style": "Expressionism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/the-old-blind-guitarist-1903",
+      "year": "1903"
+    },
+    {
+      "title": "Girl on the ball",
+      "image_id": "w_8dbff8329ed14c21b865301",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads5.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg",
+        "medium": "https://uploads6.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg!Large.jpg",
+        "small": "https://uploads6.wikiart.org/images/pablo-picasso/girl-on-the-ball-1905.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_8dbff8329ed14c21b865301.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1905",
+          "style": "Expressionism, Symbolism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/girl-on-the-ball-1905",
+      "year": "1905"
+    },
+    {
+      "title": "The girls of Avignon",
+      "image_id": "w_8c26aa72d4ed43dba9dee79",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads1.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg",
+        "medium": "https://uploads2.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg!Large.jpg",
+        "small": "https://uploads2.wikiart.org/00492/images/pablo-picasso/les-demoiselles-d-avignon-1907.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_8c26aa72d4ed43dba9dee79.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1907",
+          "style": "Cubism",
+          "genre": "nude painting (nu)",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/the-girls-of-avignon-1907",
+      "year": "1907"
+    },
+    {
+      "title": "Portrait of Ambroise Vollard",
+      "image_id": "w_9c4852e2be9d4c2599ef24a",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg",
+        "medium": "https://uploads8.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg!Blog.jpg",
+        "small": "https://uploads0.wikiart.org/images/pablo-picasso/portrait-of-ambroise-vollard-1910.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_9c4852e2be9d4c2599ef24a.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1910",
+          "style": "Analytical Cubism",
+          "genre": "portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/portrait-of-ambroise-vollard-1910",
+      "year": "1910"
+    },
+    {
+      "title": "Portrait of woman in d`hermine pass (Olga)",
+      "image_id": "w_60a937f8db4e4cf4b28d404",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg",
+        "medium": "https://uploads8.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg!Blog.jpg",
+        "small": "https://uploads0.wikiart.org/images/pablo-picasso/untitled-1937-8.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_60a937f8db4e4cf4b28d404.jpg",
+      "rights": "Public domain US",
+      "descriptions": {
+        "wikiart": {
+          "date": "1923",
+          "style": "Surrealism",
+          "genre": "portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/untitled-1937-8",
+      "year": "1923"
+    },
+    {
+      "title": "Figures at the Seaside",
+      "image_id": "w_4a5fa0f2ca0348a2a998a5f",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads2.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg",
+        "medium": "https://uploads2.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg!Blog.jpg",
+        "small": "https://uploads3.wikiart.org/images/pablo-picasso/figures-at-the-seaside-1931.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_4a5fa0f2ca0348a2a998a5f.jpg",
+      "rights": "Pablo Picasso",
+      "descriptions": {
+        "wikiart": {
+          "date": "1931",
+          "style": "Surrealism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"4dc1c5fc2df37f22f00018f7\", \"530621088b3b8165f60001e6\", \"4d90d195dcdd5f44a50000b5\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"The Artist's Studio\", \"Contemporary Impressionist\", \"Waterscapes\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/figures-at-the-seaside-1931",
+      "year": "1931"
+    },
+    {
+      "title": "Guernica",
+      "image_id": "w_0486d928be6f47988278ba0",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg",
+        "medium": "https://uploads0.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg!Large.jpg",
+        "small": "https://uploads0.wikiart.org/00139/images/pablo-picasso/guernica-by-pablo-picasso.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_0486d928be6f47988278ba0.jpg",
+      "rights": "Pablo Picasso",
+      "descriptions": {
+        "wikiart": {
+          "date": "1937",
+          "style": "Cubism, Surrealism",
+          "genre": "allegorical painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"518ba7fd9c0dedda83000235\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Atmospheric Landscapes\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/guernica-1937",
+      "year": "1937"
+    },
+    {
+      "title": "Portrait of Dora Maar",
+      "image_id": "w_3a9f199cca7341da961d394",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads3.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg",
+        "medium": "https://uploads3.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg!Blog.jpg",
+        "small": "https://uploads4.wikiart.org/images/pablo-picasso/portrait-of-dora-maar-1937-1.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_3a9f199cca7341da961d394.jpg",
+      "rights": "Pablo Picasso",
+      "descriptions": {
+        "wikiart": {
+          "date": "1937",
+          "style": "Surrealism",
+          "genre": "portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\", \"564fa5b5864d8267380003e2\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\", \"Old Master Influenced Fantasy\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/portrait-of-dora-maar-1937-1",
+      "year": "1937"
+    },
+    {
+      "title": "Cat catching a bird",
+      "image_id": "w_f4beb6e32e0d4ab7a25091b",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Pablo Picasso"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg",
+        "medium": "https://uploads3.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg!Portrait.jpg",
+        "small": "https://uploads0.wikiart.org/images/pablo-picasso/cat-catching-a-bird-1939.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_f4beb6e32e0d4ab7a25091b.jpg",
+      "rights": "Pablo Picasso",
+      "descriptions": {
+        "wikiart": {
+          "date": "1939",
+          "style": "Surrealism",
+          "genre": "animal painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"5524243872616963817e0300\", \"4d90d190dcdd5f44a500003e\"]",
+      "RelatedKeywordStrings": "[\"Picassoesque\", \"Cubism\"]",
+      "wikiart_url": "https://www.wikiart.org/en/pablo-picasso/cat-catching-a-bird-1939",
+      "year": "1939"
+    },
+    {
+      "title": "The Potato Eaters",
+      "image_id": "w_b9ae82afcf4b4260845b19a",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads2.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg",
+        "medium": "https://uploads2.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg!Blog.jpg",
+        "small": "https://uploads3.wikiart.org/images/vincent-van-gogh/the-potato-eaters-1885-1.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_b9ae82afcf4b4260845b19a.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1885",
+          "style": "Realism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/the-potato-eaters-1885-1",
+      "year": "1885"
+    },
+    {
+      "title": "Paul Gauguin's Armchair",
+      "image_id": "w_46ba991147554990947626e",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads6.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg",
+        "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg!Large.jpg",
+        "small": "https://uploads7.wikiart.org/images/vincent-van-gogh/paul-gauguin-s-armchair-1888.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_46ba991147554990947626e.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1888",
+          "style": "Post-Impressionism",
+          "genre": "still life",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/paul-gauguin-s-armchair-1888",
+      "year": "1888"
+    },
+    {
+      "title": "Red Vineyards at Arles",
+      "image_id": "w_2f9843777be94d6b936d2f8",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads5.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg",
+        "medium": "https://uploads6.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg!Large.jpg",
+        "small": "https://uploads6.wikiart.org/images/vincent-van-gogh/red-vineyards-at-arles-1888.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_2f9843777be94d6b936d2f8.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1888",
+          "style": "Post-Impressionism",
+          "genre": "landscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/red-vineyards-at-arles-1888",
+      "year": "1888"
+    },
+    {
+      "title": "Sower with Setting Sun",
+      "image_id": "w_38f04b8dfc944cd5b11f022",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads7.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg",
+        "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg!Blog.jpg",
+        "small": "https://uploads8.wikiart.org/images/vincent-van-gogh/sower-with-setting-sun-1888-3.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_38f04b8dfc944cd5b11f022.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1888",
+          "style": "Post-Impressionism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\", \"530621088b3b8165f60001e6\", \"4d90d192dcdd5f44a5000063\", \"4e4d87e8fdcf0a000100bff2\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\", \"Contemporary Impressionist\", \"Pointillism\", \"Intentionally Exposed Canvas\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/sower-with-setting-sun-1888-3",
+      "year": "1888"
+    },
+    {
+      "title": "Still Life - Vase with Fifteen Sunflowers",
+      "image_id": "w_5bd8732562eb44d9b710bff",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads6.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg",
+        "medium": "https://uploads7.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg!Large.jpg",
+        "small": "https://uploads7.wikiart.org/images/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_5bd8732562eb44d9b710bff.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1888",
+          "style": "Post-Impressionism",
+          "genre": "flower painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/still-life-vase-with-fifteen-sunflowers-1888-1",
+      "year": "1888"
+    },
+    {
+      "title": "Irises",
+      "image_id": "w_d337a6840e3e49059a2179c",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg",
+        "medium": "https://uploads0.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg!Large.jpg",
+        "small": "https://uploads0.wikiart.org/00213/images/vincent-van-gogh/antique-3840759.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_d337a6840e3e49059a2179c.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1889",
+          "style": "Post-Impressionism",
+          "genre": "landscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/irises-1889",
+      "year": "1889"
+    },
+    {
+      "title": "Landscape with House and Ploughman",
+      "image_id": "w_0b81067a0cb14c3eb2fa421",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads2.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg",
+        "medium": "https://uploads2.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg!Blog.jpg",
+        "small": "https://uploads3.wikiart.org/images/vincent-van-gogh/landscape-with-house-and-ploughman-1889(2).jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_0b81067a0cb14c3eb2fa421.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1889",
+          "style": "Cloisonnism",
+          "genre": "landscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/landscape-with-house-and-ploughman-1889",
+      "year": "1889"
+    },
+    {
+      "title": "Self Portrait with Bandaged Ear",
+      "image_id": "w_304d452d2e4941f5ae76a18",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads5.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg",
+        "medium": "https://uploads6.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg!Large.jpg",
+        "small": "https://uploads6.wikiart.org/images/vincent-van-gogh/self-portrait-with-bandaged-ear-1889.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_304d452d2e4941f5ae76a18.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1889",
+          "style": "Post-Impressionism",
+          "genre": "self-portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/self-portrait-with-bandaged-ear-1889",
+      "year": "1889"
+    },
+    {
+      "title": "The Starry Night",
+      "image_id": "w_5277deddc83a42ba9b04815",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads2.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg",
+        "medium": "https://uploads3.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg!Large.jpg",
+        "small": "https://uploads3.wikiart.org/00475/images/vincent-van-gogh/the-starry-night-1889.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_5277deddc83a42ba9b04815.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1889",
+          "style": "Post-Impressionism",
+          "genre": "cloudscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\", \"530621088b3b8165f60001e6\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\", \"Contemporary Impressionist\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/the-starry-night-1889",
+      "year": "1889"
+    },
+    {
+      "title": "Portrait of Doctor Gachet",
+      "image_id": "w_356cb668775548c58ebc02e",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg",
+        "medium": "https://uploads8.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg!Blog.jpg",
+        "small": "https://uploads0.wikiart.org/images/vincent-van-gogh/portrait-of-doctor-gachet-1890.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_356cb668775548c58ebc02e.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1890",
+          "style": "Post-Impressionism",
+          "genre": "portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"573a4823cb4c274cf800078a\", \"4e0ce81239bed00001005a74\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4f0613b2848eb27bc6003b2c\", \"4d90d196dcdd5f44a50000cb\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Bars and Restaurants\", \"Bright and Vivid Colors\", \"Figurative Art\", \"Figurative Painting\", \"Flatness\", \"Flora\"]",
+      "wikiart_url": "https://www.wikiart.org/en/vincent-van-gogh/portrait-of-doctor-gachet-1890",
+      "year": "1890"
+    },
+    {
+      "title": "Self-Portrait with Bandaged Ear",
+      "image_id": "4eb077c25fb415000100dd91",
+      "is_existing": true,
+      "existing_id": "4eb077c25fb415000100dd91",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/small.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/urJNHDCBl7n_iQmKmYUN7w/tall.jpg"
+      },
+      "filename": "4eb077c25fb415000100dd91_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1889",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "The Courtauld Gallery, London",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Selfportraitbandagedear.jpeg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "50b98fe08c65b4a57600012c",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4d90d193dcdd5f44a500007c",
+        "4e5708cb5dca140001003aa3",
+        "4d90d194dcdd5f44a5000092",
+        "51b662538b3b8190570001e2",
+        "4dcdf9e7522d6e00010042d0",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "50b98fba0a77d5469100011f",
+        "4d90d193dcdd5f44a500007e",
+        "4d90d192dcdd5f44a5000065",
+        "4dc7f1ddb1783b0001000266",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "Face",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Human Figure",
+        "Individual Portrait",
+        "Isolation/Alienation",
+        "Late 19th Century",
+        "Medical/Health",
+        "Oil Painting",
+        "Painting",
+        "People at Home",
+        "Portrait",
+        "Post-Impressionism",
+        "Self-Portrait",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Self-Portrait",
+      "image_id": "506c89b2d207d80002001296",
+      "is_existing": true,
+      "existing_id": "506c89b2d207d80002001296",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/normalized.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/-qPyT6fbu9-2pfT0XTqXEQ/tall.jpg"
+      },
+      "filename": "506c89b2d207d80002001296_medium.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1889",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Musee d'Orsay, Paris",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4d90d193dcdd5f44a500007c",
+        "51f18d0e275b24a84d00063a",
+        "4e5708cb5dca140001003aa3",
+        "4d90d194dcdd5f44a5000092",
+        "51b662538b3b8190570001e2",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d193dcdd5f44a500007e",
+        "4d90d192dcdd5f44a5000065",
+        "4dc7f1ddb1783b0001000266",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Human Figure",
+        "Iconic Works of Art History",
+        "Individual Portrait",
+        "Isolation/Alienation",
+        "Late 19th Century",
+        "Oil Painting",
+        "Painting",
+        "Portrait",
+        "Post-Impressionism",
+        "Self-Portrait",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "The Postman Joseph Roulin",
+      "image_id": "506c9581d207d8000200138d",
+      "is_existing": true,
+      "existing_id": "506c9581d207d8000200138d",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/9LMiJuSIFAjuYKUGKmQjQg/tall.jpg"
+      },
+      "filename": "506c9581d207d8000200138d_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1888",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Rijksmuseum Kroeller-Mueller, Otterlo",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Portrait_of_Joseph_Roulin_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4d90d193dcdd5f44a500007c",
+        "51f18d0e275b24a84d00063a",
+        "4e5708cb5dca140001003aa3",
+        "51b662538b3b8190570001e2",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d193dcdd5f44a500007e",
+        "4d90d192dcdd5f44a5000065",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Human Figure",
+        "Iconic Works of Art History",
+        "Individual Portrait",
+        "Late 19th Century",
+        "Oil Painting",
+        "Painting",
+        "Portrait",
+        "Post-Impressionism",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Doctor Paul Gachet (1828-1909)",
+      "image_id": "506c958a3445b400020011eb",
+      "is_existing": true,
+      "existing_id": "506c958a3445b400020011eb",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/_5K0xSYg2Quoz7n0fFJ8Cw/tall.jpg"
+      },
+      "filename": "506c958a3445b400020011eb_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1890",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Musée d'Orsay, Paris",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Dr_Paul_Gachet_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4d90d193dcdd5f44a500007c",
+        "4e5708cb5dca140001003aa3",
+        "4d90d194dcdd5f44a5000092",
+        "51b662538b3b8190570001e2",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d193dcdd5f44a500007e",
+        "4d90d192dcdd5f44a5000065",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Human Figure",
+        "Individual Portrait",
+        "Isolation/Alienation",
+        "Late 19th Century",
+        "Oil Painting",
+        "Painting",
+        "Portrait",
+        "Post-Impressionism",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "A Wheatfield, with Cypresses",
+      "image_id": "5075a193e640c30002000bb7",
+      "is_existing": true,
+      "existing_id": "5075a193e640c30002000bb7",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/dEs6rYo8ToLhU5R2EBu3MQ/square.jpg"
+      },
+      "filename": "5075a193e640c30002000bb7_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1889",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "The National Gallery, London",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Wheat_Field_with_Cypresses_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "4e0ce81239bed00001005a74",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4d90d196dcdd5f44a50000cb",
+        "4e60374fe890b1000125c530",
+        "4dc7edcd8101da00010001eb",
+        "4d90d194dcdd5f44a5000092",
+        "4d90d193dcdd5f44a500007d",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "4dcdf920522d6e00010042ca",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d192dcdd5f44a5000065",
+        "4dc7ebb432e67b000100012f",
+        "4e5ff520e890b10001073a72",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "Bright and Vivid Colors",
+        "Figurative Art",
+        "Figurative Painting",
+        "Flora",
+        "France",
+        "Impasto",
+        "Isolation/Alienation",
+        "Landscapes",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Nature",
+        "Oil Painting",
+        "Painting",
+        "Post-Impressionism",
+        "Rural Life",
+        "The Fantastic",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Starry Night, Arles",
+      "image_id": "5084459a4467430002000273",
+      "is_existing": true,
+      "existing_id": "5084459a4467430002000273",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/medium.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/tLEWfq9AOi8Z_PhuseH5Ag/tall.jpg"
+      },
+      "filename": "5084459a4467430002000273_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1888",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Musée d'Orsay, Paris",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "4e60374fe890b1000125c530",
+        "4d90d193dcdd5f44a500007c",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "4dcdf920522d6e00010042ca",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d192dcdd5f44a5000065",
+        "4e600aed9755740001002acb",
+        "4dc7ebb432e67b000100012f",
+        "4e663d39d726df00010002f9",
+        "5036a9f69da54500020004ac",
+        "4d90d195dcdd5f44a50000b5"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "19th Century",
+        "France",
+        "Human Figure",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Nature",
+        "Painting",
+        "Post-Impressionism",
+        "Reflections",
+        "Rural Life",
+        "The Netherlands",
+        "Water",
+        "Waterscapes"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Starry Night",
+      "image_id": "521e6928275b24041a00084c",
+      "is_existing": true,
+      "existing_id": "521e6928275b24041a00084c",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/aQSntdLiI8DkpDk6VenKNw/tall.jpg"
+      },
+      "filename": "521e6928275b24041a00084c_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1889",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "The Museum of Modern Art, New York",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "56539404ebad647f5493ac0f",
+        "505b5a9b930ad000020008e0",
+        "4d90d195dcdd5f44a50000bc",
+        "520baa99a09a678af00000cc",
+        "4f0613b2848eb27bc6003b2c",
+        "4e60374fe890b1000125c530",
+        "4e03896fd5d7f60001003d07",
+        "51f18d0e275b24a84d00063a",
+        "4dc7edcd8101da00010001eb",
+        "4d90d193dcdd5f44a500007d",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "4e259578944193000100631d",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "552ed4217261692af7620c00",
+        "4d90d192dcdd5f44a5000065",
+        "4d90d193dcdd5f44a5000082",
+        "4dc7ebb432e67b000100012f",
+        "521b85ffa09a671b30000149",
+        "4e663d39d726df00010002f9",
+        "521e0422139b21c452000616"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "1860–1969",
+        "Abstract versus Figurative Art",
+        "Dynamism",
+        "Figurative Art",
+        "Flatness",
+        "France",
+        "Gestural",
+        "Iconic Works of Art History",
+        "Impasto",
+        "Landscapes",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Movement",
+        "Oil Painting",
+        "Painting",
+        "Passage",
+        "Post-Impressionism",
+        "Representations of Architecture",
+        "Rural Life",
+        "Skyscapes",
+        "The Netherlands",
+        "Times of Day"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Japonaiserie: Flowering Plum Tree",
+      "image_id": "521e6eb3139b21d4dc00080b",
+      "is_existing": true,
+      "existing_id": "521e6eb3139b21d4dc00080b",
+      "artist_names": [
+        "Vincent van Gogh"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/UwKGFfmPchjwY-O_CYk17w/tall.jpg"
+      },
+      "filename": "521e6eb3139b21d4dc00080b_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1887",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Vincent van Gogh Museum, Amsterdam",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Bloeiende_pruimenboomgaard-_naar_Hiroshige_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92944eb68a1b2c000264",
+        "51b662628b3b8149ed0002e8",
+        "505b5a9b930ad000020008e0",
+        "4e0ce81239bed00001005a74",
+        "4e0ce7a587b7d100010042dc",
+        "4e8e17313aac3f0001276e2b",
+        "4e0ce8655695820001004166",
+        "4d90d195dcdd5f44a50000bc",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4d90d196dcdd5f44a50000cb",
+        "4e60374fe890b1000125c530",
+        "51f18d0e275b24a84d00063a",
+        "4dc7edcd8101da00010001eb",
+        "4db85c704f6b2471d7000081",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4dcdf920522d6e00010042ca",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d192dcdd5f44a5000065",
+        "4ef104481c23d400010063ec",
+        "4e663d39d726df00010002f9"
+      ],
+      "keyword_strings": [
+        "Vincent van Gogh",
+        "19th Century",
+        "Abstract versus Figurative Art",
+        "Bright and Vivid Colors",
+        "Color Gradient",
+        "Cross-Cultural Dialogue",
+        "Dense Composition",
+        "Dynamism",
+        "Figurative Art",
+        "Figurative Painting",
+        "Flora",
+        "France",
+        "Iconic Works of Art History",
+        "Impasto",
+        "Japonisme",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Nature",
+        "Oil Painting",
+        "Painting",
+        "Post-Impressionism",
+        "Text",
+        "The Netherlands"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Women in the garden",
+      "image_id": "w_ebefc2d4ff87456aa0ab5e9",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads2.wikiart.org/00475/images/claude-monet/rf-2773.jpg",
+        "medium": "https://uploads2.wikiart.org/00475/images/claude-monet/rf-2773.jpg!Blog.jpg",
+        "small": "https://uploads3.wikiart.org/00475/images/claude-monet/rf-2773.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_ebefc2d4ff87456aa0ab5e9.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1866",
+          "style": "Impressionism",
+          "genre": "genre painting",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"530621088b3b8165f60001e6\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Contemporary Impressionist\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/women-in-the-garden",
+      "year": "1866"
+    },
+    {
+      "title": "Impression, sunrise",
+      "image_id": "w_72ab91a054c14bc7832ac12",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg",
+        "medium": "https://uploads0.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg!Large.jpg",
+        "small": "https://uploads0.wikiart.org/00129/images/claude-monet/impression-sunrise.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_72ab91a054c14bc7832ac12.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1872",
+          "style": "Impressionism",
+          "genre": "cityscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"530621088b3b8165f60001e6\", \"5730c4cc139b216eeb003081\", \"4d90d193dcdd5f44a500007b\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Contemporary Impressionist\", \"Cityscapes and City Scenes\", \"Cityscapes\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/impression-sunrise",
+      "year": "1872"
+    },
+    {
+      "title": "Autumn on the Seine at Argenteuil",
+      "image_id": "w_969c79ece527428e924e273",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads7.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg",
+        "medium": "https://uploads8.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg!Large.jpg",
+        "small": "https://uploads8.wikiart.org/images/claude-monet/autumn-on-the-seine-at-argenteuil.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_969c79ece527428e924e273.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1873",
+          "style": "Impressionism",
+          "genre": "landscape"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/autumn-on-the-seine-at-argenteuil",
+      "year": "1873"
+    },
+    {
+      "title": "Camille Monet and a Child in the Artist’s Garden in Argenteuil",
+      "image_id": "w_e0aa5036be644239bc1df7a",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg",
+        "medium": "https://uploads0.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg!Large.jpg",
+        "small": "https://uploads0.wikiart.org/images/claude-monet/madame-monet-and-child(1).jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_e0aa5036be644239bc1df7a.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1875",
+          "style": "Impressionism",
+          "genre": "portrait",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/madame-monet-and-child",
+      "year": "1875"
+    },
+    {
+      "title": "Haystacks at Giverny",
+      "image_id": "w_9e2647614f804b65a66c4a3",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads3.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg",
+        "medium": "https://uploads3.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg!Blog.jpg",
+        "small": "https://uploads4.wikiart.org/images/claude-monet/haystacks-at-giverny.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_9e2647614f804b65a66c4a3.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1884",
+          "style": "Impressionism",
+          "genre": "landscape"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/haystacks-at-giverny",
+      "year": "1884"
+    },
+    {
+      "title": "Haystack at Giverny",
+      "image_id": "w_59d4d7d8c6634b24b6258e8",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads7.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg",
+        "medium": "https://uploads8.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg!Large.jpg",
+        "small": "https://uploads8.wikiart.org/images/claude-monet/haystack-at-giverny-1886.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_59d4d7d8c6634b24b6258e8.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1886",
+          "style": "Impressionism",
+          "genre": "landscape",
+          "medium": "oil, canvas"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\", \"4e4d87e8fdcf0a000100bff2\", \"530621088b3b8165f60001e6\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\", \"Intentionally Exposed Canvas\", \"Contemporary Impressionist\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/haystack-at-giverny-1886",
+      "year": "1886"
+    },
+    {
+      "title": "Poplars at Giverny",
+      "image_id": "w_9d724956100541199187f25",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads1.wikiart.org/images/claude-monet/poplars-at-giverny.jpg",
+        "medium": "https://uploads2.wikiart.org/images/claude-monet/poplars-at-giverny.jpg!Large.jpg",
+        "small": "https://uploads2.wikiart.org/images/claude-monet/poplars-at-giverny.jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_9d724956100541199187f25.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1887",
+          "style": "Impressionism",
+          "genre": "landscape"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/poplars-at-giverny",
+      "year": "1887"
+    },
+    {
+      "title": "Antibes in the Morning",
+      "image_id": "w_363ed8d1246b433c9e57056",
+      "is_existing": false,
+      "existing_id": null,
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://uploads8.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg",
+        "medium": "https://uploads0.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg!Large.jpg",
+        "small": "https://uploads0.wikiart.org/images/claude-monet/antibes-in-the-morning(1).jpg!PinterestSmall.jpg"
+      },
+      "filename": "w_363ed8d1246b433c9e57056.jpg",
+      "rights": "Public domain",
+      "descriptions": {
+        "wikiart": {
+          "date": "1888",
+          "style": "Impressionism",
+          "genre": "landscape"
+        }
+      },
+      "RelatedKeywordIds": "[\"56539404ebad647f5493ac0f\", \"505b5a9b930ad000020008e0\", \"518ba7fd9c0dedda83000235\", \"4e4ec2464c2606000104bff1\", \"4dc7ee1332e67b000100013c\", \"520baa99a09a678af00000cc\", \"4fbabaa5be12d400010007c4\"]",
+      "RelatedKeywordStrings": "[\"1860\\u20131969\", \"Abstract versus Figurative Art\", \"Atmospheric Landscapes\", \"City Scenes\", \"En plein air\", \"Figurative Art\", \"Figurative Painting\"]",
+      "wikiart_url": "https://www.wikiart.org/en/claude-monet/antibes-in-the-morning",
+      "year": "1888"
+    },
+    {
+      "title": "La Gare Saint Lazare",
+      "image_id": "5033edb6946de10002000150",
+      "is_existing": true,
+      "existing_id": "5033edb6946de10002000150",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/VSELVQl6sU9EX5VSc4OF0A/tall.jpg"
+      },
+      "filename": "5033edb6946de10002000150_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1877",
+          "category": "Painting",
+          "medium": "Oil on Canvas",
+          "collecting_institution": "Musée d'Orsay",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_The_Saint-Lazare_Station_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "4e4ec2464c2606000104bff1",
+        "4dc7ee1332e67b000100013c",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4e0ce7536df5b40001005508",
+        "51f18d0e275b24a84d00063a",
+        "4d90d191dcdd5f44a500004e",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4d90d193dcdd5f44a5000082",
+        "4e4ec03c5fbc570001002fc9"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "19th Century",
+        "City Scenes",
+        "En plein air",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Haze",
+        "Iconic Works of Art History",
+        "Impressionism",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Oil Painting",
+        "Painting",
+        "Representations of Architecture",
+        "Urbanization"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Blue Water Lilies",
+      "image_id": "50733beeddc3fc0002000190",
+      "is_existing": true,
+      "existing_id": "50733beeddc3fc0002000190",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/O77_qvGCG1cGzYDfAGHdOQ/tall.jpg"
+      },
+      "filename": "50733beeddc3fc0002000190_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1916-1919",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Musée d'Orsay, Paris",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_Blue_Water_Lilies_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "4e0ce8655695820001004166",
+        "4dc7ee1332e67b000100013c",
+        "4d90d196dcdd5f44a50000cb",
+        "4e60374fe890b1000125c530",
+        "4d90d191dcdd5f44a500004e",
+        "4e0ce83a87b7d10001004315",
+        "4dcdf920522d6e00010042ca",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "51a7c0998b3b81d4620006c4",
+        "5036a9f69da54500020004ac"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "Dense Composition",
+        "En plein air",
+        "Flora",
+        "France",
+        "Impressionism",
+        "Large Brushstrokes/Loose Brushwork",
+        "Nature",
+        "Oil Painting",
+        "Painting",
+        "Pastel Colors",
+        "Water"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "The Beach at Sainte-Adresse",
+      "image_id": "507db13c05878f0002002a1d",
+      "is_existing": true,
+      "existing_id": "507db13c05878f0002002a1d",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/lRH23Xl8RXm8yuo-GHfHaQ/square.jpg"
+      },
+      "filename": "507db13c05878f0002002a1d_small.jpg",
+      "rights": "Source: Wikimedia Commons / Public Domain",
+      "descriptions": {
+        "artsy": {
+          "date": "1867",
+          "category": "Painting",
+          "medium": "Oil on canvas",
+          "collecting_institution": "Art Institute of Chicago",
+          "description": "",
+          "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Claude_Monet_-_The_Beach_at_Sainte-Adresse_-_Google_Art_Project.jpg)"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "4dc7ee1332e67b000100013c",
+        "50b990a10a77d54691000122",
+        "4e60374fe890b1000125c530",
+        "4e0ce7536df5b40001005508",
+        "4d90d193dcdd5f44a500007c",
+        "4dc7edcd8101da00010001eb",
+        "4d90d191dcdd5f44a500004e",
+        "4d90d193dcdd5f44a500007d",
+        "4e0ce83a87b7d10001004315",
+        "4ef3a92290c5f60001001505",
+        "4dcdf920522d6e00010042ca",
+        "52407dc4b202a36093000271",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "4e03893ff59f48000100448e",
+        "4d90d193dcdd5f44a5000082",
+        "4dc7ebb432e67b000100012f",
+        "4e5f948912c5db0001385a2c",
+        "5036a9f69da54500020004ac",
+        "4d90d195dcdd5f44a50000b5"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "19th Century",
+        "En plein air",
+        "Figures in Nature",
+        "France",
+        "Haze",
+        "Human Figure",
+        "Impasto",
+        "Impressionism",
+        "Landscapes",
+        "Large Brushstrokes/Loose Brushwork",
+        "Modes of Transportation",
+        "Nature",
+        "Nautical",
+        "Oil Painting",
+        "Painting",
+        "Repetition",
+        "Representations of Architecture",
+        "Rural Life",
+        "Scenes of Everyday Life",
+        "Water",
+        "Waterscapes"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Wheatstacks, Snow Effect, Morning (Meules, Effet de Neige, Le Matin)",
+      "image_id": "532880d70bb6d607520000ff",
+      "is_existing": true,
+      "existing_id": "532880d70bb6d607520000ff",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/large.jpg",
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/medium_rectangle.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/nS7xeU89nYWYGNyHCf1-hg/tall.jpg"
+      },
+      "filename": "532880d70bb6d607520000ff_small.jpg",
+      "rights": "Courtesy Getty Trust Open Content Program",
+      "descriptions": {
+        "artsy": {
+          "date": "1891",
+          "category": "",
+          "medium": "Oil on canvas",
+          "collecting_institution": "",
+          "description": "",
+          "additional_information": "Unframed: 64.8 x 99.7 cm (25 1/2 x 39 1/4 in.), Framed: 88.6 x 123.2 x 7.9 cm (34 7/8 x 48 1/2 x 3 1/8 in.).  France, Europe"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "518ba7fd9c0dedda83000235",
+        "4dc7ee1332e67b000100013c",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4e0ce7536df5b40001005508",
+        "4d90d191dcdd5f44a500004e",
+        "4d90d193dcdd5f44a500007d",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "4dcdf920522d6e00010042ca",
+        "4d90d18edcdd5f44a5000010",
+        "4e03893ff59f48000100448e",
+        "521e0422139b21c452000616"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "Atmospheric Landscapes",
+        "En plein air",
+        "Figurative Painting",
+        "France",
+        "Haze",
+        "Impressionism",
+        "Landscapes",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Nature",
+        "Painting",
+        "Repetition",
+        "Times of Day"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "Sunrise (Marine)",
+      "image_id": "532880e30bb6d6075200010d",
+      "is_existing": true,
+      "existing_id": "532880e30bb6d6075200010d",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/large.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/medium.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/60jOpgxklcU7Qc209rJ5bA/tall.jpg"
+      },
+      "filename": "532880e30bb6d6075200010d_small.jpg",
+      "rights": "Courtesy Getty Trust Open Content Program",
+      "descriptions": {
+        "artsy": {
+          "date": "1873",
+          "category": "",
+          "medium": "Oil on canvas",
+          "collecting_institution": "",
+          "description": "",
+          "additional_information": "Unframed: 50.2 x 61 cm (19 3/4 x 24 in.), Framed: 67.3 x 78.4 x 6.4 cm (26 1/2 x 30 7/8 x 2 1/2 in.).  France, Europe"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "518ba7fd9c0dedda83000235",
+        "4e4ec2464c2606000104bff1",
+        "4dc7ee1332e67b000100013c",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4e0ce7536df5b40001005508",
+        "4d90d191dcdd5f44a500004e",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "4ef3a92290c5f60001001505",
+        "52407dc4b202a36093000271",
+        "4d90d18edcdd5f44a5000010",
+        "4e600aed9755740001002acb",
+        "521e0422139b21c452000616",
+        "4d90d195dcdd5f44a50000b5"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "Atmospheric Landscapes",
+        "City Scenes",
+        "En plein air",
+        "Figurative Painting",
+        "France",
+        "Haze",
+        "Impressionism",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Modes of Transportation",
+        "Nautical",
+        "Painting",
+        "Reflections",
+        "Times of Day",
+        "Waterscapes"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    },
+    {
+      "title": "The Portal of Rouen Cathedral in Morning Light",
+      "image_id": "532880f20bb6d6075200011b",
+      "is_existing": true,
+      "existing_id": "532880f20bb6d6075200011b",
+      "artist_names": [
+        "Claude Monet"
+      ],
+      "image_urls": {
+        "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/large_rectangle.jpg",
+        "larger": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/larger.jpg",
+        "medium": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/medium.jpg",
+        "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/medium_rectangle.jpg",
+        "normalized": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/normalized.jpg",
+        "small": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/small.jpg",
+        "square": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/square.jpg",
+        "tall": "https://d32dm0rphc51dk.cloudfront.net/Zm5JNmwrieNabNQ3IMhD6Q/tall.jpg"
+      },
+      "filename": "532880f20bb6d6075200011b_small.jpg",
+      "rights": "Courtesy Getty Trust Open Content Program",
+      "descriptions": {
+        "artsy": {
+          "date": "1894",
+          "category": "",
+          "medium": "Oil on canvas",
+          "collecting_institution": "",
+          "description": "",
+          "additional_information": "Unframed: 100.3 x 65.1 cm (39 1/2 x 25 5/8 in.), Framed: 113.3 x 77.5 x 5.7 cm (44 5/8 x 30 1/2 x 2 1/4 in.).  France, Europe"
+        }
+      },
+      "keyword_ids": [
+        "4d8b92774eb68a1b2c000134",
+        "56539404ebad647f5493ac0f",
+        "51b662628b3b8149ed0002e8",
+        "4dc7ee1332e67b000100013c",
+        "520baa99a09a678af00000cc",
+        "4fbabaa5be12d400010007c4",
+        "4e60374fe890b1000125c530",
+        "4e0ce7536df5b40001005508",
+        "4d90d191dcdd5f44a500004e",
+        "4e0ce83a87b7d10001004315",
+        "51b662538b3b8190570001e2",
+        "4f2c60d5848eb256491a50ff",
+        "504f74d047c6a40002000420",
+        "4d90d18edcdd5f44a5000010",
+        "507478a6c9aa95000200176e",
+        "4d90d193dcdd5f44a5000082",
+        "521e0422139b21c452000616"
+      ],
+      "keyword_strings": [
+        "Claude Monet",
+        "1860–1969",
+        "19th Century",
+        "En plein air",
+        "Figurative Art",
+        "Figurative Painting",
+        "France",
+        "Haze",
+        "Impressionism",
+        "Large Brushstrokes/Loose Brushwork",
+        "Late 19th Century",
+        "Light as Subject",
+        "Oil Painting",
+        "Painting",
+        "Related to Religion",
+        "Representations of Architecture",
+        "Times of Day"
+      ],
+      "wikiart_url": "",
+      "year": ""
+    }
+  ]
+}

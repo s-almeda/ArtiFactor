@@ -90,14 +90,12 @@ app = Flask(__name__, static_folder='static')
 from templates.map_api import map_api_bp
 app.register_blueprint(map_api_bp)
 
-
-
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
 
-
-
+from templates.staging_review import staging_review_bp
+app.register_blueprint(staging_review_bp)
 
 # Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
 if os.getenv('ADMIN_MODE', '').lower() == 'true':
