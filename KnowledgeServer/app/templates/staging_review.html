@@ -8,9 +8,6 @@
     <link rel="stylesheet" href="/static/staging_review.css">
 </head>
 <body>
-    <div class="description-container" id="artwork_descriptions_${idx}_${awidx}">
-        ${renderDescriptions(artwork.descriptions || {}, `artwork_${awidx}_descriptions`)}
-    </div>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-clipboard-check"></i> Staging Review</h1>
@@ -40,6 +37,21 @@
                 <div class="stat-card">
                     <div id="new-artworks" class="stat-value">0</div>
                     <div class="stat-label">New Artworks</div>
+                </div>
+            </div>
+            
+            <!-- Final submission controls -->
+            <div class="final-controls" style="margin-top: 20px; padding: 15px; border: 2px solid #007bff; border-radius: 8px; background: #f8f9fa;">
+                <h3><i class="fas fa-database"></i> Final Database Submission</h3>
+                <p>After reviewing and editing individual artist files, generate the final SQL-ready JSON:</p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button id="generateFinalJson" class="btn btn-primary" style="font-size: 1.1em; padding: 10px 20px;">
+                        <i class="fas fa-cogs"></i> Generate Final SQL JSON
+                    </button>
+                    <button id="downloadFinalJson" class="btn btn-success" style="display: none; font-size: 1.1em; padding: 10px 20px;">
+                        <i class="fas fa-download"></i> Download Final JSON
+                    </button>
+                    <div id="finalJsonStatus" style="margin-left: 10px; font-weight: bold;"></div>
                 </div>
             </div>
         </div>
@@ -75,6 +87,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.close').onclick = function() {
         document.getElementById('artistModal').style.display = 'none';
     };
+    
+    // Add event listeners for final submission controls
+    document.getElementById('generateFinalJson').onclick = generateFinalSqlJson;
+    document.getElementById('downloadFinalJson').onclick = downloadFinalJson;
 });
 
 async function loadArtistFiles() {
@@ -112,13 +128,13 @@ function updateSummaryStats() {
 }
 
 function computeAllArtistsStats() {
-    // Only count non-null loaded artist data
-    const validArtists = allArtistData.filter(d => d && d.artist);
+    // Only count non-null loaded artist data that are not skipped
+    const validArtists = allArtistData.filter(d => d && d.artist && !d.artist.skipped);
     allArtistsStats.totalArtists = validArtists.length;
     allArtistsStats.newArtists = validArtists.filter(d => !d.artist.is_existing).length;
-    allArtistsStats.totalArtworks = validArtists.reduce((sum, d) => sum + (d.artworks ? d.artworks.length : 0), 0);
+    allArtistsStats.totalArtworks = validArtists.reduce((sum, d) => sum + (d.artist.artworks ? d.artist.artworks.length : 0), 0);
     allArtistsStats.newArtworks = validArtists.reduce((sum, d) =>
-        sum + (d.artworks ? d.artworks.filter(aw => !aw.is_existing).length : 0), 0
+        sum + (d.artist.artworks ? d.artist.artworks.filter(aw => !aw.is_existing).length : 0), 0
     );
     updateSummaryStats();
 }
@@ -159,7 +175,10 @@ function renderArtistNav() {
     navHtml += `<select id="artistSelect">`;
     artistFiles.forEach((f, i) => {
         let artistName = (allArtistData[i] && allArtistData[i].artist && allArtistData[i].artist.name) ? allArtistData[i].artist.name : f.name;
-        navHtml += `<option value="${i}" ${i === currentArtistIdx ? 'selected' : ''}>${artistName}</option>`;
+        const isSkipped = allArtistData[i] && allArtistData[i].artist && allArtistData[i].artist.skipped;
+        const displayName = isSkipped ? `${artistName} (SKIPPED)` : artistName;
+        const optionStyle = isSkipped ? 'style="color: #6c757d; font-style: italic;"' : '';
+        navHtml += `<option value="${i}" ${i === currentArtistIdx ? 'selected' : ''} ${optionStyle}>${displayName}</option>`;
     });
     navHtml += '</select>';
     navHtml += `<button id="nextBtn" type="button" ${currentArtistIdx===artistFiles.length-1?'disabled':''}>Next &gt;</button>`;
@@ -240,11 +259,8 @@ function displayArtistList() {
         artistList.style.display = 'block';
         return;
     }
-    // Only one artist per file
-    const artistForm = createArtistForm({
-        ...artistData.artist,
-        artworks: artistData.artworks || []
-    }, 0);
+    // Use the artist data as-is since artworks are now inside artist.artworks
+    const artistForm = createArtistForm(artistData.artist, 0);
     artistList.appendChild(artistForm);
     artistList.style.display = 'block';
 }
@@ -253,7 +269,8 @@ function renderKeywordCheckboxes(keywords, allKeywords, prefix, checkedSet) {
     let html = '<div class="checkbox-group" style="display: flex; flex-direction: column; gap: 2px;">';
     allKeywords.forEach((kw, i) => {
         const checked = checkedSet.has(kw) ? 'checked' : '';
-        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" value="${kw}" ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
+        // Use the keyword value as the checkbox name for backend processing
+        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
     });
     html += '</div>';
     return html;
@@ -275,20 +292,48 @@ function createArtistForm(artist, idx) {
         </div>
     </div>`;
 
-    let artistKeywords = [];
-    if (artist.relatedKeywordStrings || artist.RelatedKeywordStrings) {
-        try { artistKeywords = JSON.parse(artist.relatedKeywordStrings || artist.RelatedKeywordStrings); } catch (e) { artistKeywords = []; }
-    } else if (artist.keywords) {
-        artistKeywords = artist.keywords;
+    // Helper function to safely parse keywords from various formats
+    function parseKeywords(item) {
+        let keywords = [];
+        
+        // Try the capitalized versions first (for artist)
+        if (item.RelatedKeywordStrings) {
+            try {
+                keywords = JSON.parse(item.RelatedKeywordStrings);
+            } catch (e) {
+                // If it's already an array, use it directly
+                if (Array.isArray(item.RelatedKeywordStrings)) {
+                    keywords = item.RelatedKeywordStrings;
+                } else {
+                    keywords = [];
+                }
+            }
+        }
+        // Try the lowercase versions (for artworks)
+        else if (item.relatedKeywordStrings) {
+            try {
+                keywords = JSON.parse(item.relatedKeywordStrings);
+            } catch (e) {
+                // If it's already an array, use it directly
+                if (Array.isArray(item.relatedKeywordStrings)) {
+                    keywords = item.relatedKeywordStrings;
+                } else {
+                    keywords = [];
+                }
+            }
+        }
+        // Fallback to legacy keywords field
+        else if (item.keywords && Array.isArray(item.keywords)) {
+            keywords = item.keywords;
+        }
+        
+        return Array.isArray(keywords) ? keywords : [];
     }
+
+    let artistKeywords = parseKeywords(artist);
     let allKeywords = new Set(artistKeywords);
     (artist.artworks || []).forEach(aw => {
-        let awKeywords = [];
-        if (aw.relatedKeywordStrings || aw.RelatedKeywordStrings) {
-            try { awKeywords = JSON.parse(aw.relatedKeywordStrings || aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
-        } else if (aw.keywords) {
-            awKeywords = aw.keywords;
-        }
+        let awKeywords = parseKeywords(aw);
         awKeywords.forEach(k => allKeywords.add(k));
     });
     allKeywords = Array.from(allKeywords);
@@ -299,13 +344,16 @@ function createArtistForm(artist, idx) {
         // Check if this is a top-level descriptions object (contains sources)
         const isTopLevel = !isNested;
         
+        // For field mappings, we need to use the base prefix (not the nested one)
+        const basePrefix = prefix.split('[')[0];
+        
         for (const [key, value] of Object.entries(descObj)) {
             if (typeof value === 'object' && value !== null && isTopLevel) {
                 // This is a source (like "artsy", "wikiart")
                 html += `<div class="description-source" style="margin-top: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <strong>Source:</strong>
-                        <input type="text" name="${prefix}_source_${key}" value="${key}" class="source-name-input" placeholder="Source name" style="font-weight: bold;">
+                        <input type="text" name="${basePrefix}_source_${key}" value="${key}" class="source-name-input" placeholder="Source name" style="font-weight: bold;">
                     </div>
                     <div class="description-container">
                         ${renderDescriptions(value, `${prefix}[${key}]`, true)}
@@ -313,9 +361,11 @@ function createArtistForm(artist, idx) {
                 </div>`;
             } else {
                 // This is a field within a source
+                // Generate a unique field name mapping key that won't conflict with description paths
+                const fieldMappingKey = `${basePrefix}_field_${prefix.replace(/[\[\]]/g, '_')}_${key}`;
                 html += `<div class="description-field" style="margin-bottom: 4px;">
                     <div class="field-name-value" style="display: flex; align-items: center; gap: 8px;">
-                        <input type="text" name="${prefix}_field_${key}" value="${key}" class="field-name-input" placeholder="Field name" style="width: 120px; font-size: 0.9em;">
+                        <input type="text" name="${fieldMappingKey}" value="${key}" class="field-name-input" placeholder="Field name" style="width: 120px; font-size: 0.9em;">
                         <textarea name="${prefix}[${key}]" class="field-value-input" rows="1" placeholder="Field value" style="flex: 1; font-size: 0.9em;">${value || ''}</textarea>
                     </div>
                 </div>`;
@@ -330,11 +380,11 @@ function createArtistForm(artist, idx) {
         <div class="detail-section">
             <h4>Artist Info</h4>
             <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
-            <button type="button" class="btn btn-danger" style="margin-bottom:8px;" onclick="removeArtistFile()">Remove this artist file</button><br>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><input type="checkbox" name="skip_artist" ${artist.skipped ? 'checked' : ''} style="margin:0;"> Skip this artist (exclude from processed file)</label><br>
             <div class="keywords-descriptions-container">
                 <div class="keywords-section">
                     <label>Keywords:</label>
-                    ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist_${idx}`, new Set(artistKeywords))}
+                    ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist`, new Set(artistKeywords))}
                     <div style="margin-top:4px;"><input type="text" name="add_artist_keyword" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtistKeyword(this.form, ${idx})">Add</button></div>
                 </div>
             </div>
@@ -367,12 +417,7 @@ function createArtistForm(artist, idx) {
         const statusClass = aw.is_existing ? 'update-icon' : 'new-icon';
         const imageUrl = aw.image_urls?.medium || aw.image_urls?.large || aw.image_urls?.small || '';
         const imagePreview = imageUrl ? `<img src="${imageUrl}" alt="${aw.value || aw.title || ''}" style="width:140px;height:140px;object-fit:cover;border-radius:4px;margin-left:8px;vertical-align:middle;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNmOGY5ZmEiLz48L3N2Zz4='">` : '';
-        let awKeywords = [];
-        if (aw.relatedKeywordStrings || aw.RelatedKeywordStrings) {
-            try { awKeywords = JSON.parse(aw.relatedKeywordStrings || aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
-        } else if (aw.keywords) {
-            awKeywords = aw.keywords;
-        }
+        let awKeywords = parseKeywords(aw);
         let allArtworkKeywords = new Set([...awKeywords, ...allKeywords]);
         allArtworkKeywords = Array.from(allArtworkKeywords);
         let artworkDescriptionsHtml = '';
@@ -396,7 +441,7 @@ function createArtistForm(artist, idx) {
                     <div class="keywords-descriptions-container">
                         <div class="keywords-section">
                             <label>Keywords:</label>
-                            ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${idx}_${awidx}`, new Set(awKeywords))}
+                            ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${awidx}`, new Set(awKeywords))}
                             <div style="margin-top:4px;"><input type="text" name="add_artwork_keyword_${awidx}" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtworkKeyword(this.form, ${idx}, ${awidx})">Add</button></div>
                         </div>
                         <div class="descriptions-section">
@@ -412,12 +457,34 @@ function createArtistForm(artist, idx) {
     });
 
 
-    html += `<div class="actions" style="margin-top:10px;">
-        <button type="button" class="btn btn-success" onclick="submitArtistForm(event, ${idx})"><i class="fas fa-check"></i> Approve</button>
-        <button type="button" class="btn btn-danger" onclick="rejectArtistFromForm(event, '${artist.slug}', ${idx})"><i class="fas fa-times"></i> Reject</button>
+    html += `</div>
+    
+    <div class="artist-actions" style="margin-top: 20px; padding: 15px; border-top: 2px solid #ddd; background: #f8f9fa;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" class="btn btn-primary" onclick="saveArtistChanges(event, ${idx})" style="font-size: 1.1em; padding: 10px 20px;">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+            <div id="saveStatus_${idx}" style="margin-left: 10px; font-weight: bold;"></div>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+            Save your edits to this artist's file, then use "Generate Final SQL JSON" above to create the database-ready output.
+        </div>
     </div>`;
 
     form.innerHTML = html;
+    
+    // Initialize form styling for skipped artists
+    if (artist.skipped) {
+        form.style.opacity = '0.6';
+        form.style.background = '#fff3cd';
+        form.style.border = '2px solid #ffc107';
+        
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'skip-warning';
+        warningDiv.innerHTML = '<div style="background:#fff3cd;padding:10px;margin:10px 0;border:1px solid #ffc107;border-radius:4px;color:#856404;"><strong>⚠️ Warning:</strong> This artist will be skipped and excluded from the processed file.</div>';
+        form.insertBefore(warningDiv, form.firstChild);
+    }
+    
     form.addEventListener('change', function(e) {
         if (e.target.name === 'assign_existing_id') {
             const val = e.target.value.trim();
@@ -426,6 +493,37 @@ function createArtistForm(artist, idx) {
                 dbinfoDiv.innerHTML = `<div>ID: <input type=\"text\" name=\"existing_id\" value=\"${val}\" style=\"width:70%\"></div>`;
             } else {
                 dbinfoDiv.innerHTML = `<div>Will be created as new artist<br><label>Or assign to existing artist ID: <input type=\"text\" name=\"assign_existing_id\" placeholder=\"Paste existing artist ID\"></label></div>`;
+            }
+        }
+        
+        // Handle skip artist checkbox
+        if (e.target.name === 'skip_artist') {
+            const isSkipped = e.target.checked;
+            const formElement = e.target.closest('form');
+            
+            if (isSkipped) {
+                formElement.style.opacity = '0.6';
+                formElement.style.background = '#fff3cd';
+                formElement.style.border = '2px solid #ffc107';
+                
+                // Show warning message
+                let warningDiv = formElement.querySelector('.skip-warning');
+                if (!warningDiv) {
+                    warningDiv = document.createElement('div');
+                    warningDiv.className = 'skip-warning';
+                    warningDiv.innerHTML = '<div style="background:#fff3cd;padding:10px;margin:10px 0;border:1px solid #ffc107;border-radius:4px;color:#856404;"><strong>⚠️ Warning:</strong> This artist will be skipped and excluded from the processed file.</div>';
+                    formElement.insertBefore(warningDiv, formElement.firstChild);
+                }
+            } else {
+                formElement.style.opacity = '1';
+                formElement.style.background = '';
+                formElement.style.border = '';
+                
+                // Remove warning message
+                const warningDiv = formElement.querySelector('.skip-warning');
+                if (warningDiv) {
+                    warningDiv.remove();
+                }
             }
         }
     });
@@ -495,7 +593,7 @@ window.addArtistKeyword = async function(form, artistIdx) {
                 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
-                checkbox.id = `artist_${artistIdx}_kw_${i}`;
+                checkbox.id = `artist_kw_${i}`;
                 checkbox.name = `artist_kw_${i}`;
                 checkbox.value = keyword;
                 checkbox.checked = false; // Don't auto-check search results
@@ -532,182 +630,390 @@ window.addArtistKeyword = async function(form, artistIdx) {
     }
 }
 
-window.addArtworkKeyword = function(form, artistIdx, awidx) {
+window.addArtworkKeyword = async function(form, artistIdx, awidx) {
     const input = form.querySelector(`input[name="add_artwork_keyword_${awidx}"]`);
     if (!input || !input.value.trim()) return;
-    const kw = input.value.trim();
-    const group = input.parentElement.parentElement.querySelector('.checkbox-group');
-    if (group && !Array.from(group.querySelectorAll('input[type=checkbox]')).some(cb => cb.value === kw)) {
-        const i = group.querySelectorAll('input[type=checkbox]').length;
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        div.style.gap = '6px';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.name = `artwork_${awidx}_kw_${i}`;
-        checkbox.value = kw;
-        checkbox.checked = true;
-        const label = document.createElement('label');
-        label.textContent = kw;
-        div.appendChild(checkbox);
-        div.appendChild(label);
-        group.insertBefore(div, input.parentElement);
+    
+    const query = input.value.trim();
+    const button = input.nextElementSibling;
+    const originalText = button.textContent;
+    
+    // Show loading state
+    button.textContent = 'Searching...';
+    button.disabled = true;
+    
+    try {
+        // Call the lookup_text API
+        const response = await fetch('/lookup_text', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: query,
+                top_k: 10
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to search keywords');
+        }
+        
+        const results = await response.json();
+        
+        // Filter to only keyword entries (isArtist = 0)
+        const keywordResults = results.filter(result => 
+            result.isArtist === 0 || result.isArtist === '0'
+        );
+        
+        if (keywordResults.length === 0) {
+            alert('No relevant keywords found for: ' + query);
+            return;
+        }
+        
+        // Add new keywords to the checkbox group
+        const group = input.parentElement.parentElement.querySelector('.checkbox-group');
+        const existingKeywords = new Set(
+            Array.from(group.querySelectorAll('input[type=checkbox]')).map(cb => cb.value)
+        );
+        
+        let addedCount = 0;
+        keywordResults.forEach(result => {
+            const keyword = result.value;
+            const distance = result.distance;
+            
+            // Only add if not already present and distance indicates relevance
+            if (!existingKeywords.has(keyword) && distance < 0.9) {
+                const i = group.querySelectorAll('input[type=checkbox]').length;
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '6px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `artwork_${awidx}_kw_${i}`;
+                checkbox.name = `artwork_${awidx}_kw_${i}`;
+                checkbox.value = keyword;
+                checkbox.checked = false; // Don't auto-check search results
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', checkbox.id);
+                label.textContent = `${keyword} (${distance.toFixed(3)})`;
+                label.style.fontSize = '0.9em';
+                label.style.color = '#666';
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                group.insertBefore(div, input.parentElement);
+                
+                existingKeywords.add(keyword);
+                addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            alert(`Added ${addedCount} new keyword options. Check the ones you want to include.`);
+        } else {
+            alert('No new relevant keywords found.');
+        }
+        
+    } catch (error) {
+        console.error('Error searching keywords:', error);
+        alert('Error searching for keywords: ' + error.message);
+    } finally {
+        // Restore button state
+        button.textContent = originalText;
+        button.disabled = false;
+        input.value = '';
     }
-    input.value = '';
 }
 
 
-async function submitArtistForm(event, artistIdx) {
+// Save changes to individual artist file
+async function saveArtistChanges(event, artistIdx) {
     event.preventDefault();
     const form = event.target.closest('form');
     const formData = new FormData(form);
-    const artist = stagingData.artists[artistIdx];
-    const updatedArtist = {
-        ...artist,
+    const statusDiv = document.getElementById(`saveStatus_${artistIdx}`);
+    
+    // Get the original filename
+    const originalFilename = artistFiles[currentArtistIdx].filename;
+    
+    // Get current artist data
+    const currentArtist = artistData.artist;
+    const currentArtworks = artistData.artist.artworks || [];
+    
+    // Check if artist should be skipped
+    const skipArtist = formData.get('skip_artist') === 'on';
+    
+    // Collect artist data
+    const processedArtistData = {
         name: formData.get('name'),
         slug: formData.get('slug'),
-        skip: formData.get('skip_artist') === 'on',
-        keywords: [],
-        is_existing: artist.is_existing,
-        existing_id: artist.existing_id,
-        artworks: []
+        is_existing: currentArtist?.is_existing || false,
+        existing_id: formData.get('assign_existing_id') || currentArtist?.existing_id,
+        artist_aliases: currentArtist?.artist_aliases || [],
+        descriptions: {},
+        timestamp: new Date().toISOString().replace(/[-:]/g, '').split('.')[0],
+        skipped: skipArtist
     };
-    if (formData.get('assign_existing_id')) {
-        updatedArtist.is_existing = true;
-        updatedArtist.existing_id = formData.get('assign_existing_id');
-    }
-    for (let [k, v] of formData.entries()) {
-        if (k.startsWith('artist_kw_')) {
-            updatedArtist.keywords.push(v);
-        }
-    }
-    function processDescriptions(formData, prefix) {
-        const descriptions = {};
-        const fieldMappings = new Map(); // Map original field names to new field names
-        const sourceMappings = new Map(); // Map original source names to new source names
+    
+    // If artist is skipped, create minimal data structure
+    if (skipArtist) {
+        const processedData = {
+            artist: processedArtistData,
+            artworks: [],
+            timestamp: processedArtistData.timestamp,
+            skipped: true
+        };
         
-        // First pass: collect all field name changes
-        for (let [k, v] of formData.entries()) {
-            if (k.startsWith(`${prefix}_field_`)) {
-                const originalField = k.replace(`${prefix}_field_`, '');
-                fieldMappings.set(originalField, v);
+        try {
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            statusDiv.style.color = '#007bff';
+            
+            const response = await fetch('/staging_review/save_processed_artist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    processed_data: processedData,
+                    original_filename: originalFilename
+                })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                statusDiv.innerHTML = '<i class="fas fa-check"></i> Saved (Skipped)';
+                statusDiv.style.color = '#28a745';
+                
+                // Update the artist data in memory
+                allArtistData[currentArtistIdx] = processedData;
+                computeAllArtistsStats();
+                renderArtistNav();
+            } else {
+                statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + result.error;
+                statusDiv.style.color = '#dc3545';
             }
-            if (k.startsWith(`${prefix}_source_`)) {
-                const originalSource = k.replace(`${prefix}_source_`, '');
-                sourceMappings.set(originalSource, v);
-            }
+        } catch (error) {
+            statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + error.message;
+            statusDiv.style.color = '#dc3545';
         }
-        
-        // Second pass: process actual description values with renamed fields
-        for (let [k, v] of formData.entries()) {
-            if (k.startsWith(prefix) && k.includes('[') && k.includes(']')) {
-                // Parse the nested path
-                let path = k.replace(prefix, '').replace(/^\[|\]$/g, '');
-                const pathParts = path.split('][');
-                
-                // Apply source renaming
-                if (pathParts.length >= 1 && sourceMappings.has(pathParts[0])) {
-                    pathParts[0] = sourceMappings.get(pathParts[0]);
-                }
-                
-                // Apply field renaming  
-                if (pathParts.length >= 2 && fieldMappings.has(pathParts[1])) {
-                    pathParts[1] = fieldMappings.get(pathParts[1]);
-                }
-                
-                // Build the nested object
-                let current = descriptions;
-                for (let i = 0; i < pathParts.length - 1; i++) {
-                    if (!current[pathParts[i]]) current[pathParts[i]] = {};
-                    current = current[pathParts[i]];
-                }
-                current[pathParts[pathParts.length - 1]] = v;
-            }
-        }
-        
-        return descriptions;
+        return;
     }
     
-    function setNested(obj, path, value) {
-        const parts = path.replace(/^\w+_descriptions/, '').replace(/\]\[/g, '.').replace(/\[|\]/g, '').split('.').filter(Boolean);
-        let cur = obj;
-        for (let i = 0; i < parts.length - 1; i++) {
-            if (!cur[parts[i]]) cur[parts[i]] = {};
-            cur = cur[parts[i]];
-        }
-        cur[parts[parts.length - 1]] = value;
-    }
+    // Process artist descriptions
+    processedArtistData.descriptions = processDescriptions(formData, 'artist_descriptions');
     
-    // Process artist descriptions with renamed fields
-    updatedArtist.descriptions = processDescriptions(formData, 'artist_descriptions');
+    // Collect artwork data
+    const artworks = [];
     let awidx = 0;
+    
     while (formData.has(`artwork_title_${awidx}`)) {
         if (!formData.get(`remove_artwork_${awidx}`)) {
-            const aw = {
-                ...((artist.artworks && artist.artworks[awidx]) || {}),
-                value: formData.get(`artwork_title_${awidx}`),  // Use 'value' to match database structure
-                image_urls: { medium: formData.get(`artwork_image_${awidx}`) },
-                keywords: [],
-                descriptions: {}
+            const artwork = {
+                index: awidx,
+                value: formData.get(`artwork_title_${awidx}`),
+                image_id: currentArtworks[awidx]?.image_id || '',
+                artist_names: [processedArtistData.name],
+                image_urls: {},
+                filename: currentArtworks[awidx]?.filename || '',
+                rights: currentArtworks[awidx]?.rights || '',
+                descriptions: {},
+                is_existing: currentArtworks[awidx]?.is_existing || false,
+                existing_id: currentArtworks[awidx]?.existing_id || null
             };
-            // Process artwork descriptions with renamed fields
-            aw.descriptions = processDescriptions(formData, `artwork_${awidx}_descriptions`);
+            
+            // Set image URL
+            const imageUrl = formData.get(`artwork_image_${awidx}`);
+            if (imageUrl) {
+                artwork.image_urls = { medium: imageUrl };
+            }
+            
+            // Process artwork descriptions
+            artwork.descriptions = processDescriptions(formData, `artwork_${awidx}_descriptions`);
+            
             // Add date to descriptions.wikiart if provided
             const dateValue = formData.get(`artwork_date_${awidx}`);
             if (dateValue) {
-                if (!aw.descriptions.wikiart) aw.descriptions.wikiart = {};
-                aw.descriptions.wikiart.date = dateValue;
+                if (!artwork.descriptions.wikiart) artwork.descriptions.wikiart = {};
+                artwork.descriptions.wikiart.date = dateValue;
             }
-            for (let [k, v] of formData.entries()) {
-                if (k.startsWith(`artwork_${awidx}_kw_`)) {
-                    aw.keywords.push(v);
-                }
-            }
-            updatedArtist.artworks.push(aw);
+            
+            artworks.push(artwork);
         }
         awidx++;
     }
-    if (updatedArtist.skip) {
-        form.remove();
-        return;
+    
+    // Create the processed data structure that matches what the backend expects
+    const processedData = {
+        artist: processedArtistData,
+        artworks: artworks,
+        timestamp: processedArtistData.timestamp
+    };
+    
+    // Add all form data entries (includes keywords) to the processed data
+    for (let [key, value] of formData.entries()) {
+        processedData[key] = value;
     }
+    
     try {
-        const response = await fetch('/staging_review/approve_artist', {
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        statusDiv.style.color = '#007bff';
+        
+        const response = await fetch('/staging_review/save_processed_artist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ artist: updatedArtist })
+            body: JSON.stringify({
+                processed_data: processedData,
+                original_filename: originalFilename
+            })
         });
+        
         const result = await response.json();
         if (result.success) {
-            form.remove();
+            statusDiv.innerHTML = '<i class="fas fa-check"></i> Saved Successfully';
+            statusDiv.style.color = '#28a745';
+            
+            // Update the artist data in memory
+            allArtistData[currentArtistIdx] = processedData;
+            computeAllArtistsStats();
+            renderArtistNav();
         } else {
-            showError(result.error);
+            statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + result.error;
+            statusDiv.style.color = '#dc3545';
         }
     } catch (error) {
-        showError('Failed to approve artist: ' + error.message);
+        statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + error.message;
+        statusDiv.style.color = '#dc3545';
     }
 }
 
-async function rejectArtistFromForm(event, artistSlug, artistIdx) {
-    event.preventDefault();
-    if (!confirm('Are you sure you want to reject all changes for this artist?')) return;
-    const form = event.target.closest('form');
+// Generate final SQL-ready JSON from all artist files
+async function generateFinalSqlJson() {
+    const button = document.getElementById('generateFinalJson');
+    const statusDiv = document.getElementById('finalJsonStatus');
+    const downloadButton = document.getElementById('downloadFinalJson');
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    statusDiv.innerHTML = 'Processing all artist files...';
+    statusDiv.style.color = '#007bff';
+    
     try {
-        const response = await fetch('/staging_review/reject_artist', {
+        const response = await fetch('/staging_review/generate_final_sql_json', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ artist_slug: artistSlug })
+            headers: { 'Content-Type': 'application/json' }
         });
+        
         const result = await response.json();
         if (result.success) {
-            form.remove();
+            statusDiv.innerHTML = `<i class="fas fa-check"></i> Generated! ${result.stats.total_artists} artists, ${result.stats.total_artworks} artworks`;
+            statusDiv.style.color = '#28a745';
+            downloadButton.style.display = 'inline-block';
+            downloadButton.onclick = () => downloadFinalJson(result.filename);
         } else {
-            showError(result.error);
+            statusDiv.innerHTML = `<i class="fas fa-times"></i> Error: ${result.error}`;
+            statusDiv.style.color = '#dc3545';
         }
     } catch (error) {
-        showError('Failed to reject artist: ' + error.message);
+        statusDiv.innerHTML = `<i class="fas fa-times"></i> Error: ${error.message}`;
+        statusDiv.style.color = '#dc3545';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-cogs"></i> Generate Final SQL JSON';
     }
+}
+
+// Download the final SQL JSON file
+async function downloadFinalJson(filename) {
+    try {
+        const response = await fetch(`/staging_review/download_final_json/${filename}`);
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            showError('Failed to download final JSON file');
+        }
+    } catch (error) {
+        showError('Error downloading file: ' + error.message);
+    }
+}
+
+function processDescriptions(formData, prefix) {
+    const descriptions = {};
+    const fieldMappings = new Map(); // Map original field names to new field names
+    const sourceMappings = new Map(); // Map original source names to new source names
+    
+    // First pass: collect all field name changes
+    for (let [k, v] of formData.entries()) {
+        if (k.startsWith(`${prefix}_field_`)) {
+            // Extract the original field path from the key
+            // Format: prefix_field_prefix_source_fieldname
+            const fieldKey = k.replace(`${prefix}_field_`, '');
+            fieldMappings.set(fieldKey, v);
+        }
+        if (k.startsWith(`${prefix}_source_`)) {
+            const originalSource = k.replace(`${prefix}_source_`, '');
+            sourceMappings.set(originalSource, v);
+        }
+    }
+    
+    // Second pass: process ONLY actual description values (not field mappings)
+    for (let [k, v] of formData.entries()) {
+        // Skip field and source mapping entries - we only want the actual description values
+        if (k.startsWith(`${prefix}_field_`) || k.startsWith(`${prefix}_source_`)) {
+            continue;
+        }
+        
+        if (k.startsWith(prefix) && k.includes('[') && k.includes(']')) {
+            // Parse the nested path - fix the parsing logic
+            // Example: "artist_descriptions[artsy][birth]" should become ["artsy", "birth"]
+            let pathStr = k.substring(prefix.length); // Remove prefix completely
+            
+            // Remove leading bracket if present
+            if (pathStr.startsWith('[')) {
+                pathStr = pathStr.substring(1);
+            }
+            
+            // Remove trailing bracket if present
+            if (pathStr.endsWith(']')) {
+                pathStr = pathStr.substring(0, pathStr.length - 1);
+            }
+            
+            // Split by '][' to get path parts
+            const pathParts = pathStr.split('][');
+            
+            // Apply source renaming (first part is source)
+            if (pathParts.length >= 1 && sourceMappings.has(pathParts[0])) {
+                pathParts[0] = sourceMappings.get(pathParts[0]);
+            }
+            
+            // Apply field renaming (second part is field)
+            if (pathParts.length >= 2) {
+                const fieldMapKey = `${prefix}_${pathParts[0]}_${pathParts[1]}`;
+                if (fieldMappings.has(fieldMapKey)) {
+                    pathParts[1] = fieldMappings.get(fieldMapKey);
+                }
+            }
+            
+            // Build the nested object
+            let current = descriptions;
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                if (!current[pathParts[i]]) current[pathParts[i]] = {};
+                current = current[pathParts[i]];
+            }
+            current[pathParts[pathParts.length - 1]] = v;
+        }
+    }
+    
+    return descriptions;
 }
 
 function showError(message) {

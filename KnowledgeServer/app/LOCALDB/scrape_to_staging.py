@@ -87,7 +87,7 @@ class LimitReachedException(Exception):
     pass
 
 class WikiArtScraper:
-    def __init__(self, download: bool = False, limit: int = 5, api_base_url: str = "http://localhost:5000"):
+    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000"):
         self.download = download
         self.limit = limit
         self.api_base_url = api_base_url.rstrip('/')
@@ -697,7 +697,58 @@ class WikiArtScraper:
         
         return sample_artists
 
-
+    def scrape_artist_all_works(self, artist_slug: str, depth: int) -> List[Dict]:
+        """Scrape artworks from the all-works/text-list page"""
+        url = f'https://www.wikiart.org/en/{artist_slug}/all-works/text-list'
+        print(f"  Scraping all-works page: {url}")
+        
+        try:
+            response = self.session.get(url, timeout=15)
+            if response.status_code != 200:
+                print(f"  Failed to fetch all-works page: {response.status_code}")
+                return []
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            artworks = []
+            
+            # Find artwork links in the text-list format
+            # This will need to be adjusted based on the actual HTML structure
+            artwork_links = soup.find_all('a', href=re.compile(r'/' + artist_slug + '/'))
+            
+            for link in artwork_links[:depth]:  # Limit to depth
+                try:
+                    artwork_path = link.get('href', '')
+                    if not artwork_path:
+                        continue
+                    
+                    title = link.get_text().strip()
+                    wikiart_url = f"https://www.wikiart.org{artwork_path}" if artwork_path.startswith('/') else artwork_path
+                    
+                    # Extract year if present in the link text or nearby elements
+                    year = None
+                    # Look for year patterns in the text or sibling elements
+                    year_match = re.search(r'\b(1\d{3}|20\d{2})\b', title)
+                    if year_match:
+                        year = year_match.group(1)
+                    
+                    artworks.append({
+                        'title': title,
+                        'date': year,
+                        'wikiart_url': wikiart_url,
+                        'wikiart_path': artwork_path
+                    })
+                    
+                except Exception as e:
+                    print(f"    Error parsing artwork link: {e}")
+                    continue
+            
+            print(f"  Found {len(artworks)} artworks from all-works page")
+            return artworks
+            
+        except Exception as e:
+            print(f"  Error scraping all-works page: {e}")
+            return []
+    
     def scrape_artist(self, artist_name: str, stop_at_limit: bool = True) -> Optional[Dict]:
         """Scrape a single artist and their artworks. Returns artist_data with whatever artworks were processed before hitting the limit."""
         if getattr(self, 'limit_reached', False):
@@ -840,9 +891,6 @@ class WikiArtScraper:
                 if 'wikiart' not in descriptions:
                     descriptions['wikiart'] = {}
                 descriptions['wikiart'].update(extra_fields)
-                # Add date to wikiart descriptions if available
-                if artwork.get('date'):
-                    descriptions['wikiart']['date'] = artwork['date']
                 # Check if artwork exists with improved matching (title + artist)
                 existing_artwork = self.find_existing_artwork(artwork['title'], actual_name)
                 is_existing_artwork = existing_artwork is not None
@@ -870,7 +918,7 @@ class WikiArtScraper:
                         artwork_data['image_id']
                     )
                 artwork_staging = {
-                    'value': artwork['title'],  # Use 'value' to match database structure
+                    'value': artwork['title'],  # Use 'value' instead of 'title' for consistency
                     'image_id': artwork_data['image_id'],
                     'is_existing': is_existing_artwork,
                     'existing_id': existing_artwork['image_id'] if is_existing_artwork else None,
@@ -879,7 +927,7 @@ class WikiArtScraper:
                     'filename': downloaded_filename or artwork_data['filename'],
                     'rights': artwork_data['rights'],
                     'descriptions': descriptions,
-                    # Store as JSON string for DB compatibility - match database field names
+                    # Store as JSON string for DB compatibility - use lowercase for artworks
                     'relatedKeywordIds': json.dumps(artwork_keyword_ids),
                     'relatedKeywordStrings': json.dumps(artwork_keyword_strings)
                 }
@@ -914,7 +962,7 @@ class WikiArtScraper:
                         return val
                 # Compose artwork entry with all available fields from DB
                 db_artwork = {
-                    'value': row_dict.get('value', ''),  # Use 'value' to match database structure
+                    'value': row_dict.get('value', ''),  # Use 'value' for consistency
                     'image_id': row_dict.get('image_id', ''),
                     'is_existing': True,
                     'existing_id': row_dict.get('image_id', ''),
@@ -923,8 +971,8 @@ class WikiArtScraper:
                     'filename': row_dict.get('filename', ''),
                     'rights': row_dict.get('rights', ''),
                     'descriptions': parse_json_field(row_dict.get('descriptions')) or {},
-                    'relatedKeywordIds': parse_json_field(row_dict.get('relatedKeywordIds')) or [],
-                    'relatedKeywordStrings': parse_json_field(row_dict.get('relatedKeywordStrings')) or []
+                    'relatedKeywordIds': row_dict.get('relatedKeywordIds', '[]'),  # Keep as JSON string
+                    'relatedKeywordStrings': row_dict.get('relatedKeywordStrings', '[]')  # Keep as JSON string
                 }
                 artist_data['artworks'].append(db_artwork)
 
@@ -968,8 +1016,7 @@ class WikiArtScraper:
                             "slug": artist_slug,
                             "artwork_count": len(artist_data.get('artworks',[])),
                         },
-                        "artist": artist_data,
-                        "artworks": artist_data.get('artworks',[])
+                        "artist": artist_data
                     }, f, indent=2, ensure_ascii=False)
                 print(f"Saved per-artist staging file: {artist_filepath}")
                 per_artist_files.append(artist_filepath)
@@ -1035,24 +1082,31 @@ def main():
                        help='Maximum number of items to scrape')
     parser.add_argument('--api-url', type=str, default='http://localhost:8080',
                        help='Base URL for the Flask API')
+    # add per-artist artwork depth
+    parser.add_argument('--depth', type=int, default=10, 
+                   help='Number of artworks to scrape per artist from all-works page')
+
     parser.add_argument('--clear', type=str, choices=['true', 'false'],
                        default='false', help='Delete old staging JSON files before scraping')
     args = parser.parse_args()
     
-    download = args.download.lower() == 'true'
-    limit = args.limit
-    api_url = args.api_url
     
     try:
         if args.clear.lower() == 'true':
             for fname in os.listdir(STAGING_PATH):
-                if fname.startswith("staging_data_") and fname.endswith(".json"):
+                file_path = os.path.join(STAGING_PATH, fname)
+                if os.path.isfile(file_path):
                     try:
-                        os.remove(os.path.join(STAGING_PATH, fname))
-                        print(f"Deleted old staging file: {fname}")
+                        os.remove(file_path)
+                        print(f"Deleted file: {fname}")
                     except Exception as e:
                         print(f"Error deleting {fname}: {e}")
-        scraper = WikiArtScraper(download=download, limit=limit, api_base_url=api_url)
+        scraper = WikiArtScraper(
+            download=args.download.lower() == 'true',
+            limit=args.limit,
+            api_base_url=args.api_url,
+            depth=args.depth
+        )
         try:
             scraper.run_scraping()
             staging_file = scraper.save_staging_data()
