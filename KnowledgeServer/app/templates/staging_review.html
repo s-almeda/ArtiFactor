@@ -265,12 +265,17 @@ function displayArtistList() {
     artistList.style.display = 'block';
 }
 
-function renderKeywordCheckboxes(keywords, allKeywords, prefix, checkedSet) {
+function renderKeywordCheckboxes(keywords, keywordIds, allKeywords, prefix, checkedSet) {
     let html = '<div class="checkbox-group" style="display: flex; flex-direction: column; gap: 2px;">';
     allKeywords.forEach((kw, i) => {
         const checked = checkedSet.has(kw) ? 'checked' : '';
+        // Find the corresponding keyword ID
+        const kwIndex = keywords.indexOf(kw);
+        const kwId = kwIndex >= 0 && keywordIds.length > kwIndex ? keywordIds[kwIndex] : '';
+        const dataEntryId = kwId ? `data-entry-id="${kwId}"` : '';
+        
         // Use the keyword value as the checkbox name for backend processing
-        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
+        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${dataEntryId} ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
     });
     html += '</div>';
     return html;
@@ -284,6 +289,9 @@ function createArtistForm(artist, idx) {
     let html = `<div class="artist-header">
         <div class="artist-name">
             <input type="text" name="name" value="${artist.name || ''}" style="font-size:1.1em; font-weight:bold; width:70%;">
+            <div style="font-size:0.9em; color:#666; margin-top:4px;">
+                Entry ID: ${artist.existing_id || artist.generated_entry_id || '(will be generated)'}
+            </div>
         </div>
         <div class="artist-status">
             <span class="status-badge ${artist.is_existing ? 'status-existing' : 'status-new'}">
@@ -295,6 +303,7 @@ function createArtistForm(artist, idx) {
     // Helper function to safely parse keywords from various formats
     function parseKeywords(item) {
         let keywords = [];
+        let keywordIds = [];
         
         // Try the capitalized versions first (for artist)
         if (item.RelatedKeywordStrings) {
@@ -306,6 +315,19 @@ function createArtistForm(artist, idx) {
                     keywords = item.RelatedKeywordStrings;
                 } else {
                     keywords = [];
+                }
+            }
+            
+            // Also try to parse keyword IDs
+            if (item.RelatedKeywordIds) {
+                try {
+                    keywordIds = JSON.parse(item.RelatedKeywordIds);
+                } catch (e) {
+                    if (Array.isArray(item.RelatedKeywordIds)) {
+                        keywordIds = item.RelatedKeywordIds;
+                    } else {
+                        keywordIds = [];
+                    }
                 }
             }
         }
@@ -321,20 +343,29 @@ function createArtistForm(artist, idx) {
                     keywords = [];
                 }
             }
-        }
-        // Fallback to legacy keywords field
-        else if (item.keywords && Array.isArray(item.keywords)) {
-            keywords = item.keywords;
+            
+            // Also try to parse keyword IDs
+            if (item.relatedKeywordIds) {
+                try {
+                    keywordIds = JSON.parse(item.relatedKeywordIds);
+                } catch (e) {
+                    if (Array.isArray(item.relatedKeywordIds)) {
+                        keywordIds = item.relatedKeywordIds;
+                    } else {
+                        keywordIds = [];
+                    }
+                }
+            }
         }
         
-        return Array.isArray(keywords) ? keywords : [];
+        return { keywords, keywordIds };
     }
 
-    let artistKeywords = parseKeywords(artist);
-    let allKeywords = new Set(artistKeywords);
+    let artistKeywordData = parseKeywords(artist);
+    let allKeywords = new Set(artistKeywordData.keywords);
     (artist.artworks || []).forEach(aw => {
-        let awKeywords = parseKeywords(aw);
-        awKeywords.forEach(k => allKeywords.add(k));
+        let awKeywordData = parseKeywords(aw);
+        awKeywordData.keywords.forEach(k => allKeywords.add(k));
     });
     allKeywords = Array.from(allKeywords);
     function renderDescriptions(descObj, prefix, isNested = false) {
@@ -384,7 +415,7 @@ function createArtistForm(artist, idx) {
             <div class="keywords-descriptions-container">
                 <div class="keywords-section">
                     <label>Keywords:</label>
-                    ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist`, new Set(artistKeywords))}
+                    ${renderKeywordCheckboxes(artistKeywordData.keywords, artistKeywordData.keywordIds, allKeywords, `artist`, new Set(artistKeywordData.keywords))}
                     <div style="margin-top:4px;"><input type="text" name="add_artist_keyword" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtistKeyword(this.form, ${idx})">Add</button></div>
                 </div>
             </div>
@@ -417,8 +448,8 @@ function createArtistForm(artist, idx) {
         const statusClass = aw.is_existing ? 'update-icon' : 'new-icon';
         const imageUrl = aw.image_urls?.medium || aw.image_urls?.large || aw.image_urls?.small || '';
         const imagePreview = imageUrl ? `<img src="${imageUrl}" alt="${aw.value || aw.title || ''}" style="width:140px;height:140px;object-fit:cover;border-radius:4px;margin-left:8px;vertical-align:middle;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNmOGY5ZmEiLz48L3N2Zz4='">` : '';
-        let awKeywords = parseKeywords(aw);
-        let allArtworkKeywords = new Set([...awKeywords, ...allKeywords]);
+        let awKeywordData = parseKeywords(aw);
+        let allArtworkKeywords = new Set([...awKeywordData.keywords, ...allKeywords]);
         allArtworkKeywords = Array.from(allArtworkKeywords);
         let artworkDescriptionsHtml = '';
         if (aw.descriptions && typeof aw.descriptions === 'object') {
@@ -441,7 +472,7 @@ function createArtistForm(artist, idx) {
                     <div class="keywords-descriptions-container">
                         <div class="keywords-section">
                             <label>Keywords:</label>
-                            ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${awidx}`, new Set(awKeywords))}
+                            ${renderKeywordCheckboxes(awKeywordData.keywords, awKeywordData.keywordIds, allArtworkKeywords, `artwork_${awidx}`, new Set(awKeywordData.keywords))}
                             <div style="margin-top:4px;"><input type="text" name="add_artwork_keyword_${awidx}" placeholder="Add keyword" style="width:80%"> <button type="button" onclick="addArtworkKeyword(this.form, ${idx}, ${awidx})">Add</button></div>
                         </div>
                         <div class="descriptions-section">
@@ -581,6 +612,7 @@ window.addArtistKeyword = async function(form, artistIdx) {
         let addedCount = 0;
         keywordResults.forEach(result => {
             const keyword = result.value;
+            const keywordId = result.entry_id;
             const distance = result.distance;
             
             // Only add if not already present and distance indicates relevance
@@ -596,6 +628,7 @@ window.addArtistKeyword = async function(form, artistIdx) {
                 checkbox.id = `artist_kw_${i}`;
                 checkbox.name = `artist_kw_${i}`;
                 checkbox.value = keyword;
+                checkbox.setAttribute('data-entry-id', keywordId); // Store the entry_id
                 checkbox.checked = false; // Don't auto-check search results
                 
                 const label = document.createElement('label');
@@ -606,7 +639,7 @@ window.addArtistKeyword = async function(form, artistIdx) {
                 
                 div.appendChild(checkbox);
                 div.appendChild(label);
-                group.insertBefore(div, input.parentElement);
+                group.appendChild(div);
                 
                 existingKeywords.add(keyword);
                 addedCount++;
@@ -680,10 +713,11 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
         let addedCount = 0;
         keywordResults.forEach(result => {
             const keyword = result.value;
+            const keywordId = result.entry_id;
             const distance = result.distance;
             
             // Only add if not already present and distance indicates relevance
-            if (!existingKeywords.has(keyword) && distance < 0.9) {
+            if (!existingKeywords.has(keyword) && distance < 1.3) {
                 const i = group.querySelectorAll('input[type=checkbox]').length;
                 const div = document.createElement('div');
                 div.style.display = 'flex';
@@ -695,6 +729,7 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
                 checkbox.id = `artwork_${awidx}_kw_${i}`;
                 checkbox.name = `artwork_${awidx}_kw_${i}`;
                 checkbox.value = keyword;
+                checkbox.setAttribute('data-entry-id', keywordId); // Store the entry_id
                 checkbox.checked = false; // Don't auto-check search results
                 
                 const label = document.createElement('label');
@@ -705,7 +740,7 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
                 
                 div.appendChild(checkbox);
                 div.appendChild(label);
-                group.insertBefore(div, input.parentElement);
+                group.appendChild(div);
                 
                 existingKeywords.add(keyword);
                 addedCount++;
@@ -729,6 +764,29 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
     }
 }
 
+// Collect keywords from form, pairing strings with their entry_ids
+function collectKeywords(form, keywordPrefix) {
+    const keywordStrings = [];
+    const keywordIds = [];
+    
+    // Get all keyword checkboxes with the specified prefix
+    const keywordCheckboxes = form.querySelectorAll(`input[name^="${keywordPrefix}"]`);
+    
+    keywordCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const keywordString = checkbox.value;
+            const entryId = checkbox.getAttribute('data-entry-id');
+            
+            keywordStrings.push(keywordString);
+            keywordIds.push(entryId || ''); // Use empty string if no entry_id
+        }
+    });
+    
+    return {
+        strings: JSON.stringify(keywordStrings),
+        ids: JSON.stringify(keywordIds)
+    };
+}
 
 // Save changes to individual artist file
 async function saveArtistChanges(event, artistIdx) {
@@ -804,6 +862,11 @@ async function saveArtistChanges(event, artistIdx) {
     // Process artist descriptions
     processedArtistData.descriptions = processDescriptions(formData, 'artist_descriptions');
     
+    // Process artist keywords
+    const artistKeywords = collectKeywords(form, 'artist_kw_');
+    processedArtistData.RelatedKeywordStrings = artistKeywords.strings;
+    processedArtistData.RelatedKeywordIds = artistKeywords.ids;
+    
     // Collect artwork data
     const artworks = [];
     let awidx = 0;
@@ -838,6 +901,11 @@ async function saveArtistChanges(event, artistIdx) {
                 if (!artwork.descriptions.wikiart) artwork.descriptions.wikiart = {};
                 artwork.descriptions.wikiart.date = dateValue;
             }
+            
+            // Process artwork keywords
+            const artworkKeywords = collectKeywords(form, `artwork_${awidx}_kw_`);
+            artwork.relatedKeywordStrings = artworkKeywords.strings;
+            artwork.relatedKeywordIds = artworkKeywords.ids;
             
             artworks.push(artwork);
         }

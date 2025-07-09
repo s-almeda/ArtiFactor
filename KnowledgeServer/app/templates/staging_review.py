@@ -449,13 +449,15 @@ def create_clean_artist_json(form_data):
     artist_keywords = []
     artist_keyword_ids = []
     
-    # Look for checked keywords in form data
-    for key, value in form_data.items():
-        if key.startswith('artist_kw_') and value:
-            artist_keywords.append(value)
-            # TODO: Map keyword strings to IDs if needed
+    # Check if keywords were sent from the form processing
+    if 'RelatedKeywordStrings' in form_data and 'RelatedKeywordIds' in form_data:
+        try:
+            artist_keywords = json.loads(form_data['RelatedKeywordStrings'])
+            artist_keyword_ids = json.loads(form_data['RelatedKeywordIds'])
+        except (json.JSONDecodeError, TypeError):
+            pass
     
-    # If no keywords were selected from form, preserve existing keywords
+    # If no keywords were processed from form, try to get from existing data
     if not artist_keywords and artist_data.get('RelatedKeywordStrings'):
         try:
             existing_keywords = json.loads(artist_data.get('RelatedKeywordStrings', '[]'))
@@ -473,6 +475,18 @@ def create_clean_artist_json(form_data):
         except (json.JSONDecodeError, TypeError):
             pass
     
+    # Ensure artist has an entry_id for consistency
+    artist_entry_id = artist_data.get('existing_id')
+    if not artist_entry_id:
+        # Generate new ID for new artist
+        import time
+        import random
+        import string
+        timestamp = int(time.time())
+        random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        artist_entry_id = f"{timestamp:x}{random_part}"
+        artist_data['generated_entry_id'] = artist_entry_id
+    
     # Process artworks
     processed_artworks = []
     
@@ -484,14 +498,15 @@ def create_clean_artist_json(form_data):
         artwork_keywords = []
         artwork_keyword_ids = []
         
-        artwork_index = artwork.get('index', 0)
-        # Try both possible naming patterns
-        for key, value in form_data.items():
-            if (key.startswith(f'artwork_{artwork_index}_kw_') or 
-                key.startswith(f'artwork_{awidx}_kw_')) and value:
-                artwork_keywords.append(value)
+        # Check if keywords were sent from the form processing
+        if 'relatedKeywordStrings' in artwork and 'relatedKeywordIds' in artwork:
+            try:
+                artwork_keywords = json.loads(artwork['relatedKeywordStrings'])
+                artwork_keyword_ids = json.loads(artwork['relatedKeywordIds'])
+            except (json.JSONDecodeError, TypeError):
+                pass
         
-        # If no keywords were selected from form, preserve existing keywords
+        # If no keywords were processed from form, preserve existing keywords
         if not artwork_keywords and artwork.get('relatedKeywordStrings'):
             try:
                 existing_keywords = json.loads(artwork.get('relatedKeywordStrings', '[]'))
@@ -508,6 +523,26 @@ def create_clean_artist_json(form_data):
                     artwork_keyword_ids = existing_keyword_ids
             except (json.JSONDecodeError, TypeError):
                 pass
+        
+        # IMPORTANT: Ensure artist's entry_id is in relatedKeywordIds and artist name is in relatedKeywordStrings
+        artist_entry_id = artist_data.get('existing_id') or artist_data.get('generated_entry_id')
+        artist_name = artist_data.get('name', '')
+        
+        if not artist_entry_id:
+            # Generate new ID for new artist if not already generated
+            import time
+            import random
+            import string
+            timestamp = int(time.time())
+            random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            artist_entry_id = f"{timestamp:x}{random_part}"
+            artist_data['generated_entry_id'] = artist_entry_id
+        
+        # Ensure artist is first in the keyword lists
+        if artist_entry_id not in artwork_keyword_ids:
+            artwork_keyword_ids.insert(0, artist_entry_id)
+        if artist_name not in artwork_keywords:
+            artwork_keywords.insert(0, artist_name)
         
         # Build artwork entry
         artwork_entry = {
@@ -532,6 +567,7 @@ def create_clean_artist_json(form_data):
         'slug': artist_data.get('slug', ''),
         'is_existing': artist_data.get('is_existing', False),
         'existing_id': artist_data.get('existing_id'),
+        'generated_entry_id': artist_data.get('generated_entry_id'),  # Include generated ID
         'artist_aliases': artist_data.get('artist_aliases', []),
         'descriptions': artist_data.get('descriptions', {}),
         'RelatedKeywordIds': json.dumps(artist_keyword_ids),
@@ -674,8 +710,15 @@ def create_text_entry_from_artist(artist_info):
     except (json.JSONDecodeError, TypeError):
         related_keyword_strings = []
     
+    # Get or generate artist entry_id
+    artist_entry_id = artist_info.get('existing_id')
+    if not artist_entry_id:
+        artist_entry_id = generate_new_id()
+        # Store generated ID back to artist_info for use in artwork processing
+        artist_info['generated_entry_id'] = artist_entry_id
+    
     return {
-        'entry_id': artist_info.get('existing_id') or generate_new_id(),
+        'entry_id': artist_entry_id,
         'value': artist_info.get('name', ''),
         'images': [artwork.get('image_id') for artwork in artist_info.get('artworks', []) if artwork.get('image_id')],
         'isArtist': 1,
@@ -700,10 +743,24 @@ def create_image_entry_from_artwork(artwork, artist_info):
     except (json.JSONDecodeError, TypeError):
         related_keyword_strings = []
     
+    # IMPORTANT: Ensure artist's entry_id is in relatedKeywordIds and artist name is in relatedKeywordStrings
+    artist_entry_id = artist_info.get('existing_id') or artist_info.get('generated_entry_id')
+    artist_name = artist_info.get('name', '')
+    
+    if not artist_entry_id:
+        # Generate new ID for new artist if not already generated
+        artist_entry_id = generate_new_id()
+    
+    # Ensure artist is first in the keyword lists
+    if artist_entry_id not in related_keyword_ids:
+        related_keyword_ids.insert(0, artist_entry_id)
+    if artist_name not in related_keyword_strings:
+        related_keyword_strings.insert(0, artist_name)
+    
     return {
         'image_id': artwork.get('image_id') or generate_new_id(),
         'value': artwork.get('value', ''),
-        'artist_names': [artist_info.get('name', '')],
+        'artist_names': [artist_name],
         'image_urls': artwork.get('image_urls', {}),
         'filename': artwork.get('filename', ''),
         'rights': artwork.get('rights', ''),

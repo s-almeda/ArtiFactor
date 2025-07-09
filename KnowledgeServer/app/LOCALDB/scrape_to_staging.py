@@ -22,7 +22,7 @@ import sys
 import time
 import uuid
 from datetime import datetime
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
@@ -321,7 +321,7 @@ class WikiArtScraper:
             distance = result.get('distance')
             #print(f"[DEBUG] Considering keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.9:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 1.25:
                 final_keyword_ids.append(keyword_id)
                 final_keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -360,7 +360,7 @@ class WikiArtScraper:
             distance = result.get('distance')
             print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.9:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 1.25:
                 keyword_ids.append(keyword_id)
                 keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -910,6 +910,25 @@ class WikiArtScraper:
                 artwork_keyword_ids, artwork_keyword_strings = self.get_artwork_keywords(
                     artwork['title'], keyword_ids, keyword_strings, artwork_data
                 )
+                
+                # IMPORTANT: Add artist's entry_id to artwork's relatedKeywordIds
+                artist_entry_id = artist_data['existing_id'] if is_existing else None
+                if not artist_entry_id:
+                    # Generate new ID for new artist (this should match what the staging review will generate)
+                    import time
+                    import random
+                    import string
+                    timestamp = int(time.time())
+                    random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+                    artist_entry_id = f"{timestamp:x}{random_part}"
+                    # Update artist_data with the generated ID for consistency
+                    artist_data['generated_entry_id'] = artist_entry_id
+                
+                # Ensure artist is first in the keyword lists
+                if artist_entry_id not in artwork_keyword_ids:
+                    artwork_keyword_ids.insert(0, artist_entry_id)
+                if actual_name not in artwork_keyword_strings:
+                    artwork_keyword_strings.insert(0, actual_name)
                 # Download image if enabled
                 downloaded_filename = None
                 if artwork_data['image_urls']['small']:
@@ -960,6 +979,18 @@ class WikiArtScraper:
                         return json.loads(val)
                     except Exception:
                         return val
+                
+                # Parse existing keywords
+                existing_keyword_ids = parse_json_field(row_dict.get('relatedKeywordIds')) or []
+                existing_keyword_strings = parse_json_field(row_dict.get('relatedKeywordStrings')) or []
+                
+                # IMPORTANT: Ensure artist's entry_id is in relatedKeywordIds and artist name is in relatedKeywordStrings
+                artist_entry_id = artist_data.get('existing_id') or artist_data.get('generated_entry_id')
+                if artist_entry_id not in existing_keyword_ids:
+                    existing_keyword_ids.insert(0, artist_entry_id)
+                if actual_name not in existing_keyword_strings:
+                    existing_keyword_strings.insert(0, actual_name)
+                
                 # Compose artwork entry with all available fields from DB
                 db_artwork = {
                     'value': row_dict.get('value', ''),  # Use 'value' for consistency
@@ -971,8 +1002,8 @@ class WikiArtScraper:
                     'filename': row_dict.get('filename', ''),
                     'rights': row_dict.get('rights', ''),
                     'descriptions': parse_json_field(row_dict.get('descriptions')) or {},
-                    'relatedKeywordIds': row_dict.get('relatedKeywordIds', '[]'),  # Keep as JSON string
-                    'relatedKeywordStrings': row_dict.get('relatedKeywordStrings', '[]')  # Keep as JSON string
+                    'relatedKeywordIds': json.dumps(existing_keyword_ids),  # Store as JSON string with artist ID
+                    'relatedKeywordStrings': json.dumps(existing_keyword_strings)  # Store as JSON string with artist name
                 }
                 artist_data['artworks'].append(db_artwork)
 
@@ -1073,6 +1104,8 @@ class WikiArtScraper:
 def main():
     print(f"✅ Using database: {DB_PATH}")
     print(f"✅ Using images: {IMAGES_PATH}")
+
+
         
 
     parser = argparse.ArgumentParser(description='Scrape WikiArt data to staging JSON')
@@ -1082,6 +1115,8 @@ def main():
                        help='Maximum number of items to scrape')
     parser.add_argument('--api-url', type=str, default='http://localhost:8080',
                        help='Base URL for the Flask API')
+    
+
     # add per-artist artwork depth
     parser.add_argument('--depth', type=int, default=10, 
                    help='Number of artworks to scrape per artist from all-works page')
@@ -1089,6 +1124,17 @@ def main():
     parser.add_argument('--clear', type=str, choices=['true', 'false'],
                        default='false', help='Delete old staging JSON files before scraping')
     args = parser.parse_args()
+
+     #check connection to api-url; retry 5 times and quit if not reachable
+    api_url = args.api_url
+    try:
+        response = requests.get(api_url, timeout=5)
+        if response.status_code != 200:
+            print(f"❌ API URL {api_url} is not reachable. Status code: {response.status_code}")
+            sys.exit(1)
+    except requests.RequestException as e:
+        print(f"❌ Error connecting to API URL {api_url}: {e}")
+        sys.exit(1)
     
     
     try:
