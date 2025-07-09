@@ -6,7 +6,6 @@
     <title>Staging Review - WikiArt Data</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/staging_review.css">
-    <script src="/static/staging_review.js"></script>
 </head>
 <body>
     <div class="container">
@@ -42,24 +41,398 @@
             </div>
         </div>
 
-        <div id="artist-list" class="artist-list" style="display: none;">
-            <!-- Artists will be rendered as editable forms here -->
-        </div>
-    </div>
-
-    <!-- Artist Details Modal -->
-    <div id="artistModal" class="modal">
+    <div id="artist-list" class="artist-list" style="display: none;"></div>
+    <div id="artistModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close">&times;</span>
             <div id="modal-content">
                 <!-- Modal content will be populated here -->
-    <link rel="stylesheet" href="/static/staging_review.css">
-    <script src="/static/staging_review.js"></script>
+            </div>
+        </div>
+    </div>
+
+<script>
+let stagingData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadStagingData();
+    document.querySelector('.close').onclick = function() {
+        document.getElementById('artistModal').style.display = 'none';
+    };
+});
+
+async function loadStagingData() {
+    try {
+        const response = await fetch('/staging_review/load_staging_data');
+        const result = await response.json();
+        if (result.success) {
+            stagingData = result.data;
+            displayStagingData();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to load staging data: ' + error.message);
+    }
+}
+
+function displayStagingData() {
+    document.getElementById('loading').style.display = 'none';
+    if (!stagingData) {
+        showError('No staging data available');
+        return;
+    }
+    // Display summary statistics
+    const summary = stagingData.summary || {};
+    document.getElementById('total-artists').textContent = summary.total_artists || 0;
+    document.getElementById('new-artists').textContent = summary.new_artists || 0;
+    document.getElementById('total-artworks').textContent = stagingData.metadata?.total_artworks || 0;
+    document.getElementById('new-artworks').textContent = summary.total_new_artworks || 0;
+    document.getElementById('summary-container').style.display = 'block';
+    displayArtistList();
+}
+
+function displayArtistList() {
+    const artistList = document.getElementById('artist-list');
+    artistList.innerHTML = '';
+    if (!stagingData.artists || stagingData.artists.length === 0) {
+        artistList.innerHTML = '<p class="loading">No artists found in staging data</p>';
+        artistList.style.display = 'block';
+        return;
+    }
+    stagingData.artists.forEach((artist, idx) => {
+        const artistForm = createArtistForm(artist, idx);
+        artistList.appendChild(artistForm);
+    });
+    artistList.style.display = 'block';
+}
+
+function renderKeywordCheckboxes(keywords, allKeywords, prefix, checkedSet) {
+    let html = '<div class="checkbox-group" style="display: flex; flex-direction: column; gap: 2px;">';
+    allKeywords.forEach((kw, i) => {
+        const checked = checkedSet.has(kw) ? 'checked' : '';
+        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" value="${kw}" ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
+function createArtistForm(artist, idx) {
+    const form = document.createElement('form');
+    form.className = 'artist-item';
+    form.dataset.artistSlug = artist.slug;
+
+    let html = `<div class="artist-header">
+        <div class="artist-name">
+            <input type="text" name="name" value="${artist.name || ''}" style="font-size:1.1em; font-weight:bold; width:70%;">
+        </div>
+        <div class="artist-status">
+            <span class="status-badge ${artist.is_existing ? 'status-existing' : 'status-new'}">
+                ${artist.is_existing ? 'To Update (ID: ' + (artist.existing_id || '') + ')' : 'New!'}
+            </span>
+        </div>
+    </div>`;
+
+    let artistKeywords = [];
+    if (artist.RelatedKeywordStrings) {
+        try { artistKeywords = JSON.parse(artist.RelatedKeywordStrings); } catch (e) { artistKeywords = []; }
+    } else if (artist.keywords) {
+        artistKeywords = artist.keywords;
+    }
+    let allKeywords = new Set(artistKeywords);
+    (artist.artworks || []).forEach(aw => {
+        let awKeywords = [];
+        if (aw.RelatedKeywordStrings) {
+            try { awKeywords = JSON.parse(aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
+        } else if (aw.keywords) {
+            awKeywords = aw.keywords;
+        }
+        awKeywords.forEach(k => allKeywords.add(k));
+    });
+    allKeywords = Array.from(allKeywords);
+    function renderDescriptions(descObj, prefix) {
+        if (!descObj || typeof descObj !== 'object') return '';
+        let html = '';
+        for (const [key, value] of Object.entries(descObj)) {
+            if (typeof value === 'object' && value !== null) {
+                html += `<div style='margin-left:1em;'><b>${key}:</b><br>${renderDescriptions(value, `${prefix}[${key}]`)}</div>`;
+            } else {
+                html += `<label>${key}:<br><textarea name="${prefix}[${key}]" style="width:48%; min-width:180px; max-width:48%;" rows="2">${value || ''}</textarea></label><br>`;
             }
         }
+        return html;
+    }
+    html += `<div class="artist-details">
+        <div class="detail-section">
+            <h4>Artist Info</h4>
+            <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
+            <label>Skip this artist: <input type="checkbox" name="skip_artist"></label><br>
+            <label>Keywords:<br>
+                ${renderKeywordCheckboxes(artistKeywords, allKeywords, `artist_${idx}`, new Set(artistKeywords))}
+                <div style="margin-top:4px;"><input type="text" name="add_artist_keyword" placeholder="Add keyword" style="width:40%"> <button type="button" onclick="addArtistKeyword(this.form, ${idx})">Add</button></div>
+            </label><br>
+            <div><b>Descriptions:</b><br>${renderDescriptions(artist.descriptions || {}, 'artist_descriptions')}</div>
+        </div>
+        <div class="detail-section">
+            <h4>Database Info</h4>
+            <div id="dbinfo_${idx}">
+                ${artist.is_existing ?
+                    `<div>ID: <input type=\"text\" name=\"existing_id\" value=\"${artist.existing_id || ''}\" style=\"width:70%\"></div>` :
+                    `<div>Will be created as new artist<br>
+                        <label>Or assign to existing artist ID: <input type=\"text\" name=\"assign_existing_id\" placeholder=\"Paste existing artist ID\"></label>
+                    </div>`
+                }
+            </div>
+        </div>
+    </div>`;
 
-        // Close modal with close button
-        document.querySelector('.close').onclick = closeModal;
-    </script>
+    html += `<div class="detail-section" style="margin-top:15px;">
+        <h4>Artworks (${artist.artworks?.length || 0})</h4>
+        <div id="artworks_${idx}">
+    `;
+    (artist.artworks || []).forEach((aw, awidx) => {
+        const status = aw.is_existing ? 'To Update (ID: ' + (aw.existing_id || '') + ')' : 'New!';
+        const statusClass = aw.is_existing ? 'update-icon' : 'new-icon';
+        const imageUrl = aw.image_urls?.medium || aw.image_urls?.large || aw.image_urls?.small || '';
+        const imagePreview = imageUrl ? `<img src="${imageUrl}" alt="${aw.title}" style="width:140px;height:140px;object-fit:cover;border-radius:4px;margin-left:8px;vertical-align:middle;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNmOGY5ZmEiLz48L3N2Zz4='">` : '';
+        let awKeywords = [];
+        if (aw.RelatedKeywordStrings) {
+            try { awKeywords = JSON.parse(aw.RelatedKeywordStrings); } catch (e) { awKeywords = []; }
+        } else if (aw.keywords) {
+            awKeywords = aw.keywords;
+        }
+        let allArtworkKeywords = new Set([...awKeywords, ...allKeywords]);
+        allArtworkKeywords = Array.from(allArtworkKeywords);
+        let artworkDescriptionsHtml = '';
+        if (aw.descriptions && typeof aw.descriptions === 'object') {
+            artworkDescriptionsHtml = `<div><b>Descriptions:</b><br>${renderDescriptions(aw.descriptions, `artwork_${awidx}_descriptions`)}</div>`;
+        }
+        html += `<div class="artwork-card" style="margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="${statusClass}">${status}</span>
+                <span style="font-size:0.9em;color:#888;">image_id: ${aw.image_id || ''}</span>
+                ${imagePreview}
+            </div>
+            <label>Title: <input type="text" name="artwork_title_${awidx}" value="${aw.title || ''}" style="width:60%"></label><br>
+            <label>Year: <input type="text" name="artwork_year_${awidx}" value="${aw.year || ''}" style="width:30%"></label><br>
+            <label>Image URL: <input type="text" name="artwork_image_${awidx}" value="${imageUrl}" style="width:60%"></label><br>
+            <label>Remove: <input type="checkbox" name="remove_artwork_${awidx}"></label><br>
+            <label>Keywords:<br>
+                ${renderKeywordCheckboxes(awKeywords, allArtworkKeywords, `artwork_${idx}_${awidx}`, new Set(awKeywords))}
+                <div style="margin-top:4px;"><input type="text" name="add_artwork_keyword_${awidx}" placeholder="Add keyword" style="width:40%"> <button type="button" onclick="addArtworkKeyword(this.form, ${idx}, ${awidx})">Add</button></div>
+            </label><br>
+            ${artworkDescriptionsHtml}
+        </div>`;
+    });
+    html += `</div>
+        <button type="button" class="btn btn-primary" onclick="addArtworkRow(${idx})">Add Artwork</button>
+    </div>`;
+
+    html += `<div class="actions" style="margin-top:10px;">
+        <button type="button" class="btn btn-success" onclick="submitArtistForm(event, ${idx})"><i class="fas fa-check"></i> Approve</button>
+        <button type="button" class="btn btn-danger" onclick="rejectArtistFromForm(event, '${artist.slug}', ${idx})"><i class="fas fa-times"></i> Reject</button>
+    </div>`;
+
+    form.innerHTML = html;
+    form.addEventListener('change', function(e) {
+        if (e.target.name === 'assign_existing_id') {
+            const val = e.target.value.trim();
+            const dbinfoDiv = document.getElementById(`dbinfo_${idx}`);
+            if (val) {
+                dbinfoDiv.innerHTML = `<div>ID: <input type=\"text\" name=\"existing_id\" value=\"${val}\" style=\"width:70%\"></div>`;
+            } else {
+                dbinfoDiv.innerHTML = `<div>Will be created as new artist<br><label>Or assign to existing artist ID: <input type=\"text\" name=\"assign_existing_id\" placeholder=\"Paste existing artist ID\"></label></div>`;
+            }
+        }
+    });
+    return form;
+}
+
+function addArtworkRow(artistIdx) {
+    const artworksDiv = document.getElementById(`artworks_${artistIdx}`);
+    const awidx = artworksDiv.querySelectorAll('.artwork-card').length;
+    const artist = stagingData.artists[artistIdx];
+    let allKeywords = new Set(artist.keywords || []);
+    (artist.artworks || []).forEach(aw => (aw.keywords || []).forEach(k => allKeywords.add(k)));
+    allKeywords = Array.from(allKeywords);
+    const html = `<div class=\"artwork-card\" style=\"margin-bottom:10px;\">
+        <label>Title: <input type=\"text\" name=\"artwork_title_${awidx}\" value=\"\" style=\"width:60%\"></label><br>
+        <label>Year: <input type=\"text\" name=\"artwork_year_${awidx}\" value=\"\" style=\"width:30%\"></label><br>
+        <label>Image URL: <input type=\"text\" name=\"artwork_image_${awidx}\" value=\"\" style=\"width:60%\"></label><br>
+        <label>Remove: <input type=\"checkbox\" name=\"remove_artwork_${awidx}\"></label><br>
+        <label>Keywords:<br>
+            ${renderKeywordCheckboxes([], allKeywords, `artwork_${artistIdx}_${awidx}`, new Set())}
+            <div style=\"margin-top:4px;\"><input type=\"text\" name=\"add_artwork_keyword_${awidx}\" placeholder=\"Add keyword\" style=\"width:40%\"> <button type=\"button\" onclick=\"addArtworkKeyword(this.form, ${artistIdx}, ${awidx})\">Add</button></div>
+        </label>
+    </div>`;
+    artworksDiv.insertAdjacentHTML('beforeend', html);
+}
+
+window.addArtistKeyword = function(form, artistIdx) {
+    const input = form.querySelector('input[name="add_artist_keyword"]');
+    if (!input || !input.value.trim()) return;
+    const kw = input.value.trim();
+    const group = input.parentElement.parentElement.querySelector('.checkbox-group');
+    if (group && !Array.from(group.querySelectorAll('input[type=checkbox]')).some(cb => cb.value === kw)) {
+        const i = group.querySelectorAll('input[type=checkbox]').length;
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '6px';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = `artist_kw_${i}`;
+        checkbox.value = kw;
+        checkbox.checked = true;
+        const label = document.createElement('label');
+        label.textContent = kw;
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        group.insertBefore(div, input.parentElement);
+    }
+    input.value = '';
+}
+
+window.addArtworkKeyword = function(form, artistIdx, awidx) {
+    const input = form.querySelector(`input[name="add_artwork_keyword_${awidx}"]`);
+    if (!input || !input.value.trim()) return;
+    const kw = input.value.trim();
+    const group = input.parentElement.parentElement.querySelector('.checkbox-group');
+    if (group && !Array.from(group.querySelectorAll('input[type=checkbox]')).some(cb => cb.value === kw)) {
+        const i = group.querySelectorAll('input[type=checkbox]').length;
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '6px';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = `artwork_${awidx}_kw_${i}`;
+        checkbox.value = kw;
+        checkbox.checked = true;
+        const label = document.createElement('label');
+        label.textContent = kw;
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        group.insertBefore(div, input.parentElement);
+    }
+    input.value = '';
+}
+
+async function submitArtistForm(event, artistIdx) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const formData = new FormData(form);
+    const artist = stagingData.artists[artistIdx];
+    const updatedArtist = {
+        ...artist,
+        name: formData.get('name'),
+        slug: formData.get('slug'),
+        skip: formData.get('skip_artist') === 'on',
+        keywords: [],
+        is_existing: artist.is_existing,
+        existing_id: artist.existing_id,
+        artworks: []
+    };
+    if (formData.get('assign_existing_id')) {
+        updatedArtist.is_existing = true;
+        updatedArtist.existing_id = formData.get('assign_existing_id');
+    }
+    for (let [k, v] of formData.entries()) {
+        if (k.startsWith('artist_kw_')) {
+            updatedArtist.keywords.push(v);
+        }
+    }
+    function setNested(obj, path, value) {
+        const parts = path.replace(/^\w+_descriptions/, '').replace(/\]\[/g, '.').replace(/\[|\]/g, '').split('.').filter(Boolean);
+        let cur = obj;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (!cur[parts[i]]) cur[parts[i]] = {};
+            cur = cur[parts[i]];
+        }
+        cur[parts[parts.length - 1]] = value;
+    }
+    updatedArtist.descriptions = {};
+    for (let [k, v] of formData.entries()) {
+        if (k.startsWith('artist_descriptions')) {
+            setNested(updatedArtist.descriptions, k, v);
+        }
+    }
+    let awidx = 0;
+    while (formData.has(`artwork_title_${awidx}`)) {
+        if (!formData.get(`remove_artwork_${awidx}`)) {
+            const aw = {
+                ...((artist.artworks && artist.artworks[awidx]) || {}),
+                title: formData.get(`artwork_title_${awidx}`),
+                year: formData.get(`artwork_year_${awidx}`),
+                image_urls: { medium: formData.get(`artwork_image_${awidx}`) },
+                keywords: [],
+                descriptions: {}
+            };
+            for (let [k, v] of formData.entries()) {
+                if (k.startsWith(`artwork_${awidx}_kw_`)) {
+                    aw.keywords.push(v);
+                }
+            }
+            for (let [k, v] of formData.entries()) {
+                if (k.startsWith(`artwork_${awidx}_descriptions`)) {
+                    setNested(aw.descriptions, k.replace(`artwork_${awidx}_`, ''), v);
+                }
+            }
+            updatedArtist.artworks.push(aw);
+        }
+        awidx++;
+    }
+    if (updatedArtist.skip) {
+        form.remove();
+        return;
+    }
+    try {
+        const response = await fetch('/staging_review/approve_artist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ artist: updatedArtist })
+        });
+        const result = await response.json();
+        if (result.success) {
+            form.remove();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to approve artist: ' + error.message);
+    }
+}
+
+async function rejectArtistFromForm(event, artistSlug, artistIdx) {
+    event.preventDefault();
+    if (!confirm('Are you sure you want to reject all changes for this artist?')) return;
+    const form = event.target.closest('form');
+    try {
+        const response = await fetch('/staging_review/reject_artist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ artist_slug: artistSlug })
+        });
+        const result = await response.json();
+        if (result.success) {
+            form.remove();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to reject artist: ' + error.message);
+    }
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+}
+</script>
+    };
+};
+</script>
 </body>
 </html>
