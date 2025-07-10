@@ -697,30 +697,8 @@ def get_final_sql_commands():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@staging_review_bp.route('/approve_final_sql', methods=['POST'])
-def approve_final_sql():
-    """Approve and execute the SQL commands from the latest final_sql_ready file, with password check."""
-    data = request.get_json()
-    password = data.get('password')
-    sql_commands = data.get('sql_commands')
-    # Set your password here (or use env/config)
-    ADMIN_PASSWORD = os.environ.get('FINAL_SQL_ADMIN_PASSWORD', 'letmein')
-    if password != ADMIN_PASSWORD:
-        return jsonify({'success': False, 'error': 'Incorrect password'})
-    # Connect to the DB
-    db_path = os.path.abspath(os.path.join(STAGING_DIR, '..', 'knowledgebase.db'))
-    try:
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        for cmd in sql_commands:
-            cur.execute(cmd['sql'].split('--')[0], cmd['values'])
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'All SQL commands executed successfully.'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
 
-# --- NEW ROUTES FOR INDIVIDUAL ARTIST PROCESSING ---
+# --- INDIVIDUAL ARTIST PROCESSING ---
 
 @staging_review_bp.route('/generate_final_sql_json', methods=['POST'])
 def generate_final_sql_json():
@@ -817,14 +795,6 @@ def download_final_json(filename):
 def process_individual_artist(filename):
     """Process a single artist file and generate SQL commands for immediate execution"""
     try:
-        data = request.get_json()
-        password = data.get('password')
-        
-        # Verify password
-        ADMIN_PASSWORD = os.environ.get('FINAL_SQL_ADMIN_PASSWORD', 'letmein')
-        if password != ADMIN_PASSWORD:
-            return jsonify({'success': False, 'error': 'Incorrect password'})
-        
         # Load the artist file
         safe_filename = os.path.basename(filename)
         file_path = os.path.join(STAGING_DIR, safe_filename)

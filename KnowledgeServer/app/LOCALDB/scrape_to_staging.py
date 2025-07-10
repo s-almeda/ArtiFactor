@@ -343,7 +343,7 @@ class WikiArtScraper:
             distance = result.get('distance')
             #print(f"[DEBUG] Considering keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.85:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 0.8:
                 final_keyword_ids.append(keyword_id)
                 final_keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -383,7 +383,7 @@ class WikiArtScraper:
             distance = result.get('distance')
             #print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.95:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 0.8:
                 keyword_ids.append(keyword_id)
                 keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
