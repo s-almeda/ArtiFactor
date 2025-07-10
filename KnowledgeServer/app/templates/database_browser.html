@@ -15,6 +15,7 @@
                     <button class="page-btn" id="prev-btn-top" onclick="changePage(-1)">← Previous</button>
                     <span class="page-info" id="page-info-top">Page 1</span>
                     <button class="page-btn" id="next-btn-top" onclick="changePage(1)">Next →</button>
+                    <button class="page-btn" id="last-btn-top" onclick="goToLastPage()">Last &raquo;</button>
                 </div>
             </div>
             <div class="controls">
@@ -23,6 +24,15 @@
                     <button class="table-btn active" onclick="switchTable('image_entries')">Image Entries</button>
                 </div>
                 <div class="stats" id="stats">Loading...</div>
+                <input id="search-bar" type="text" placeholder="Search..." style="margin-left:16px;padding:4px 10px;border-radius:4px;border:1px solid #ccc;width:200px;" oninput="onSearchInput()">
+                <label for="page-size" style="font-size:14px;margin-left:10px;">Show per page:</label>
+                <select id="page-size" style="margin-left:4px;padding:4px 8px;border-radius:4px;" onchange="onPageSizeChange()">
+                    <option value="25">25</option>
+                    <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="all">All</option>
+                </select>
                 <label for="download-size" style="font-size:14px;margin-left:10px;">Download:</label>
                 <select id="download-size" style="margin-left:4px;padding:4px 8px;border-radius:4px;">
                     <option value="100">100</option>
@@ -58,11 +68,13 @@
         let currentTable = 'image_entries';
         let currentPage = 1;
         let totalPages = 1;
-        const pageSize = 25;
+        let pageSize = 25;
         let totalRows = 0;
         let currentData = null;
         let sortColumn = null;
         let sortDirection = 'asc';
+        let searchQuery = '';
+        let filteredRows = null;
 
         // Load data on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -92,15 +104,23 @@
             }
         }
 
+        function goToLastPage() {
+            currentPage = totalPages;
+            loadData();
+        }
+
         function loadData() {
             const tableContent = document.getElementById('table-content');
             tableContent.innerHTML = '<div class="loading">Loading data...</div>';
-            
-            let url = `/api/browse_database?table=${currentTable}&page=${currentPage}&page_size=${pageSize}`;
+            let url = `/api/browse_database?table=${currentTable}&page=${currentPage}`;
+            let ps = pageSize;
+            if (typeof ps === 'string' && ps === 'all') {
+                ps = 1000000;
+            }
+            url += `&page_size=${ps}`;
             if (sortColumn) {
                 url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
             }
-            
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -118,6 +138,19 @@
                 });
         }
 
+        function onPageSizeChange() {
+            const select = document.getElementById('page-size');
+            pageSize = select.value;
+            currentPage = 1;
+            loadData();
+        }
+
+        function onSearchInput() {
+            const input = document.getElementById('search-bar');
+            searchQuery = input.value.trim().toLowerCase();
+            displayData(currentData);
+        }
+
         function sortBy(column) {
             if (sortColumn === column) {
                 sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -130,15 +163,34 @@
 
         function displayData(data) {
             const tableContent = document.getElementById('table-content');
-            
-            if (!data.rows || data.rows.length === 0) {
+            if (!data || !data.rows || data.rows.length === 0) {
+                tableContent.innerHTML = '<div class="empty">No data found</div>';
+                filteredRows = [];
+                return;
+            }
+            // Filter rows if search is active
+            filteredRows = data.rows;
+            if (searchQuery) {
+                filteredRows = data.rows.filter(row => {
+                    return Object.values(row).some(val => {
+                        if (val == null) return false;
+                        let str = '';
+                        if (typeof val === 'string') {
+                            str = val;
+                        } else if (typeof val === 'object') {
+                            str = JSON.stringify(val);
+                        } else {
+                            str = String(val);
+                        }
+                        return str.toLowerCase().includes(searchQuery);
+                    });
+                });
+            }
+            if (filteredRows.length === 0) {
                 tableContent.innerHTML = '<div class="empty">No data found</div>';
                 return;
             }
-            
             let html = '<table><thead><tr>';
-            
-            // Build table headers based on table type
             if (currentTable === 'text_entries') {
                 html += `
                     <th onclick="sortBy('entry_id')" class="${sortColumn === 'entry_id' ? 'sorted-' + sortDirection : ''}">ID</th>
@@ -156,30 +208,24 @@
                     <th>Related Keywords</th>
                 `;
             }
-            
             html += '</tr></thead><tbody>';
-            
-            // Build table rows
-            data.rows.forEach((row, index) => {
-                html += `<tr onclick="showDetails(${index})">`;
-                
+            filteredRows.forEach((row, index) => {
+                html += `<tr onclick="showDetailsByRow(${index})">`;
                 if (currentTable === 'text_entries') {
                     html += `
                         <td><code>${row.entry_id}</code></td>
                         <td class="truncate">
                             ${row.value}
-                            <!-- //$//{row.isArtist ? '<span class="artist-badge">Artist</span>' : ''} -->
                         </td>
                         <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
                         <td>${formatJsonField(row.images, 'array', true)}</td>
                         <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
                     `;
                 } else {
-                    // For image_entries
                     const imageUrl = getImageUrl(row.image_urls);
                     html += `
                         <td onclick="event.stopPropagation()">
-                            ${imageUrl ? `<img src="${imageUrl}" class="image-thumbnail" alt="${row.value}" onclick="showDetails(${index})">` : '-'}
+                            ${imageUrl ? `<img src="${imageUrl}" class="image-thumbnail" alt="${row.value}" onclick="showDetailsByRow(${index})">` : '-'}
                         </td>
                         <td><code>${row.image_id}</code></td>
                         <td class="truncate">${row.value}</td>
@@ -187,10 +233,8 @@
                         <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
                     `;
                 }
-                
                 html += '</tr>';
             });
-            
             html += '</tbody></table>';
             tableContent.innerHTML = html;
         }
@@ -241,18 +285,20 @@
 
         function updatePagination(data) {
             totalRows = data.total_rows;
-            totalPages = Math.ceil(totalRows / pageSize);
-            
+            let ps = pageSize;
+            if (typeof ps === 'string' && ps === 'all') {
+                ps = totalRows;
+            } else {
+                ps = parseInt(ps, 10) || 25;
+            }
+            totalPages = Math.ceil(totalRows / ps);
             const prevBtnTop = document.getElementById('prev-btn-top');
             const nextBtnTop = document.getElementById('next-btn-top');
             const pageInfoTop = document.getElementById('page-info-top');
-            
             prevBtnTop.disabled = currentPage === 1;
             nextBtnTop.disabled = currentPage === totalPages;
-            
-            const startRow = (currentPage - 1) * pageSize + 1;
-            const endRow = Math.min(currentPage * pageSize, totalRows);
-            
+            const startRow = (currentPage - 1) * ps + 1;
+            const endRow = Math.min(currentPage * ps, totalRows);
             pageInfoTop.textContent = `Page ${currentPage} of ${totalPages} (${startRow}-${endRow} of ${totalRows})`;
         }
 
@@ -263,24 +309,21 @@
         }
 
         // Modal functions
-        function showDetails(index) {
-            const row = currentData.rows[index];
+        function showDetailsByRow(filteredIndex) {
+            if (!filteredRows || filteredIndex < 0 || filteredIndex >= filteredRows.length) return;
+            const row = filteredRows[filteredIndex];
             const modal = document.getElementById('detailModal');
             const modalTitle = document.getElementById('modal-title');
             const modalBody = document.getElementById('modal-body');
-            
             // Set title
             modalTitle.textContent = row.value || 'Details';
-            
             // Build details HTML
             let detailsHtml = '';
-            
             if (currentTable === 'text_entries') {
                 detailsHtml = buildTextEntryDetails(row);
             } else {
                 detailsHtml = buildImageEntryDetails(row);
             }
-            
             modalBody.innerHTML = detailsHtml;
             modal.style.display = 'block';
         }

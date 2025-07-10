@@ -247,7 +247,10 @@ function displayArtistList() {
 }
 
 function renderKeywordCheckboxes(keywords, keywordIds, allKeywords, prefix, checkedSet) {
-    let html = '<div class="checkbox-group" style="display: flex; flex-direction: column; gap: 2px;">';
+    // Wider and more spacious for artist keywords
+    const isArtist = prefix === 'artist';
+    let html = `<div class="checkbox-group" style="display: flex; flex-direction: column; gap: ${isArtist ? '8px' : '2px'};${isArtist ? 'max-width: 520px; min-width: 340px; width: 100%;' : ''}">`;
+    // Each row: more space for artist
     allKeywords.forEach((kw, i) => {
         const checked = checkedSet.has(kw) ? 'checked' : '';
         // Find the corresponding keyword ID
@@ -255,11 +258,125 @@ function renderKeywordCheckboxes(keywords, keywordIds, allKeywords, prefix, chec
         const kwId = kwIndex >= 0 && keywordIds.length > kwIndex ? keywordIds[kwIndex] : '';
         const dataEntryId = kwId ? `data-entry-id="${kwId}"` : '';
         
-        // Add "copy to all" button for all keyword lists
+        // Add "copy to all" and "assign" buttons for all keyword lists
         const copyButton = `<button type="button" onclick="window.copyKeywordToAllArtworks('${kw}', '${kwId}', this)" style="font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Copy to All</button>`;
-        
+        const assignButton = `<button type="button" onclick="window.openAssignKeywordModal('${kw}', '${kwId}', this)" style="font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">Assign</button>`;
         // Use the keyword value as the checkbox name for backend processing
-        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${dataEntryId} ${checked}><label for="${prefix}_kw_${i}">${kw}</label>${copyButton}</div>`;
+        html += `<div style='display:flex;align-items:center;gap:${isArtist ? '12px' : '6px'};padding:${isArtist ? '6px 0' : '0'};${isArtist ? 'min-width:320px;' : ''}'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${dataEntryId} ${checked}><label for="${prefix}_kw_${i}" style="flex:1 1 auto;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kw}</label>${copyButton}${assignButton}</div>`;
+// Modal logic for assigning a keyword to selected artworks
+window.openAssignKeywordModal = function(keyword, keywordId, buttonElement) {
+    // Find the form and artist data
+    const form = buttonElement.closest('form');
+    if (!form) return;
+    // Find the artist data from the global artistData
+    const artist = artistData && artistData.artist ? artistData.artist : null;
+    if (!artist || !Array.isArray(artist.artworks)) return;
+    // Modal elements
+    const modal = document.getElementById('artistModal');
+    const modalContent = document.getElementById('modal-content');
+    // Build modal HTML
+    let html = `<div style="font-size:1.2em;font-weight:bold;margin-bottom:10px;">Assign keyword: <span style='color:#007bff;'>${keyword}</span></div>`;
+    html += `<div style='display:flex;justify-content:flex-end;gap:10px;margin-bottom:6px;'>`;
+    html += `<button type='button' id='assignModalSelectAllBtn' style='font-size:0.95em;padding:4px 14px;border-radius:5px;background:#e0e0e0;color:#333;border:none;cursor:pointer;'>Select All</button>`;
+    html += `<button type='button' id='assignModalDeselectAllBtn' style='font-size:0.95em;padding:4px 14px;border-radius:5px;background:#e0e0e0;color:#333;border:none;cursor:pointer;'>Deselect All</button>`;
+    html += `</div>`;
+    html += `<div id='assignModalGrid' style="max-height:340px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:16px;">`;
+    // For each artwork, show image and selection state
+    artist.artworks.forEach((aw, idx) => {
+        const awKeywords = [];
+        try {
+            if (aw.relatedKeywordStrings) awKeywords.push(...(Array.isArray(aw.relatedKeywordStrings) ? aw.relatedKeywordStrings : JSON.parse(aw.relatedKeywordStrings)));
+        } catch(e) {}
+        const isSelected = awKeywords.includes(keyword);
+        const imageUrl = aw.image_urls && (aw.image_urls.medium || aw.image_urls.large || aw.image_urls.small) ? (aw.image_urls.medium || aw.image_urls.large || aw.image_urls.small) : '';
+        html += `<div class='assign-artwork-thumb' data-awidx='${idx}' data-selected='${isSelected ? '1' : '0'}' style='border:2px solid ${isSelected ? '#007bff' : '#ccc'};border-radius:6px;padding:6px;text-align:center;cursor:pointer;transition:border 0.2s;background:#fafbfc;'>`;
+        html += imageUrl ? `<img src='${imageUrl}' style='width:80px;height:80px;object-fit:cover;border-radius:4px;display:block;margin:0 auto 6px auto;'>` : `<div style='width:80px;height:80px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#aaa;'>No Image</div>`;
+        html += `<div style='font-size:0.82em;line-height:1.2;max-width:100%;word-break:break-word;white-space:normal;margin:0 auto 2px auto;'>${aw.value || aw.title || 'Untitled'}</div>`;
+        html += `<div style='margin-top:4px;'><i class=\"fas fa-check-circle\" style=\"color:${isSelected ? '#007bff' : '#ccc'};font-size:1.2em;\"></i></div>`;
+        html += `</div>`;
+    });
+    html += `</div>`;
+    html += `<div style='display:flex;justify-content:space-between;align-items:center;'>`;
+    html += `<button id='assignModalDoneBtn' class='btn btn-primary' style='font-size:1.1em;padding:8px 24px;border-radius:6px;background:#007bff;color:#fff;'>Done</button>`;
+    html += `<button id='assignModalCancelBtn' class='btn btn-secondary' style='font-size:1.1em;padding:8px 24px;border-radius:6px;background:#aaa;color:#fff;'>Cancel</button>`;
+    html += `</div>`;
+    modalContent.innerHTML = html;
+    modal.style.display = 'block';
+    // Selection logic
+    Array.from(modalContent.querySelectorAll('.assign-artwork-thumb')).forEach(div => {
+        div.onclick = function() {
+            const selected = div.getAttribute('data-selected') === '1';
+            div.setAttribute('data-selected', selected ? '0' : '1');
+            div.style.border = selected ? '2px solid #ccc' : '2px solid #007bff';
+            div.querySelector('i').style.color = selected ? '#ccc' : '#007bff';
+        };
+    });
+    // Select All / Deselect All logic
+    const selectAllBtn = document.getElementById('assignModalSelectAllBtn');
+    const deselectAllBtn = document.getElementById('assignModalDeselectAllBtn');
+    selectAllBtn.onclick = function() {
+        Array.from(modalContent.querySelectorAll('.assign-artwork-thumb')).forEach(div => {
+            div.setAttribute('data-selected', '1');
+            div.style.border = '2px solid #007bff';
+            div.querySelector('i').style.color = '#007bff';
+        });
+    };
+    deselectAllBtn.onclick = function() {
+        Array.from(modalContent.querySelectorAll('.assign-artwork-thumb')).forEach(div => {
+            div.setAttribute('data-selected', '0');
+            div.style.border = '2px solid #ccc';
+            div.querySelector('i').style.color = '#ccc';
+        });
+    };
+    // Cancel button
+    document.getElementById('assignModalCancelBtn').onclick = function() {
+        modal.style.display = 'none';
+    };
+    // Done button
+    document.getElementById('assignModalDoneBtn').onclick = function() {
+        // For each artwork, update the corresponding checkbox in the form
+        Array.from(modalContent.querySelectorAll('.assign-artwork-thumb')).forEach(div => {
+            const awidx = parseInt(div.getAttribute('data-awidx'));
+            const shouldHave = div.getAttribute('data-selected') === '1';
+            // Find the artwork's keyword checkbox group in the form
+            const group = form.querySelector(`.artwork-card:nth-of-type(${awidx+1}) .checkbox-group`);
+            if (group) {
+                let checkbox = Array.from(group.querySelectorAll('input[type=checkbox]')).find(cb => cb.value === keyword);
+                if (shouldHave && !checkbox) {
+                    // Add the keyword checkbox if not present
+                    const i = group.querySelectorAll('input[type=checkbox]').length;
+                    const divEl = document.createElement('div');
+                    divEl.style.display = 'flex';
+                    divEl.style.alignItems = 'center';
+                    divEl.style.gap = '6px';
+                    const newCheckbox = document.createElement('input');
+                    newCheckbox.type = 'checkbox';
+                    newCheckbox.id = `artwork_${awidx}_kw_${i}`;
+                    newCheckbox.name = `artwork_${awidx}_kw_${i}`;
+                    newCheckbox.value = keyword;
+                    newCheckbox.setAttribute('data-entry-id', keywordId);
+                    newCheckbox.checked = true;
+                    const label = document.createElement('label');
+                    label.setAttribute('for', newCheckbox.id);
+                    label.textContent = keyword;
+                    label.style.fontSize = '0.9em';
+                    label.style.color = '#666';
+                    divEl.appendChild(newCheckbox);
+                    divEl.appendChild(label);
+                    group.appendChild(divEl);
+                } else if (shouldHave && checkbox) {
+                    checkbox.checked = true;
+                } else if (!shouldHave && checkbox) {
+                    checkbox.checked = false;
+                }
+            }
+        });
+        modal.style.display = 'none';
+    };
+    // X close (top right)
+    const closeBtn = modal.querySelector('.close');
+    if (closeBtn) closeBtn.onclick = function() { modal.style.display = 'none'; };
+};
     });
     html += '</div>';
     return html;
@@ -532,7 +649,8 @@ window.addArtistKeyword = async function(form, artistIdx) {
             },
             body: JSON.stringify({
                 query: query,
-                top_k: 10
+                top_k: 10,
+                search_in: 'both'
             })
         });
         
@@ -641,7 +759,8 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
             },
             body: JSON.stringify({
                 query: query,
-                top_k: 10
+                top_k: 10,
+                search_in: 'both'
             })
         });
         
@@ -672,15 +791,14 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
             const keyword = result.value;
             const keywordId = result.entry_id;
             const distance = result.distance;
-            
             // Only add if not already present and distance indicates relevance
-            if (!existingKeywords.has(keyword) && distance < 1.3) {
+            if (!existingKeywords.has(keyword) && distance < 1.35) {
                 const i = group.querySelectorAll('input[type=checkbox]').length;
                 const div = document.createElement('div');
                 div.style.display = 'flex';
                 div.style.alignItems = 'center';
                 div.style.gap = '6px';
-                
+                // Checkbox
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.id = `artwork_${awidx}_kw_${i}`;
@@ -688,17 +806,31 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
                 checkbox.value = keyword;
                 checkbox.setAttribute('data-entry-id', keywordId); // Store the entry_id
                 checkbox.checked = false; // Don't auto-check search results
-                
+                // Label
                 const label = document.createElement('label');
                 label.setAttribute('for', checkbox.id);
                 label.textContent = `${keyword} (${distance.toFixed(3)})`;
                 label.style.fontSize = '0.9em';
                 label.style.color = '#666';
-                
+                // Copy to All button
+                const copyBtn = document.createElement('button');
+                copyBtn.type = 'button';
+                copyBtn.textContent = 'Copy to All';
+                copyBtn.style.fontSize = '0.8em';
+                copyBtn.style.padding = '2px 6px';
+                copyBtn.style.marginLeft = '4px';
+                copyBtn.style.background = '#007bff';
+                copyBtn.style.color = 'white';
+                copyBtn.style.border = 'none';
+                copyBtn.style.borderRadius = '3px';
+                copyBtn.style.cursor = 'pointer';
+                copyBtn.onclick = function() {
+                    window.copyKeywordToAllArtworks(keyword, keywordId, copyBtn);
+                };
                 div.appendChild(checkbox);
                 div.appendChild(label);
+                div.appendChild(copyBtn);
                 group.appendChild(div);
-                
                 existingKeywords.add(keyword);
                 addedCount++;
             }
