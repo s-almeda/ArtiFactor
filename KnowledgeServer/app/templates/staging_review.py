@@ -1,15 +1,56 @@
-# staging_review.py
-
-from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 import json
 import os
 import glob
+import sqlite3
+import time
+import string
+import random
+
+from flask import Blueprint, render_template, request, jsonify, current_app, send_file
 from datetime import datetime
 from index import get_db
 from typing import Dict, List, Optional, Any
 
 # Path to the staging directory (relative to app root)
 STAGING_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'LOCALDB', 'staging'))
+
+staging_review_bp = Blueprint('staging_review', __name__, url_prefix='/staging_review')
+
+@staging_review_bp.route('/check_changed_rows', methods=['POST'])
+def check_changed_rows():
+    """Query and return the rows for the provided entry_ids and image_ids."""
+    try:
+        data = request.get_json()
+        entry_ids = data.get('entry_ids', [])
+        image_ids = data.get('image_ids', [])
+        if not entry_ids and not image_ids:
+            return jsonify({'success': False, 'error': 'No entry_ids or image_ids provided'})
+        db_path = os.path.abspath(os.path.join(STAGING_DIR, '..', 'knowledgebase.db'))
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        text_rows, text_fields = [], []
+        image_rows, image_fields = [], []
+        if entry_ids:
+            q = f"SELECT * FROM text_entries WHERE entry_id IN ({','.join(['?']*len(entry_ids))})"
+            cur.execute(q, list(entry_ids))
+            result = cur.fetchall()
+            if result:
+                text_fields = result[0].keys()
+                for row in result:
+                    text_rows.append(dict(row))
+        if image_ids:
+            q = f"SELECT * FROM image_entries WHERE image_id IN ({','.join(['?']*len(image_ids))})"
+            cur.execute(q, list(image_ids))
+            result = cur.fetchall()
+            if result:
+                image_fields = result[0].keys()
+                for row in result:
+                    image_rows.append(dict(row))
+        conn.close()
+        return jsonify({'success': True, 'text_rows': text_rows, 'text_fields': list(text_fields), 'image_rows': image_rows, 'image_fields': list(image_fields)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 def get_latest_staging_file() -> Optional[str]:
     """Return the path to the most recent staging_data_*.json file in the staging dir, or None if not found."""
@@ -18,8 +59,6 @@ def get_latest_staging_file() -> Optional[str]:
         return None
     files.sort(key=os.path.getmtime, reverse=True)
     return files[0]
-
-staging_review_bp = Blueprint('staging_review', __name__, url_prefix='/staging_review')
 
 @staging_review_bp.route('/')
 def staging_review_page():
@@ -422,29 +461,6 @@ def create_clean_artist_json(form_data):
     artist_data = form_data.get('artist', {})
     artworks_data = form_data.get('artworks', [])
     
-    # Check if artist is skipped
-    if artist_data.get('skipped') or form_data.get('skipped'):
-        # Create minimal structure for skipped artist
-        return {
-            'metadata': {
-                'timestamp': form_data.get('timestamp', ''),
-                'artist': artist_data.get('name', ''),
-                'slug': artist_data.get('slug', ''),
-                'artwork_count': 0,
-                'processed': True,
-                'skipped': True
-            },
-            'artist': {
-                'name': artist_data.get('name', ''),
-                'slug': artist_data.get('slug', ''),
-                'skipped': True,
-                'descriptions': {},
-                'RelatedKeywordIds': '[]',
-                'RelatedKeywordStrings': '[]',
-                'artworks': []
-            }
-        }
-    
     # Process artist keywords
     artist_keywords = []
     artist_keyword_ids = []
@@ -589,193 +605,117 @@ def create_clean_artist_json(form_data):
     
     return clean_data
 
-# New: Generate final SQL-ready JSON from all processed artist files
-@staging_review_bp.route('/generate_final_sql_json', methods=['POST'])
-def generate_final_sql_json():
-    """Generate final SQL-ready JSON from all processed artist files"""
+# --- FINAL SQL REVIEW ROUTES ---
+def get_latest_final_sql_file():
+    files = glob.glob(os.path.join(STAGING_DIR, 'final_sql_ready_*.json'))
+    if not files:
+        return None
+    files.sort(key=os.path.getmtime, reverse=True)
+    return files[0]
+
+@staging_review_bp.route('/final_sql_review')
+def final_sql_review():
+    """Render the final SQL review HTML page."""
+    return render_template('staging_review_final.html')
+
+@staging_review_bp.route('/get_final_sql_commands')
+def get_final_sql_commands():
+    """Return the SQL commands (as text) generated from the latest final_sql_ready_*.json file."""
+    final_file = get_latest_final_sql_file()
+    if not final_file or not os.path.exists(final_file):
+        return jsonify({'success': False, 'error': 'No final SQL-ready file found'})
     try:
-        # Get all processed artist files
-        files = glob.glob(os.path.join(STAGING_DIR, 'staging_artist_*.json'))
-        if not files:
-            return jsonify({'success': False, 'error': 'No artist files found'})
-        
-        # Structure for final SQL commands
-        final_data = {
-            'metadata': {
-                'timestamp': datetime.now().isoformat(),
-                'total_files_processed': len(files),
-                'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            },
-            'text_entries': [],  # For INSERT/UPDATE to text_entries (artists)
-            'image_entries': [],  # For INSERT/UPDATE to image_entries (artworks)
-            'stats': {
-                'total_artists': 0,
-                'new_artists': 0,
-                'existing_artists': 0,
-                'total_artworks': 0,
-                'new_artworks': 0,
-                'existing_artworks': 0,
-                'skipped_artists': 0
-            }
-        }
-        
-        # Process each artist file
-        for file_path in files:
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    artist_data = json.load(f)
-                
-                artist_info = artist_data.get('artist', {})
-                
-                # Skip if artist is marked as skipped
-                if artist_info.get('skipped'):
-                    final_data['stats']['skipped_artists'] += 1
-                    continue
-                
-                # Process artist for text_entries
-                artist_entry = create_text_entry_from_artist(artist_info)
-                final_data['text_entries'].append(artist_entry)
-                
-                # Update stats
-                final_data['stats']['total_artists'] += 1
-                if artist_info.get('is_existing'):
-                    final_data['stats']['existing_artists'] += 1
+        with open(final_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        sql_commands = []
+        # TEXT ENTRIES
+        for entry in data.get('text_entries', []):
+            fields = [
+                'entry_id', 'value', 'images', 'isArtist', 'type', 'artist_aliases', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings'
+            ]
+            values = [entry.get(f) for f in fields]
+            # Ensure all JSON fields are dumped as strings
+            for i, f in enumerate(fields):
+                if f in ['images', 'artist_aliases', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']:
+                    values[i] = json.dumps(entry.get(f)) if not isinstance(entry.get(f), str) else entry.get(f)
+            if entry.get('sql_action') == 'INSERT':
+                sql = f"INSERT INTO text_entries ({', '.join(fields)}) VALUES ({', '.join(['?']*len(fields))}); -- {entry['entry_id']}"
+            else:
+                set_clause = ', '.join([f"{f}=?" for f in fields[1:]])
+                sql = f"UPDATE text_entries SET {set_clause} WHERE entry_id=?; -- {entry['entry_id']}"
+                # For UPDATE, order: [value,...,relatedKeywordStrings, entry_id]
+                values = values[1:] + [values[0]]
+            sql_commands.append({'sql': sql, 'values': values, 'table': 'text_entries'})
+        # IMAGE ENTRIES
+        for entry in data.get('image_entries', []):
+            fields = [
+                'image_id', 'value', 'artist_names', 'image_urls', 'filename', 'rights', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings'
+            ]
+            values = [entry.get(f) for f in fields]
+            for i, f in enumerate(fields):
+                if f in ['artist_names', 'image_urls', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']:
+                    values[i] = json.dumps(entry.get(f)) if not isinstance(entry.get(f), str) else entry.get(f)
+            if entry.get('sql_action') == 'INSERT':
+                sql = f"INSERT INTO image_entries ({', '.join(fields)}) VALUES ({', '.join(['?']*len(fields))}); -- {entry['image_id']}"
+            else:
+                set_clause = ', '.join([f"{f}=?" for f in fields[1:]])
+                sql = f"UPDATE image_entries SET {set_clause} WHERE image_id=?; -- {entry['image_id']}"
+                values = values[1:] + [values[0]]
+            sql_commands.append({'sql': sql, 'values': values, 'table': 'image_entries'})
+        # For review, pretty-print JSON fields in the VALUES preview
+        def pretty_value(val):
+            if isinstance(val, str):
+                try:
+                    parsed = json.loads(val)
+                    if isinstance(parsed, (list, dict)):
+                        return json.dumps(parsed, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
+            return val
+
+        # Raw SQL preview (with values interpolated for display only)
+        def sql_with_values(cmd):
+            sql = cmd['sql'].split('--')[0].strip()
+            vals = []
+            for v in cmd['values']:
+                if isinstance(v, str):
+                    vals.append("'" + v.replace("'", "''") + "'")
+                elif v is None:
+                    vals.append('NULL')
                 else:
-                    final_data['stats']['new_artists'] += 1
-                
-                # Process artworks for image_entries
-                artworks = artist_info.get('artworks', [])
-                for artwork in artworks:
-                    artwork_entry = create_image_entry_from_artwork(artwork, artist_info)
-                    final_data['image_entries'].append(artwork_entry)
-                    
-                    # Update stats
-                    final_data['stats']['total_artworks'] += 1
-                    if artwork.get('is_existing'):
-                        final_data['stats']['existing_artworks'] += 1
-                    else:
-                        final_data['stats']['new_artworks'] += 1
-                        
-            except Exception as e:
-                print(f"Error processing file {file_path}: {e}")
-                continue
-        
-        # Save final JSON
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        final_filename = f'final_sql_ready_{timestamp}.json'
-        final_path = os.path.join(STAGING_DIR, final_filename)
-        
-        with open(final_path, 'w', encoding='utf-8') as f:
-            json.dump(final_data, f, indent=2, ensure_ascii=False)
-        
+                    vals.append(str(v))
+            return sql.replace('?', '{}').format(*vals)
+
+        raw_sql = '\n\n'.join([sql_with_values(cmd) for cmd in sql_commands])
+
         return jsonify({
             'success': True,
-            'filename': final_filename,
-            'stats': final_data['stats'],
-            'message': f'Final SQL JSON generated with {final_data["stats"]["total_artists"]} artists and {final_data["stats"]["total_artworks"]} artworks'
+            'sql_commands': sql_commands,
+            'filename': os.path.basename(final_file),
+            'raw_sql': raw_sql
         })
-        
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
+        return jsonify({'success': False, 'error': str(e)})
 
-# New: Download final SQL JSON file
-@staging_review_bp.route('/download_final_json/<filename>')
-def download_final_json(filename):
-    """Download the final SQL-ready JSON file"""
+@staging_review_bp.route('/approve_final_sql', methods=['POST'])
+def approve_final_sql():
+    """Approve and execute the SQL commands from the latest final_sql_ready file, with password check."""
+    data = request.get_json()
+    password = data.get('password')
+    sql_commands = data.get('sql_commands')
+    # Set your password here (or use env/config)
+    ADMIN_PASSWORD = os.environ.get('FINAL_SQL_ADMIN_PASSWORD', 'letmein')
+    if password != ADMIN_PASSWORD:
+        return jsonify({'success': False, 'error': 'Incorrect password'})
+    # Connect to the DB
+    db_path = os.path.abspath(os.path.join(STAGING_DIR, '..', 'knowledgebase.db'))
     try:
-        safe_filename = os.path.basename(filename)
-        file_path = os.path.join(STAGING_DIR, safe_filename)
-        
-        if not os.path.exists(file_path):
-            return jsonify({'success': False, 'error': 'File not found'}), 404
-        
-        return send_file(file_path, as_attachment=True, download_name=safe_filename)
-        
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        for cmd in sql_commands:
+            cur.execute(cmd['sql'].split('--')[0], cmd['values'])
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'All SQL commands executed successfully.'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-def create_text_entry_from_artist(artist_info):
-    """Create a text_entries row structure from artist info"""
-    # Safely parse keyword arrays from JSON strings
-    try:
-        related_keyword_ids = json.loads(artist_info.get('RelatedKeywordIds', '[]'))
-    except (json.JSONDecodeError, TypeError):
-        related_keyword_ids = []
-    
-    try:
-        related_keyword_strings = json.loads(artist_info.get('RelatedKeywordStrings', '[]'))
-    except (json.JSONDecodeError, TypeError):
-        related_keyword_strings = []
-    
-    # Get or generate artist entry_id
-    artist_entry_id = artist_info.get('existing_id')
-    if not artist_entry_id:
-        artist_entry_id = generate_new_id()
-        # Store generated ID back to artist_info for use in artwork processing
-        artist_info['generated_entry_id'] = artist_entry_id
-    
-    return {
-        'entry_id': artist_entry_id,
-        'value': artist_info.get('name', ''),
-        'images': [artwork.get('image_id') for artwork in artist_info.get('artworks', []) if artwork.get('image_id')],
-        'isArtist': 1,
-        'type': 'artist',
-        'artist_aliases': artist_info.get('artist_aliases', []),
-        'descriptions': artist_info.get('descriptions', {}),
-        'relatedKeywordIds': json.dumps(related_keyword_ids),  # Store as JSON string for DB
-        'relatedKeywordStrings': json.dumps(related_keyword_strings),  # Store as JSON string for DB
-        'sql_action': 'UPDATE' if artist_info.get('is_existing') else 'INSERT'
-    }
-
-def create_image_entry_from_artwork(artwork, artist_info):
-    """Create an image_entries row structure from artwork info"""
-    # Safely parse keyword arrays from JSON strings
-    try:
-        related_keyword_ids = json.loads(artwork.get('relatedKeywordIds', '[]'))
-    except (json.JSONDecodeError, TypeError):
-        related_keyword_ids = []
-    
-    try:
-        related_keyword_strings = json.loads(artwork.get('relatedKeywordStrings', '[]'))
-    except (json.JSONDecodeError, TypeError):
-        related_keyword_strings = []
-    
-    # IMPORTANT: Ensure artist's entry_id is in relatedKeywordIds and artist name is in relatedKeywordStrings
-    artist_entry_id = artist_info.get('existing_id') or artist_info.get('generated_entry_id')
-    artist_name = artist_info.get('name', '')
-    
-    if not artist_entry_id:
-        # Generate new ID for new artist if not already generated
-        artist_entry_id = generate_new_id()
-    
-    # Ensure artist is first in the keyword lists
-    if artist_entry_id not in related_keyword_ids:
-        related_keyword_ids.insert(0, artist_entry_id)
-    if artist_name not in related_keyword_strings:
-        related_keyword_strings.insert(0, artist_name)
-    
-    return {
-        'image_id': artwork.get('image_id') or generate_new_id(),
-        'value': artwork.get('value', ''),
-        'artist_names': [artist_name],
-        'image_urls': artwork.get('image_urls', {}),
-        'filename': artwork.get('filename', ''),
-        'rights': artwork.get('rights', ''),
-        'descriptions': artwork.get('descriptions', {}),
-        'relatedKeywordIds': json.dumps(related_keyword_ids),  # Store as JSON string for DB
-        'relatedKeywordStrings': json.dumps(related_keyword_strings),  # Store as JSON string for DB
-        'sql_action': 'UPDATE' if artwork.get('is_existing') else 'INSERT'
-    }
-
-def generate_new_id():
-    """Generate a new MongoDB-style ID for new entries"""
-    import time
-    import random
-    import string
-    
-    timestamp = int(time.time())
-    random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-    return f"{timestamp:x}{random_part}"
+        return jsonify({'success': False, 'error': str(e)})

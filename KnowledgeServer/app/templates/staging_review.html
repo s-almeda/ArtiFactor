@@ -128,8 +128,8 @@ function updateSummaryStats() {
 }
 
 function computeAllArtistsStats() {
-    // Only count non-null loaded artist data that are not skipped
-    const validArtists = allArtistData.filter(d => d && d.artist && !d.artist.skipped);
+    // Only count non-null loaded artist data
+    const validArtists = allArtistData.filter(d => d && d.artist);
     allArtistsStats.totalArtists = validArtists.length;
     allArtistsStats.newArtists = validArtists.filter(d => !d.artist.is_existing).length;
     allArtistsStats.totalArtworks = validArtists.reduce((sum, d) => sum + (d.artist.artworks ? d.artist.artworks.length : 0), 0);
@@ -141,32 +141,6 @@ function computeAllArtistsStats() {
 
 // Call updateSummaryStats() after any change that affects the stats, e.g. after removing or approving/rejecting an artist file.
 // For example, after removing an artist file:
-async function removeArtistFile() {
-    if (!confirm('Are you sure you want to remove this artist file?')) return;
-    const file = artistFiles[currentArtistIdx];
-    try {
-        const response = await fetch(`/staging_review/remove_artist_file/${file.filename}`, { method: 'DELETE' });
-        const result = await response.json();
-        if (result.success) {
-            artistFiles.splice(currentArtistIdx, 1);
-            allArtistData.splice(currentArtistIdx, 1);
-            computeAllArtistsStats();
-            if (artistFiles.length === 0) {
-                document.getElementById('artist-list').innerHTML = '';
-                showError('No artist files left.');
-                return;
-            }
-            if (currentArtistIdx >= artistFiles.length) currentArtistIdx = artistFiles.length - 1;
-            renderArtistNav();
-            loadArtistData(currentArtistIdx);
-        } else {
-            showError(result.error);
-        }
-    } catch (error) {
-        showError('Failed to remove artist file: ' + error.message);
-    }
-}
-
 function renderArtistNav() {
     // Always re-render the nav bar for correct state
     let navHtml = '<div id="artist-nav" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">';
@@ -175,9 +149,8 @@ function renderArtistNav() {
     navHtml += `<select id="artistSelect">`;
     artistFiles.forEach((f, i) => {
         let artistName = (allArtistData[i] && allArtistData[i].artist && allArtistData[i].artist.name) ? allArtistData[i].artist.name : f.name;
-        const isSkipped = allArtistData[i] && allArtistData[i].artist && allArtistData[i].artist.skipped;
-        const displayName = isSkipped ? `${artistName} (SKIPPED)` : artistName;
-        const optionStyle = isSkipped ? 'style="color: #6c757d; font-style: italic;"' : '';
+        const displayName = artistName;
+        const optionStyle = '';
         navHtml += `<option value="${i}" ${i === currentArtistIdx ? 'selected' : ''} ${optionStyle}>${displayName}</option>`;
     });
     navHtml += '</select>';
@@ -274,8 +247,11 @@ function renderKeywordCheckboxes(keywords, keywordIds, allKeywords, prefix, chec
         const kwId = kwIndex >= 0 && keywordIds.length > kwIndex ? keywordIds[kwIndex] : '';
         const dataEntryId = kwId ? `data-entry-id="${kwId}"` : '';
         
+        // Add "copy to all" button for all keyword lists
+        const copyButton = `<button type="button" onclick="window.copyKeywordToAllArtworks('${kw}', '${kwId}', this)" style="font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Copy to All</button>`;
+        
         // Use the keyword value as the checkbox name for backend processing
-        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${dataEntryId} ${checked}><label for="${prefix}_kw_${i}">${kw}</label></div>`;
+        html += `<div style='display:flex;align-items:center;gap:6px;'><input type="checkbox" id="${prefix}_kw_${i}" name="${prefix}_kw_${i}" value="${kw}" ${dataEntryId} ${checked}><label for="${prefix}_kw_${i}">${kw}</label>${copyButton}</div>`;
     });
     html += '</div>';
     return html;
@@ -411,7 +387,12 @@ function createArtistForm(artist, idx) {
         <div class="detail-section">
             <h4>Artist Info</h4>
             <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
-            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><input type="checkbox" name="skip_artist" ${artist.skipped ? 'checked' : ''} style="margin:0;"> Skip this artist (exclude from processed file)</label><br>
+            <div style="margin-bottom:8px;">
+                <button type="button" onclick="deleteArtistFile()" class="btn btn-danger" style="font-size: 0.9em; padding: 6px 12px;">
+                    <i class="fas fa-trash"></i> Delete Artist File
+                </button>
+                <span style="margin-left: 8px; font-size: 0.9em; color: #666;">Permanently remove this artist file from staging</span>
+            </div>
             <div class="keywords-descriptions-container">
                 <div class="keywords-section">
                     <label>Keywords:</label>
@@ -495,6 +476,9 @@ function createArtistForm(artist, idx) {
             <button type="button" class="btn btn-primary" onclick="saveArtistChanges(event, ${idx})" style="font-size: 1.1em; padding: 10px 20px;">
                 <i class="fas fa-save"></i> Save Changes
             </button>
+            <button type="button" class="btn btn-danger" onclick="deleteArtistFile(event, ${idx})" style="font-size: 1.1em; padding: 10px 20px;">
+                <i class="fas fa-trash"></i> Delete Artist File
+            </button>
             <div id="saveStatus_${idx}" style="margin-left: 10px; font-weight: bold;"></div>
         </div>
         <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
@@ -504,18 +488,6 @@ function createArtistForm(artist, idx) {
 
     form.innerHTML = html;
     
-    // Initialize form styling for skipped artists
-    if (artist.skipped) {
-        form.style.opacity = '0.6';
-        form.style.background = '#fff3cd';
-        form.style.border = '2px solid #ffc107';
-        
-        const warningDiv = document.createElement('div');
-        warningDiv.className = 'skip-warning';
-        warningDiv.innerHTML = '<div style="background:#fff3cd;padding:10px;margin:10px 0;border:1px solid #ffc107;border-radius:4px;color:#856404;"><strong>⚠️ Warning:</strong> This artist will be skipped and excluded from the processed file.</div>';
-        form.insertBefore(warningDiv, form.firstChild);
-    }
-    
     form.addEventListener('change', function(e) {
         if (e.target.name === 'assign_existing_id') {
             const val = e.target.value.trim();
@@ -524,37 +496,6 @@ function createArtistForm(artist, idx) {
                 dbinfoDiv.innerHTML = `<div>ID: <input type=\"text\" name=\"existing_id\" value=\"${val}\" style=\"width:70%\"></div>`;
             } else {
                 dbinfoDiv.innerHTML = `<div>Will be created as new artist<br><label>Or assign to existing artist ID: <input type=\"text\" name=\"assign_existing_id\" placeholder=\"Paste existing artist ID\"></label></div>`;
-            }
-        }
-        
-        // Handle skip artist checkbox
-        if (e.target.name === 'skip_artist') {
-            const isSkipped = e.target.checked;
-            const formElement = e.target.closest('form');
-            
-            if (isSkipped) {
-                formElement.style.opacity = '0.6';
-                formElement.style.background = '#fff3cd';
-                formElement.style.border = '2px solid #ffc107';
-                
-                // Show warning message
-                let warningDiv = formElement.querySelector('.skip-warning');
-                if (!warningDiv) {
-                    warningDiv = document.createElement('div');
-                    warningDiv.className = 'skip-warning';
-                    warningDiv.innerHTML = '<div style="background:#fff3cd;padding:10px;margin:10px 0;border:1px solid #ffc107;border-radius:4px;color:#856404;"><strong>⚠️ Warning:</strong> This artist will be skipped and excluded from the processed file.</div>';
-                    formElement.insertBefore(warningDiv, formElement.firstChild);
-                }
-            } else {
-                formElement.style.opacity = '1';
-                formElement.style.background = '';
-                formElement.style.border = '';
-                
-                // Remove warning message
-                const warningDiv = formElement.querySelector('.skip-warning');
-                if (warningDiv) {
-                    warningDiv.remove();
-                }
             }
         }
     });
@@ -616,7 +557,7 @@ window.addArtistKeyword = async function(form, artistIdx) {
             const distance = result.distance;
             
             // Only add if not already present and distance indicates relevance
-            if (!existingKeywords.has(keyword) && distance < 0.9) {
+            if (!existingKeywords.has(keyword) && distance < 1.3) {
                 const i = group.querySelectorAll('input[type=checkbox]').length;
                 const div = document.createElement('div');
                 div.style.display = 'flex';
@@ -637,8 +578,16 @@ window.addArtistKeyword = async function(form, artistIdx) {
                 label.style.fontSize = '0.9em';
                 label.style.color = '#666';
                 
+                // Add "Copy to All" button
+                const copyButton = document.createElement('button');
+                copyButton.type = 'button';
+                copyButton.textContent = 'Copy to All';
+                copyButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                copyButton.onclick = function() { window.copyKeywordToAllArtworks(keyword, keywordId, copyButton); };
+                
                 div.appendChild(checkbox);
                 div.appendChild(label);
+                div.appendChild(copyButton);
                 group.appendChild(div);
                 
                 existingKeywords.add(keyword);
@@ -764,6 +713,92 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
     }
 }
 
+// Copy a keyword to all artwork keyword lists
+window.copyKeywordToAllArtworks = function(keyword, keywordId, buttonElement) {
+    // Get the current form
+    const form = buttonElement.closest('form');
+    if (!form) return;
+
+    // Find the checkbox next to the button to determine checked state
+    const checkboxDiv = buttonElement.closest('div');
+    const checkbox = checkboxDiv ? checkboxDiv.querySelector('input[type=checkbox][value="' + keyword.replace(/"/g, '&quot;') + '"]') : null;
+    const shouldCheck = checkbox ? checkbox.checked : true;
+
+    // Find all artwork keyword checkbox groups
+    const artworkKeywordGroups = form.querySelectorAll('.artwork-card .keywords-section .checkbox-group');
+
+    let changedCount = 0;
+    let alreadyCount = 0;
+
+    artworkKeywordGroups.forEach(group => {
+        // Check if this keyword already exists in this artwork's list
+        let existingCheckbox = group.querySelector('input[type=checkbox][value="' + keyword.replace(/"/g, '&quot;') + '"]');
+        if (existingCheckbox) {
+            if (shouldCheck && !existingCheckbox.checked) {
+                existingCheckbox.checked = true;
+                changedCount++;
+            } else if (!shouldCheck && existingCheckbox.checked) {
+                existingCheckbox.checked = false;
+                changedCount++;
+            } else {
+                alreadyCount++;
+            }
+        } else if (shouldCheck) {
+            // Add new keyword checkbox to this group and check it
+            // Try to find a template checkbox to clone for consistent structure
+            const templateCheckbox = group.querySelector('input[type=checkbox]');
+            let newCheckbox, newLabel, newButton;
+            if (templateCheckbox) {
+                newCheckbox = templateCheckbox.cloneNode();
+                newCheckbox.value = keyword;
+                newCheckbox.checked = true;
+                if (keywordId) newCheckbox.setAttribute('data-entry-id', keywordId);
+                // Generate a unique id for the new checkbox
+                const newId = templateCheckbox.id.replace(/\d+$/, '') + Math.floor(Math.random()*100000);
+                newCheckbox.id = newId;
+                newLabel = document.createElement('label');
+                newLabel.setAttribute('for', newId);
+                newLabel.textContent = keyword;
+                // Add "Copy to All" button
+                newButton = document.createElement('button');
+                newButton.type = 'button';
+                newButton.textContent = 'Copy to All';
+                newButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                newButton.onclick = function() { window.copyKeywordToAllArtworks(keyword, keywordId, newButton); };
+                // Compose the new div
+                const newDiv = document.createElement('div');
+                newDiv.style.display = 'flex';
+                newDiv.style.alignItems = 'center';
+                newDiv.style.gap = '6px';
+                newDiv.appendChild(newCheckbox);
+                newDiv.appendChild(newLabel);
+                newDiv.appendChild(newButton);
+                group.appendChild(newDiv);
+                changedCount++;
+            }
+        }
+    });
+
+    // Provide feedback
+    if (changedCount > 0) {
+        buttonElement.textContent = shouldCheck ? '✓ Copied' : '✓ Deselected';
+        buttonElement.style.background = shouldCheck ? '#28a745' : '#ffc107';
+        setTimeout(() => {
+            buttonElement.style.background = '#007bff';
+            buttonElement.textContent = 'Copy to All';
+        }, 1500);
+    } else if (alreadyCount > 0) {
+        buttonElement.textContent = '✓ Already set';
+        buttonElement.style.background = '#6c757d';
+        setTimeout(() => {
+            buttonElement.style.background = '#007bff';
+            buttonElement.textContent = 'Copy to All';
+        }, 1500);
+    } else {
+        alert('No artworks found to copy keyword to.');
+    }
+}
+
 // Collect keywords from form, pairing strings with their entry_ids
 function collectKeywords(form, keywordPrefix) {
     const keywordStrings = [];
@@ -788,6 +823,39 @@ function collectKeywords(form, keywordPrefix) {
     };
 }
 
+// Delete the current artist file entirely
+async function deleteArtistFile() {
+    if (!confirm('Are you sure you want to permanently delete this artist file? This action cannot be undone.')) return;
+    
+    const file = artistFiles[currentArtistIdx];
+    try {
+        const response = await fetch(`/staging_review/remove_artist_file/${file.filename}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+            artistFiles.splice(currentArtistIdx, 1);
+            allArtistData.splice(currentArtistIdx, 1);
+            computeAllArtistsStats();
+            
+            if (artistFiles.length === 0) {
+                document.getElementById('artist-list').innerHTML = '';
+                showError('No artist files left.');
+                return;
+            }
+            
+            if (currentArtistIdx >= artistFiles.length) {
+                currentArtistIdx = artistFiles.length - 1;
+            }
+            
+            renderArtistNav();
+            loadArtistData(currentArtistIdx);
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        showError('Failed to delete artist file: ' + error.message);
+    }
+}
+
 // Save changes to individual artist file
 async function saveArtistChanges(event, artistIdx) {
     event.preventDefault();
@@ -802,9 +870,6 @@ async function saveArtistChanges(event, artistIdx) {
     const currentArtist = artistData.artist;
     const currentArtworks = artistData.artist.artworks || [];
     
-    // Check if artist should be skipped
-    const skipArtist = formData.get('skip_artist') === 'on';
-    
     // Collect artist data
     const processedArtistData = {
         name: formData.get('name'),
@@ -813,51 +878,8 @@ async function saveArtistChanges(event, artistIdx) {
         existing_id: formData.get('assign_existing_id') || currentArtist?.existing_id,
         artist_aliases: currentArtist?.artist_aliases || [],
         descriptions: {},
-        timestamp: new Date().toISOString().replace(/[-:]/g, '').split('.')[0],
-        skipped: skipArtist
+        timestamp: new Date().toISOString().replace(/[-:]/g, '').split('.')[0]
     };
-    
-    // If artist is skipped, create minimal data structure
-    if (skipArtist) {
-        const processedData = {
-            artist: processedArtistData,
-            artworks: [],
-            timestamp: processedArtistData.timestamp,
-            skipped: true
-        };
-        
-        try {
-            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            statusDiv.style.color = '#007bff';
-            
-            const response = await fetch('/staging_review/save_processed_artist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    processed_data: processedData,
-                    original_filename: originalFilename
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                statusDiv.innerHTML = '<i class="fas fa-check"></i> Saved (Skipped)';
-                statusDiv.style.color = '#28a745';
-                
-                // Update the artist data in memory
-                allArtistData[currentArtistIdx] = processedData;
-                computeAllArtistsStats();
-                renderArtistNav();
-            } else {
-                statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + result.error;
-                statusDiv.style.color = '#dc3545';
-            }
-        } catch (error) {
-            statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + error.message;
-            statusDiv.style.color = '#dc3545';
-        }
-        return;
-    }
     
     // Process artist descriptions
     processedArtistData.descriptions = processDescriptions(formData, 'artist_descriptions');
@@ -946,6 +968,64 @@ async function saveArtistChanges(event, artistIdx) {
             allArtistData[currentArtistIdx] = processedData;
             computeAllArtistsStats();
             renderArtistNav();
+        } else {
+            statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + result.error;
+            statusDiv.style.color = '#dc3545';
+        }
+    } catch (error) {
+        statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + error.message;
+        statusDiv.style.color = '#dc3545';
+    }
+}
+
+// Delete artist file entirely
+async function deleteArtistFile(event, artistIdx) {
+    event.preventDefault();
+    
+    if (!confirm('Are you sure you want to delete this artist file entirely? This action cannot be undone.')) {
+        return;
+    }
+    
+    const filename = artistFiles[currentArtistIdx].filename;
+    const statusDiv = document.getElementById(`saveStatus_${artistIdx}`);
+    
+    try {
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        statusDiv.style.color = '#dc3545';
+        
+        const response = await fetch(`/staging_review/remove_artist_file/${filename}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            statusDiv.innerHTML = '<i class="fas fa-check"></i> File Deleted';
+            statusDiv.style.color = '#28a745';
+            
+            // Remove from arrays
+            artistFiles.splice(currentArtistIdx, 1);
+            allArtistData.splice(currentArtistIdx, 1);
+            
+            // Recompute stats
+            computeAllArtistsStats();
+            
+            // Handle navigation
+            if (artistFiles.length === 0) {
+                document.getElementById('artist-list').innerHTML = '<p class="loading">No artist files remaining.</p>';
+                document.getElementById('artist-list').style.display = 'block';
+                return;
+            }
+            
+            // Adjust current index if needed
+            if (currentArtistIdx >= artistFiles.length) {
+                currentArtistIdx = artistFiles.length - 1;
+            }
+            
+            // Reload the current artist
+            renderArtistNav();
+            loadArtistData(currentArtistIdx);
+            
         } else {
             statusDiv.innerHTML = '<i class="fas fa-times"></i> Error: ' + result.error;
             statusDiv.style.color = '#dc3545';

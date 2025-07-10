@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final SQL Review</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/staging_review.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-database"></i> Final SQL Review</h1>
+            <p>Review and approve the final SQL commands before committing to the database.</p>
+        </div>
+        <div id="sql-review-controls" style="margin-bottom: 20px;">
+            <button id="loadSqlBtn" class="btn btn-primary">Load Latest SQL Commands</button>
+        </div>
+        <div id="sql-commands-container" style="background: #f8f9fa; border: 1px solid #ccc; padding: 16px; border-radius: 8px; min-height: 200px;"></div>
+        <div id="approval-controls" style="margin-top: 20px; display: none;">
+            <button id="approveBtn" class="btn btn-success">Approve and Execute</button>
+            <input type="password" id="adminPassword" placeholder="Enter admin password" style="margin-left: 10px;">
+            <button id="checkRowsBtn" class="btn btn-info" style="margin-left: 10px;">Check Changed Rows</button>
+        </div>
+        <div id="sql-status" style="margin-top: 16px; font-weight: bold;"></div>
+        <div id="changed-rows-table-container" style="overflow-x: auto; max-width: 100%; margin-top: 24px;"></div>
+    </div>
+<script>
+document.getElementById('loadSqlBtn').onclick = async function() {
+    const container = document.getElementById('sql-commands-container');
+    container.textContent = 'Loading...';
+    document.getElementById('sql-status').textContent = '';
+    fetch('/staging_review/get_final_sql_commands')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window._sqlCommands = data.sql_commands;
+                container.innerHTML = '<pre style="white-space: pre-wrap;">' +
+                    (data.raw_sql ? escapeHtml(data.raw_sql) : '') + '</pre>';
+                document.getElementById('approval-controls').style.display = 'block';
+            } else {
+                container.textContent = data.error || 'Failed to load SQL commands.';
+                document.getElementById('approval-controls').style.display = 'none';
+            }
+        });
+};
+document.getElementById('approveBtn').onclick = async function() {
+    const password = document.getElementById('adminPassword').value;
+    const sqlCommands = window._sqlCommands;
+    if (!sqlCommands) {
+        document.getElementById('sql-status').textContent = 'No SQL commands loaded.';
+        return;
+    }
+    document.getElementById('sql-status').textContent = 'Executing...';
+    fetch('/staging_review/approve_final_sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, sql_commands: sqlCommands })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('sql-status').textContent = 'Success: ' + data.message;
+        } else {
+            document.getElementById('sql-status').textContent = 'Error: ' + (data.error || 'Unknown error');
+        }
+    });
+};
+
+document.getElementById('checkRowsBtn').onclick = async function() {
+    const sqlCommands = window._sqlCommands;
+    if (!sqlCommands) {
+        document.getElementById('sql-status').textContent = 'No SQL commands loaded.';
+        return;
+    }
+    // Collect entry_ids and image_ids from the loaded SQL commands
+    const entry_ids = [];
+    const image_ids = [];
+    for (const cmd of sqlCommands) {
+        if (cmd.table === 'text_entries') {
+            // For both INSERT and UPDATE, entry_id is always at index 0
+            if (cmd.values && cmd.values.length > 0 && !entry_ids.includes(cmd.values[0])) {
+                entry_ids.push(cmd.values[0]);
+            }
+        } else if (cmd.table === 'image_entries') {
+            if (cmd.values && cmd.values.length > 0 && !image_ids.includes(cmd.values[0])) {
+                image_ids.push(cmd.values[0]);
+            }
+        }
+    }
+    document.getElementById('sql-status').textContent = 'Querying changed rows...';
+    fetch('/staging_review/check_changed_rows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_ids, image_ids })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            renderChangedRowsTable(data.text_rows, data.text_fields, data.image_rows, data.image_fields);
+            document.getElementById('sql-status').textContent = 'Changed rows loaded.';
+        } else {
+            document.getElementById('sql-status').textContent = 'Error: ' + (data.error || 'Unknown error');
+        }
+    });
+};
+
+function renderChangedRowsTable(textRows, textFields, imageRows, imageFields) {
+    const container = document.getElementById('changed-rows-table-container');
+    let html = '';
+    if (textRows && textRows.length) {
+        html += '<h3>text_entries</h3>';
+        html += renderTable(textFields, textRows);
+    }
+    if (imageRows && imageRows.length) {
+        html += '<h3>image_entries</h3>';
+        html += renderTable(imageFields, imageRows);
+    }
+    if (!html) html = '<em>No changed rows found.</em>';
+    container.innerHTML = html;
+}
+
+function renderTable(fields, rows) {
+    let html = '<table class="sql-table" style="min-width: 900px;">';
+    html += '<thead><tr>';
+    for (const f of fields) html += '<th>' + escapeHtml(f) + '</th>';
+    html += '</tr></thead><tbody>';
+    for (const row of rows) {
+        html += '<tr>';
+        for (const field of fields) {
+            let cellVal = row[field];
+            if (typeof cellVal === 'string' && (cellVal.startsWith('{') || cellVal.startsWith('['))) {
+                try {
+                    const parsed = JSON.parse(cellVal);
+                    if (typeof parsed === 'object') {
+                        cellVal = '<pre>' + escapeHtml(JSON.stringify(parsed, null, 2)) + '</pre>';
+                    } else {
+                        cellVal = escapeHtml(cellVal);
+                    }
+                } catch (e) {
+                    cellVal = escapeHtml(cellVal);
+                }
+            } else {
+                cellVal = escapeHtml(String(cellVal));
+            }
+            html += '<td>' + cellVal + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    return html;
+}
+function escapeHtml(text) {
+    var map = {
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+</script>
+</body>
+</html>

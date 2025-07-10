@@ -13,7 +13,9 @@ Usage:
 import argparse
 import json
 import os
+import random
 import re
+import string
 #using sqlean to make using extensions easy,,
 import sqlite_vec
 import sqlean as sqlite3
@@ -87,9 +89,11 @@ class LimitReachedException(Exception):
     pass
 
 class WikiArtScraper:
-    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000"):
+    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000", clear: bool = False):
         self.download = download
         self.limit = limit
+        self.depth = depth
+        self.clear = clear
         self.api_base_url = api_base_url.rstrip('/')
         
         # Session for WikiArt scraping
@@ -139,6 +143,23 @@ class WikiArtScraper:
         
         self.new_artists_count = 0
         self.new_artworks_count = 0
+        
+        # Summary log for tracking artist processing results
+        self.artist_summary_log = []
+        
+        # Initialize progress log for resumable scraping
+        self.progress_log_file = os.path.join(BASE_DIR, "processed_artists.txt")
+        
+        # If clear flag is set, remove the progress log to start fresh
+        if self.clear and os.path.exists(self.progress_log_file):
+            try:
+                os.remove(self.progress_log_file)
+                print(f"Cleared progress log: {self.progress_log_file}")
+            except Exception as e:
+                print(f"Warning: Failed to clear progress log: {e}")
+        
+        self.initialize_progress_log()
+        self.processed_artists = self.load_processed_artists()
     
     def get_database_operations_count(self) -> int:
         """Get the total number of database operations that would be performed"""
@@ -272,7 +293,7 @@ class WikiArtScraper:
             )
             response.raise_for_status()
             results = response.json()
-            print(f"[DEBUG] lookup_keywords_via_api: got {len(results)} results for query: {query_text[:80]}")
+            #print(f"[DEBUG] lookup_keywords_via_api: got {len(results)} results for query: {query_text[:80]}")
             # Filter to only keyword entries (isArtist = 0, robust to string/int)
             keyword_results = []
             for result in results:
@@ -306,7 +327,7 @@ class WikiArtScraper:
         if 'wikipedia' in artist_info and 'description' in artist_info['wikipedia']:
             search_text_parts.append(artist_info['wikipedia']['description'])
         search_text = ' '.join(search_text_parts)
-        print(f"  Searching for keywords with text: {search_text[:100]}...")
+        print(f"    Searching for keywords with text: {search_text[:100]}...")
         # Find similar keywords using API
         similar_keywords = self.lookup_keywords_via_api(search_text, top_k=10)
         #print(f"[DEBUG] get_artist_keywords: similar_keywords={similar_keywords}")
@@ -321,14 +342,15 @@ class WikiArtScraper:
             distance = result.get('distance')
             #print(f"[DEBUG] Considering keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 1.25:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 0.85:
                 final_keyword_ids.append(keyword_id)
                 final_keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
-                print(f"    Added keyword: {keyword_text} (distance: {distance:.3f})")
-        print(f"[DEBUG] get_artist_keywords: final_keyword_ids={final_keyword_ids}")
-        print(f"[DEBUG] get_artist_keywords: final_keyword_strings={final_keyword_strings}")
-        # Limit to 3-7 keywords total
+                print(f"      Added keyword: {keyword_text} (distance: {distance:.3f})")
+        # print(f"[DEBUG] get_artist_keywords: final_keyword_ids={final_keyword_ids}")
+        # print(f"[DEBUG] get_artist_keywords: final_keyword_strings={final_keyword_strings}")
+        print(f"    Found {len(final_keyword_ids)}: {len(final_keyword_strings)} ids/keywords: {final_keyword_strings[:3]}")
+        # # Limit to 3-7 keywords total
         max_keywords = min(7, max(3, len(final_keyword_ids)))
         return final_keyword_ids[:max_keywords], final_keyword_strings[:max_keywords]
 
@@ -347,7 +369,7 @@ class WikiArtScraper:
                 if field in wikiart_desc:
                     search_text_parts.append(wikiart_desc[field])
         search_text = ' '.join(search_text_parts)
-        print(f"    Searching for artwork keywords with text: {search_text[:100]}...")
+        print(f"      Searching for artwork keywords with text: {search_text[:100]}...")
         # Find additional similar keywords using API
         similar_keywords = self.lookup_keywords_via_api(search_text, top_k=5)
         #print(f"[DEBUG] get_artwork_keywords: similar_keywords={similar_keywords}")
@@ -358,16 +380,59 @@ class WikiArtScraper:
             keyword_id = result.get('entry_id')
             keyword_text = result.get('value')
             distance = result.get('distance')
-            print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
+            #print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 1.25:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 0.9:
                 keyword_ids.append(keyword_id)
                 keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
-                print(f"      Added artwork keyword: {keyword_text} (distance: {distance:.3f})")
-        print(f"[DEBUG] get_artwork_keywords: keyword_ids={keyword_ids}")
+                print(f"        Added artwork keyword: {keyword_text} (distance: {distance:.3f})")
+        #print(f"[DEBUG] get_artwork_keywords: keyword_ids={keyword_ids}")
         print(f"[DEBUG] get_artwork_keywords: keyword_strings={keyword_strings}")
         return keyword_ids, keyword_strings
+
+    def is_valid_artwork(self, artwork_data: Dict, artwork_title: str) -> bool:
+        """Validate if artwork data meets quality requirements"""
+        
+        # Check title length
+        if len(artwork_title) > 60:
+            print(f"      Skipping artwork with long title: {artwork_title[:50]}...")
+            return False
+        
+        # Get wikiart descriptions
+        wikiart_desc = artwork_data.get('descriptions', {}).get('wikiart', {})
+        
+        # Check if date exists
+        if not wikiart_desc.get('date'):
+            print(f"      Skipping artwork without date: {artwork_title}")
+            return False
+        
+        # Check date length
+        date_str = str(wikiart_desc.get('date', ''))
+        if len(date_str) > 60:
+            print(f"      Skipping artwork with long date: {artwork_title}")
+            return False
+        
+        # Check if rights exist
+        if not artwork_data.get('rights'):
+            print(f"      Skipping artwork without rights: {artwork_title}")
+            return False
+        
+        # Check for at least one additional required field
+        required_fields = ['medium', 'style', 'genre', 'movement']
+        has_required_field = any(wikiart_desc.get(field) for field in required_fields)
+        
+        if not has_required_field:
+            print(f"      Skipping artwork without required metadata: {artwork_title}")
+            return False
+        
+        # Check location length if present
+        location = wikiart_desc.get('location', wikiart_desc.get('collecting_institution', ''))
+        if location and len(str(location)) > 60:
+            print(f"      Skipping artwork with long location: {artwork_title}")
+            return False
+        
+        return True
 
     def download_image(self, image_url: str, image_id: str) -> Optional[str]:
         """Download image to local storage"""
@@ -391,11 +456,11 @@ class WikiArtScraper:
             with open(filepath, 'wb') as f:
                 f.write(response.content)
             
-            print(f"Downloaded image: {filename}")
+            print(f"        Downloaded image: {filename}")
             return filename
             
         except Exception as e:
-            print(f"Error downloading image {image_url}: {e}")
+            print(f"        Error downloading image {image_url}: {e}")
             return None
 
     def parse_wikiart_html(self, html_content: str) -> Dict:
@@ -665,63 +730,150 @@ class WikiArtScraper:
         
         return artwork_data
     
-    def get_artist_names_to_scrape(self) -> List[str]:
-        """Get list of artist names to scrape"""
-        # For now, return a sample list - in production you might want to:
-        # 1. Get from a predefined list
-        # 2. Scrape from WikiArt's artist index
-        # 3. Use an API or other source
+    def clean_artist_name(self, name: str) -> Optional[str]:
+        """Clean and validate artist name"""
+        if not name:
+            return None
+            
+        # Clean the name
+        cleaned = name.strip()
         
-        sample_artists = [
-            "Pablo Picasso",
-            "Vincent van Gogh",
-            "Claude Monet",
-            "Leonardo da Vinci",
-            "Michelangelo",
-            "Rembrandt van Rijn",
-            "Johannes Vermeer",
-            "Henri Matisse",
-            "Paul Cézanne",
-            "Edgar Degas",
-            "Pierre-Auguste Renoir",
-            "Gustav Klimt",
-            "Salvador Dalí",
-            "Frida Kahlo",
-            "Georgia O'Keeffe",
-            "Jackson Pollock",
-            "Andy Warhol",
-            "Edvard Munch",
-            "Wassily Kandinsky",
-            "Piet Mondrian"
+        # Remove common prefixes/suffixes that might cause issues
+        prefixes_to_remove = ['artist:', 'painter:', 'sculptor:']
+        for prefix in prefixes_to_remove:
+            if cleaned.lower().startswith(prefix):
+                cleaned = cleaned[len(prefix):].strip()
+        
+        # Skip names that are too short or contain only numbers/symbols
+        if len(cleaned) < 2:
+            return None
+            
+        if cleaned.isdigit():
+            return None
+            
+        # Skip obvious non-artist entries
+        skip_patterns = [
+            'unknown', 'anonymous', 'various', 'multiple', 'school of',
+            'after ', 'attributed to', 'circle of', 'follower of',
+            'workshop of', 'studio of', 'copy after'
         ]
         
-        return sample_artists
+        cleaned_lower = cleaned.lower()
+        for pattern in skip_patterns:
+            if pattern in cleaned_lower:
+                return None
+        
+        return cleaned
+
+    def get_artist_names_to_scrape(self) -> List[str]:
+        """Get list of artist names to scrape from artist_names.txt file, excluding already processed ones"""
+        artist_names_file = os.path.join(BASE_DIR, "artist_names.txt")
+        
+        if not os.path.exists(artist_names_file):
+            print(f"Warning: artist_names.txt not found at {artist_names_file}")
+            # Fallback to sample list
+            return [
+                "Pablo Picasso", "Vincent van Gogh", "Claude Monet", "Leonardo da Vinci", 
+                "Michelangelo", "Rembrandt van Rijn", "Johannes Vermeer", "Henri Matisse"
+            ]
+        
+        try:
+            with open(artist_names_file, 'r', encoding='utf-8') as f:
+                raw_names = [line.strip() for line in f if line.strip()]
+            
+            # Clean and validate each name
+            valid_names = []
+            skipped_already_processed = 0
+            for name in raw_names:
+                cleaned = self.clean_artist_name(name)
+                if not cleaned:
+                    print(f"    Skipping invalid artist name: '{name}'")
+                    continue
+                    
+                # Check if already processed
+                if cleaned in self.processed_artists:
+                    skipped_already_processed += 1
+                    continue
+                    
+                valid_names.append(cleaned)
+            
+            print(f"Loaded {len(valid_names)} artist names to process")
+            print(f"  - Total in file: {len(raw_names)}")
+            print(f"  - Already processed: {skipped_already_processed}")
+            print(f"  - Invalid/cleaned out: {len(raw_names) - len(valid_names) - skipped_already_processed}")
+            return valid_names
+            
+        except Exception as e:
+            print(f"Error reading artist_names.txt: {e}")
+            # Fallback to sample list
+            return [
+                "Pablo Picasso", "Vincent van Gogh", "Claude Monet", "Leonardo da Vinci"
+            ]
 
     def scrape_artist_all_works(self, artist_slug: str, depth: int) -> List[Dict]:
-        """Scrape artworks from the all-works/text-list page"""
+        """Scrape artwork links from all-works/text-list page"""
         url = f'https://www.wikiart.org/en/{artist_slug}/all-works/text-list'
-        print(f"  Scraping all-works page: {url}")
+        print(f"    Scraping all-works page: {url}")
         
         try:
             response = self.session.get(url, timeout=15)
             if response.status_code != 200:
-                print(f"  Failed to fetch all-works page: {response.status_code}")
+                print(f"    Failed to fetch all-works page: {response.status_code}")
                 return []
             
             soup = BeautifulSoup(response.text, 'html.parser')
             artworks = []
             
-            # Find artwork links in the text-list format
-            # This will need to be adjusted based on the actual HTML structure
-            artwork_links = soup.find_all('a', href=re.compile(r'/' + artist_slug + '/'))
+            # Find artwork links - try multiple selectors for robustness
+            artwork_links = []
             
-            for link in artwork_links[:depth]:  # Limit to depth
+            # Method 1: Look for links containing the artist slug in href
+            links_with_slug = soup.find_all('a', href=re.compile(r'/' + re.escape(artist_slug) + '/[^/]+$'))
+            artwork_links.extend(links_with_slug)
+            
+            # Method 2: Look in specific containers for artwork lists
+            artwork_containers = soup.find_all(['ul', 'div'], class_=re.compile(r'artwork|painting|work|list'))
+            for container in artwork_containers:
+                container_links = container.find_all('a', href=re.compile(r'/' + re.escape(artist_slug) + '/'))
+                artwork_links.extend(container_links)
+            
+            # Method 3: Look for any links in the page that match the pattern
+            if not artwork_links:
+                all_links = soup.find_all('a', href=True)
+                for link in all_links:
+                    href = link.get('href', '')
+                    # Match pattern: /artist-slug/artwork-name
+                    if re.match(rf'/{re.escape(artist_slug)}/[^/]+/?$', href):
+                        artwork_links.append(link)
+            
+            # Remove duplicates by href
+            unique_links = {}
+            for link in artwork_links:
+                href = link.get('href', '')
+                if href and href not in unique_links:
+                    unique_links[href] = link
+            
+            processed_count = 0
+            for href, link in unique_links.items():
+                if processed_count >= depth:
+                    break
+                    
                 try:
-                    artwork_path = link.get('href', '')
-                    if not artwork_path:
+                    artwork_path = href
+                    if not artwork_path or '/all-works' in artwork_path:
                         continue
                     
                     title = link.get_text().strip()
+                    if not title or len(title) < 2 or len(title) > 60:
+                        continue
+                    
+                    # Quick spam filter - skip obvious spam titles
+                    spam_keywords = ['gmail', 'airbnb', 'onlyfans', 'paypal', 'sell', 'buy','accounts','skype', 'verified', 'accounts', 'buy', 'hosting ready','linkedin','business','zillow','soundcloud','verified', 'binance','coinbase','instant access']
+                    title_lower = title.lower()
+                    if any(keyword in title_lower for keyword in spam_keywords):
+                        print(f"      Skipping spam artwork: {title}")
+                        continue
+                    
                     wikiart_url = f"https://www.wikiart.org{artwork_path}" if artwork_path.startswith('/') else artwork_path
                     
                     # Extract year if present in the link text or nearby elements
@@ -730,6 +882,14 @@ class WikiArtScraper:
                     year_match = re.search(r'\b(1\d{3}|20\d{2})\b', title)
                     if year_match:
                         year = year_match.group(1)
+                    else:
+                        # Look for year in parent or sibling elements
+                        parent = link.parent
+                        if parent:
+                            parent_text = parent.get_text()
+                            year_match = re.search(r'\b(1\d{3}|20\d{2})\b', parent_text)
+                            if year_match:
+                                year = year_match.group(1)
                     
                     artworks.append({
                         'title': title,
@@ -737,39 +897,84 @@ class WikiArtScraper:
                         'wikiart_url': wikiart_url,
                         'wikiart_path': artwork_path
                     })
+                    processed_count += 1
                     
                 except Exception as e:
-                    print(f"    Error parsing artwork link: {e}")
+                    print(f"      Error parsing artwork link: {e}")
                     continue
             
-            print(f"  Found {len(artworks)} artworks from all-works page")
+            print(f"    Found {len(artworks)} artworks from all-works page")
             return artworks
             
         except Exception as e:
-            print(f"  Error scraping all-works page: {e}")
+            print(f"    Error scraping all-works page: {e}")
             return []
     
     def scrape_artist(self, artist_name: str, stop_at_limit: bool = True) -> Optional[Dict]:
         """Scrape a single artist and their artworks. Returns artist_data with whatever artworks were processed before hitting the limit."""
         if getattr(self, 'limit_reached', False):
             return None
+            
+        # Validate artist name first
+        if not artist_name or len(artist_name.strip()) < 2:
+            print(f"    Skipping invalid artist name: '{artist_name}'")
+            self.add_to_summary_log(artist_name, "ERROR", "Invalid artist name")
+            self.update_progress_log(artist_name, "ERROR", "Invalid artist name")
+            return None
+            
         slug = slugify(artist_name)
+        if not slug or len(slug) < 2:
+            print(f"    Skipping artist with invalid slug: '{artist_name}' -> '{slug}'")
+            self.add_to_summary_log(artist_name, "ERROR", "Invalid slug generated")
+            self.update_progress_log(artist_name, "ERROR", "Invalid slug generated")
+            return None
+            
         url = f'https://www.wikiart.org/en/{slug}'
         print(f"Scraping artist: {artist_name} ({url})")
+        
         if getattr(self, 'limit_reached', False):
             return None
-        response = self.session.get(url, timeout=15)
+            
+        try:
+            response = self.session.get(url, timeout=15)
+        except Exception as e:
+            print(f"    Failed to connect to WikiArt for {artist_name}: {e}")
+            self.add_to_summary_log(artist_name, "ERROR", f"Failed to connect: {e}")
+            self.update_progress_log(artist_name, "ERROR", f"Failed to connect: {e}")
+            return None
+            
         if getattr(self, 'limit_reached', False):
             return None
+            
         if response.status_code != 200:
-            print(f"  Failed to fetch artist page: {response.status_code}")
+            print(f"    Failed to fetch artist page: {response.status_code}")
+            self.add_to_summary_log(artist_name, "ERROR", f"HTTP {response.status_code}")
+            self.update_progress_log(artist_name, "ERROR", f"HTTP {response.status_code}")
             return None
+            
+        # Check if the page actually contains artist data (not a 404 or redirect)
+        if "artist not found" in response.text.lower() or "page not found" in response.text.lower():
+            print(f"    Artist not found on WikiArt: {artist_name}")
+            self.add_to_summary_log(artist_name, "ERROR", "Artist not found on WikiArt")
+            self.update_progress_log(artist_name, "ERROR", "Artist not found on WikiArt")
+            return None
+            
         # Parse artist info
         artist_info = self.parse_wikiart_html(response.text)
         if not artist_info.get('structured_data', {}).get('name'):
-            print(f"  No artist name found, skipping")
+            print(f"    No artist name found in structured data, skipping: {artist_name}")
+            self.add_to_summary_log(artist_name, "ERROR", "No structured data found")
+            self.update_progress_log(artist_name, "ERROR", "No structured data found")
             return None
+            
         actual_name = artist_info['structured_data']['name']
+        
+        # Validate that we got meaningful artist data
+        if not actual_name or len(actual_name.strip()) < 2:
+            print(f"    Invalid actual name extracted: '{actual_name}', skipping")
+            self.add_to_summary_log(artist_name, "ERROR", f"Invalid extracted name: '{actual_name}'")
+            self.update_progress_log(artist_name, "ERROR", f"Invalid extracted name: '{actual_name}'")
+            return None
         # Build descriptions field for artist
         descriptions = {}
         # Place all wikiart/structured data under descriptions['wikiart']
@@ -819,7 +1024,7 @@ class WikiArtScraper:
                         except Exception:
                             pass
             except Exception as e:
-                print(f"  Error loading DB artist info for {actual_name}: {e}")
+                print(f"    Error loading DB artist info for {actual_name}: {e}")
             # Merge DB descriptions with scraped wikiart
             if db_descriptions:
                 # Merge wikiart
@@ -835,13 +1040,14 @@ class WikiArtScraper:
         new_artist_count = 0 if is_existing else 1
         if self.would_exceed_limit(additional_artists=new_artist_count):
             self.limit_reached = True
+            self.add_to_summary_log(artist_name, "ERROR", "Limit reached before processing")
             return None
         # Get keywords for artist (merge DB and scraped, dedup)
         keyword_ids, keyword_strings = self.get_artist_keywords(actual_name, artist_info)
         all_keyword_ids = list(dict.fromkeys(db_keyword_ids + keyword_ids))
         all_keyword_strings = list(dict.fromkeys(db_keyword_strings + keyword_strings))
-        # Parse artworks
-        artworks = self.parse_wikiart_artworks(response.text)
+        # Parse artworks using all-works page with depth parameter
+        artworks = self.scrape_artist_all_works(slug, self.depth)
         artist_data = {
             'name': actual_name,
             'slug': slug,
@@ -857,8 +1063,8 @@ class WikiArtScraper:
         # Track that we're processing this artist
         if not is_existing:
             self.new_artists_count += 1
-        # Process artworks from WikiArt
-        for artwork in artworks[:10]:  # Limit artworks per artist
+        # Process artworks from WikiArt (depth already applied in scrape_artist_all_works)
+        for artwork in artworks:
             if getattr(self, 'limit_reached', False):
                 break
             # Check if we would exceed limit with this artwork (if new)
@@ -866,7 +1072,7 @@ class WikiArtScraper:
                 self.limit_reached = True
                 break
             try:
-                print(f"  Processing artwork: {artwork['title']}")
+                print(f"    Processing artwork: {artwork['title']}")
                 if getattr(self, 'limit_reached', False):
                     break
                 # Get artwork details
@@ -876,6 +1082,11 @@ class WikiArtScraper:
                 if artwork_response.status_code != 200:
                     continue
                 artwork_data = self.parse_artwork_details(artwork_response.text, artwork['title'])
+                
+                # Validate artwork quality - skip spam and low-quality entries
+                if not self.is_valid_artwork(artwork_data, artwork['title']):
+                    continue  # Skip this artwork
+                
                 # Merge any extra scraped fields into descriptions['wikiart']
                 extra_fields = {}
                 # Collect extra fields from the parsed artwork dict that aren't standard DB columns
@@ -895,17 +1106,17 @@ class WikiArtScraper:
                 existing_artwork = self.find_existing_artwork(artwork['title'], actual_name)
                 is_existing_artwork = existing_artwork is not None
                 if is_existing_artwork:
-                    print(f"    Found existing artwork: {artwork['title']} by {actual_name} -> {existing_artwork['image_id']}")
+                    print(f"      🔎 Found existing artwork: {artwork['title']} by {actual_name} -> {existing_artwork['image_id']}")
                 else:
-                    print(f"    New artwork: {artwork['title']} by {actual_name}")
+                    print(f"      ✅ New artwork: {artwork['title']} by {actual_name}")
                     # Check if adding this artwork would exceed the limit
                     if stop_at_limit and self.would_exceed_limit(additional_artworks=1):
-                        print(f"    [DEBUG] limit is {self.limit}, this addition would be #{self.get_database_operations_count() + 1}")
+                        print(f"** Processing addition {self.get_database_operations_count() + 1}/{self.limit} **")
                         self.limit_reached = True
                         break
                     # Track that we're adding this artwork
                     self.new_artworks_count += 1
-                    print(f"    [DEBUG] limit is {self.limit}, this is addition #{self.get_database_operations_count()}")
+                    print(f"** Processing addition {self.get_database_operations_count() + 1}/{self.limit} **")
                 # Get keywords for artwork
                 artwork_keyword_ids, artwork_keyword_strings = self.get_artwork_keywords(
                     artwork['title'], keyword_ids, keyword_strings, artwork_data
@@ -915,9 +1126,6 @@ class WikiArtScraper:
                 artist_entry_id = artist_data['existing_id'] if is_existing else None
                 if not artist_entry_id:
                     # Generate new ID for new artist (this should match what the staging review will generate)
-                    import time
-                    import random
-                    import string
                     timestamp = int(time.time())
                     random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
                     artist_entry_id = f"{timestamp:x}{random_part}"
@@ -953,7 +1161,7 @@ class WikiArtScraper:
                 artist_data['artworks'].append(artwork_staging)
                 time.sleep(0.5)  # Rate limiting
             except Exception as e:
-                print(f"  Error processing artwork {artwork['title']}: {e}")
+                print(f"    Error processing artwork {artwork['title']}: {e}")
                 continue
 
         # --- Add all existing DB artworks for this artist (not already included) ---
@@ -964,7 +1172,7 @@ class WikiArtScraper:
                 cursor = self.db.execute('SELECT * FROM image_entries WHERE json_extract(artist_names, "$[0]") = ?', (actual_name,))
                 db_artworks = cursor.fetchall()
             except Exception as e:
-                print(f"  Error loading DB artworks for {actual_name}: {e}")
+                print(f"    Error loading DB artworks for {actual_name}: {e}")
             # Build set of image_ids already included
             included_image_ids = set(a['image_id'] for a in artist_data['artworks'] if a.get('image_id'))
             for row in db_artworks:
@@ -1007,6 +1215,37 @@ class WikiArtScraper:
                 }
                 artist_data['artworks'].append(db_artwork)
 
+        # Validate that artist has some meaningful data or artworks
+        if not artist_data['artworks'] and not is_existing:
+            print(f"    Skipping new artist with no artworks: {artist_name}")
+            # Roll back the new artist count since we're not including them
+            if not is_existing:
+                self.new_artists_count -= 1
+            self.add_to_summary_log(artist_name, "ERROR", "New artist with no artworks")
+            self.update_progress_log(artist_name, "ERROR", "New artist with no artworks")
+            return None
+            
+        # For existing artists, also skip if they have very little meaningful data
+        if is_existing and not artist_data['artworks']:
+            wikiart_desc = artist_data.get('descriptions', {}).get('wikiart', {})
+            has_meaningful_data = any([
+                wikiart_desc.get('birth'),
+                wikiart_desc.get('death'), 
+                wikiart_desc.get('nationality'),
+                wikiart_desc.get('art_movement'),
+                wikiart_desc.get('description')
+            ])
+            if not has_meaningful_data:
+                print(f"    Skipping existing artist with no artworks and minimal data: {artist_name}")
+                self.add_to_summary_log(artist_name, "ERROR", "Existing artist with no artworks and minimal data")
+                self.update_progress_log(artist_name, "ERROR", "Existing artist with no artworks and minimal data")
+                return None
+
+        # Success! Log the result
+        artwork_count = len(artist_data['artworks'])
+        print(f"    Successfully processed artist {actual_name} with {artwork_count} artworks")
+        self.add_to_summary_log(artist_name, "SUCCESS", f"{artwork_count} artworks")
+        self.update_progress_log(artist_name, "SUCCESS", f"{artwork_count} artworks")
         return artist_data
 
 
@@ -1015,6 +1254,7 @@ class WikiArtScraper:
         print(f"Starting scraping process...")
         print(f"Download enabled: {self.download}")
         print(f"Limit: {self.limit}")
+        print(f"Progress log: {self.progress_log_file}")
         print(f"Loaded {len(self.existing_artists)} existing artists")
         print(f"Loaded {len(self.existing_keywords)} existing keywords")
         print(f"Loaded {len(self.existing_artworks)} existing artworks")
@@ -1031,6 +1271,10 @@ class WikiArtScraper:
         for artist_name in artist_names:
             if self.limit_reached or self.get_database_operations_count() >= self.limit:
                 print(f"[INFO] Scraping stopped: limit of {self.limit} reached.")
+                # Log remaining artists as skipped due to limit
+                remaining_artists = artist_names[artist_names.index(artist_name):]
+                for remaining_artist in remaining_artists:
+                    self.update_progress_log(remaining_artist, "SKIPPED", "Limit reached before processing")
                 break
 
             artist_data = self.scrape_artist(artist_name, stop_at_limit=True)
@@ -1076,6 +1320,13 @@ class WikiArtScraper:
         print(f"Total database operations: {self.get_database_operations_count()}")
         print(f"Limit: {self.limit}")
         print(f"Per-artist files written: {len(per_artist_files)}")
+        print(f"Progress log updated: {self.progress_log_file}")
+        
+        # Print the summary log of all artists processed
+        self.print_summary_log()
+        
+        # Save the summary log to a file as well
+        self.save_summary_log()
 
     def cleanup(self):
         """Clean up resources, especially database connection"""
@@ -1098,8 +1349,116 @@ class WikiArtScraper:
         print(f"Staging data saved to: {filepath}")
         return filepath
     
+    def add_to_summary_log(self, artist_name: str, status: str, message: str = ""):
+        """Add an entry to the artist summary log"""
+        self.artist_summary_log.append({
+            "artist": artist_name,
+            "status": status,  # "SUCCESS" or "ERROR"
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    def print_summary_log(self):
+        """Print the summary log at the end of processing"""
+        if not self.artist_summary_log:
+            return
+            
+        print(f"\n{'='*60}")
+        print(f"ARTIST PROCESSING SUMMARY LOG")
+        print(f"{'='*60}")
+        
+        success_count = 0
+        error_count = 0
+        
+        for entry in self.artist_summary_log:
+            artist = entry["artist"]
+            status = entry["status"]
+            message = entry["message"]
+            
+            if status == "SUCCESS":
+                print(f"{artist} -- SUCCESS -- {message}")
+                success_count += 1
+            else:  # ERROR
+                print(f"{artist} -- ERROR -- {message}")
+                error_count += 1
+        
+        print(f"\n{'-'*60}")
+        print(f"SUMMARY: {success_count} successful, {error_count} errors, {len(self.artist_summary_log)} total")
+        print(f"{'-'*60}")
+    
+    def save_summary_log(self, timestamp: str):
+        """Save the summary log to a file for persistence"""
+        if not self.artist_summary_log:
+            return None
+            
+        log_filename = f"artist_summary_log_{timestamp}.json"
+        log_filepath = os.path.join(self.staging_dir, log_filename)
+        
+        # Create a formatted summary for easy reading
+        summary_data = {
+            "metadata": {
+                "timestamp": timestamp,
+                "total_artists": len(self.artist_summary_log),
+                "successful": len([x for x in self.artist_summary_log if x["status"] == "SUCCESS"]),
+                "errors": len([x for x in self.artist_summary_log if x["status"] == "ERROR"])
+            },
+            "summary": self.artist_summary_log
+        }
+        
+        with open(log_filepath, 'w', encoding='utf-8') as f:
+            json.dump(summary_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"Artist summary log saved to: {log_filepath}")
+        return log_filepath
+    
+    def load_processed_artists(self) -> set:
+        """Load list of already processed artists from progress log"""
+        processed = set()
+        if os.path.exists(self.progress_log_file):
+            try:
+                with open(self.progress_log_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#'):  # Skip empty lines and comments
+                            # Format: "artist_name|status|timestamp"
+                            parts = line.split('|', 2)
+                            if len(parts) >= 1:
+                                processed.add(parts[0])
+                print(f"Loaded {len(processed)} already processed artists from {self.progress_log_file}")
+            except Exception as e:
+                print(f"Warning: Error reading progress log {self.progress_log_file}: {e}")
+        else:
+            print(f"No existing progress log found at {self.progress_log_file}")
+        return processed
+    
+    def update_progress_log(self, artist_name: str, status: str, message: str = ""):
+        """Update the progress log with artist processing status"""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"{artist_name}|{status}|{timestamp}"
+        if message:
+            log_entry += f"|{message}"
+        
+        try:
+            with open(self.progress_log_file, 'a', encoding='utf-8') as f:
+                f.write(log_entry + '\n')
+                f.flush()  # Ensure it's written immediately
+            self.processed_artists.add(artist_name)
+        except Exception as e:
+            print(f"Warning: Failed to update progress log: {e}")
 
-
+    def initialize_progress_log(self):
+        """Initialize progress log file with header if it doesn't exist"""
+        if not os.path.exists(self.progress_log_file):
+            try:
+                with open(self.progress_log_file, 'w', encoding='utf-8') as f:
+                    f.write("# Processed Artists Log\n")
+                    f.write("# Format: artist_name|status|timestamp|message\n")
+                    f.write("# Status can be: SUCCESS, ERROR, SKIPPED\n")
+                    f.write("# This file is used for resumable scraping - artists listed here will be skipped\n")
+                    f.write("#\n")
+                print(f"Created new progress log: {self.progress_log_file}")
+            except Exception as e:
+                print(f"Warning: Failed to create progress log: {e}")
 
 def main():
     print(f"✅ Using database: {DB_PATH}")
@@ -1122,7 +1481,7 @@ def main():
                    help='Number of artworks to scrape per artist from all-works page')
 
     parser.add_argument('--clear', type=str, choices=['true', 'false'],
-                       default='false', help='Delete old staging JSON files before scraping')
+                       default='false', help='Hard reset: delete staging files and progress log, start from beginning of artist list')
     args = parser.parse_args()
 
      #check connection to api-url; retry 5 times and quit if not reachable
@@ -1151,7 +1510,8 @@ def main():
             download=args.download.lower() == 'true',
             limit=args.limit,
             api_base_url=args.api_url,
-            depth=args.depth
+            depth=args.depth,
+            clear=args.clear.lower() == 'true'
         )
         try:
             scraper.run_scraping()
