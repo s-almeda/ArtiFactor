@@ -127,7 +127,6 @@ function showPasswordModal() {
             return;
         }
         
-        // Test password by making a dummy API call
         const isValid = await validatePassword(password);
         if (isValid) {
             adminPassword = password;
@@ -159,9 +158,15 @@ function showPasswordError(message) {
 
 async function validatePassword(password) {
     try {
-        // Test with a dummy call to check password
-        const response = await fetch('/staging_review/list_artist_files');
-        return response.ok; // For now, just check if we can access the API
+        const response = await fetch('/validate_admin_password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: password })
+        });
+        const result = await response.json();
+        return result.success === true;
     } catch (error) {
         return false;
     }

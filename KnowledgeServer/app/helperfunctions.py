@@ -311,30 +311,67 @@ def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=3):
     return matches
 
 
-def find_most_similar_texts(text_features, conn, top_k=3):
+
+
+def find_most_similar_texts(text_features, conn, top_k=3, search_in="description"):
     """
-    given a vector of text embeddings
     Find the top-k most similar texts by cosine similarity.
-    Takes in the text features and a database connection.
-    Returns a pandas.DataFrame containing the entry_ids and distances of the top-k most similar texts.
+    Args:
+        text_features: embedding vector (serialized)
+        conn: database connection
+        top_k: number of results to return
+        search_in: "description", "value", or "both"
+    Returns:
+        pandas.DataFrame with entry_id and distance columns
     """
     print("Finding similar texts...")
 
-    # Query the vector database (on the text descriptions for each entry) for the most similar texts
-    query = """
-        SELECT
-            id,
-            distance
-        FROM vec_description_features
-        WHERE embedding MATCH ?
-        ORDER BY distance
-        LIMIT ?
-    """
-    rows = conn.execute(query, [text_features, top_k]).fetchall()
+    queries = []
+    params = []
 
-    # Convert the results to a DataFrame
-    similar_texts = pd.DataFrame(rows, columns=["entry_id", "distance"])
-    return similar_texts
+    if search_in == "description":
+        queries.append("""
+            SELECT id AS entry_id, distance
+            FROM vec_description_features
+            WHERE embedding MATCH ?
+        """)
+        params.append([text_features])
+    elif search_in == "value":
+        queries.append("""
+            SELECT id AS entry_id, distance
+            FROM vec_value_features
+            WHERE embedding MATCH ?
+        """)
+        params.append([text_features])
+    elif search_in == "both":
+        queries.append("""
+            SELECT id AS entry_id, distance
+            FROM vec_description_features
+            WHERE embedding MATCH ?
+        """)
+        queries.append("""
+            SELECT id AS entry_id, distance
+            FROM vec_value_features
+            WHERE embedding MATCH ?
+        """)
+        params = [[text_features], [text_features]]
+    else:
+        raise ValueError("search_in must be 'description', 'value', or 'both'")
+
+    # Collect results from all queries
+    all_rows = []
+    for q, p in zip(queries, params):
+        rows = conn.execute(q + " ORDER BY distance LIMIT ?", p + [top_k]).fetchall()
+        all_rows.extend(rows)
+
+    # Combine, deduplicate by entry_id, and sort by distance
+    if all_rows:
+        df = pd.DataFrame(all_rows, columns=["entry_id", "distance"])
+        df = df.sort_values("distance").drop_duplicates("entry_id").head(top_k).reset_index(drop=True)
+    else:
+        df = pd.DataFrame(columns=["entry_id", "distance"])
+
+    return df
 
 
 def retrieve_text_details(similar_texts, conn):

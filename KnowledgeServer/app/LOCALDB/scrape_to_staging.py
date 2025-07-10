@@ -280,14 +280,15 @@ class WikiArtScraper:
 
         return None
 
-    def lookup_keywords_via_api(self, query_text: str, top_k: int = 10) -> List[Dict]:
+    def lookup_keywords_via_api(self, query_text: str, top_k: int = 10, search_in: string = "both") -> List[Dict]:
         """Use the existing lookup_text API to find similar keywords"""
         try:
             response = self.api_session.post(
                 f"{self.api_base_url}/lookup_text",
                 json={
                     "query": query_text,
-                    "top_k": top_k
+                    "top_k": top_k,
+                    "search_in": search_in
                 },
                 timeout=30
             )
@@ -329,7 +330,7 @@ class WikiArtScraper:
         search_text = ' '.join(search_text_parts)
         print(f"    Searching for keywords with text: {search_text[:100]}...")
         # Find similar keywords using API
-        similar_keywords = self.lookup_keywords_via_api(search_text, top_k=10)
+        similar_keywords = self.lookup_keywords_via_api(search_text, top_k=10, search_in="both")
         #print(f"[DEBUG] get_artist_keywords: similar_keywords={similar_keywords}")
         # Combine existing and new keywords
         final_keyword_ids = existing_keywords_ids.copy()
@@ -371,7 +372,7 @@ class WikiArtScraper:
         search_text = ' '.join(search_text_parts)
         print(f"      Searching for artwork keywords with text: {search_text[:100]}...")
         # Find additional similar keywords using API
-        similar_keywords = self.lookup_keywords_via_api(search_text, top_k=5)
+        similar_keywords = self.lookup_keywords_via_api(search_text, top_k=5, search_in="value")
         #print(f"[DEBUG] get_artwork_keywords: similar_keywords={similar_keywords}")
         # Track which IDs we already have to avoid duplicates
         existing_ids_set = set(keyword_ids)
@@ -382,7 +383,7 @@ class WikiArtScraper:
             distance = result.get('distance')
             #print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
             # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.9:
+            if keyword_id not in existing_ids_set and distance is not None and distance < 0.95:
                 keyword_ids.append(keyword_id)
                 keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -1325,8 +1326,6 @@ class WikiArtScraper:
         # Print the summary log of all artists processed
         self.print_summary_log()
         
-        # Save the summary log to a file as well
-        self.save_summary_log()
 
     def cleanup(self):
         """Clean up resources, especially database connection"""
@@ -1386,31 +1385,7 @@ class WikiArtScraper:
         print(f"SUMMARY: {success_count} successful, {error_count} errors, {len(self.artist_summary_log)} total")
         print(f"{'-'*60}")
     
-    def save_summary_log(self, timestamp: str):
-        """Save the summary log to a file for persistence"""
-        if not self.artist_summary_log:
-            return None
-            
-        log_filename = f"artist_summary_log_{timestamp}.json"
-        log_filepath = os.path.join(self.staging_dir, log_filename)
-        
-        # Create a formatted summary for easy reading
-        summary_data = {
-            "metadata": {
-                "timestamp": timestamp,
-                "total_artists": len(self.artist_summary_log),
-                "successful": len([x for x in self.artist_summary_log if x["status"] == "SUCCESS"]),
-                "errors": len([x for x in self.artist_summary_log if x["status"] == "ERROR"])
-            },
-            "summary": self.artist_summary_log
-        }
-        
-        with open(log_filepath, 'w', encoding='utf-8') as f:
-            json.dump(summary_data, f, indent=2, ensure_ascii=False)
-        
-        print(f"Artist summary log saved to: {log_filepath}")
-        return log_filepath
-    
+
     def load_processed_artists(self) -> set:
         """Load list of already processed artists from progress log"""
         processed = set()

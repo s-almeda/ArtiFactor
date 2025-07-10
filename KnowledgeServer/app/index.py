@@ -538,7 +538,8 @@ def handle_lookup_text():
     Expected request JSON:
     {
         "query": "search text",
-        "top_k": 5  (optional, defaults to 5)
+        "top_k": 5  (optional, defaults to 5),
+        "search_in": "description" | "value" | "both" (optional, defaults to "description")
     }
     
     Returns JSON array of matches with distance scores and full database details.
@@ -551,30 +552,33 @@ def handle_lookup_text():
         return jsonify({"error": "No query text provided"}), 400
         
     top_k = request.json.get('top_k', 5)
+    search_in = request.json.get('search_in', 'description')
     print(f"Query text: {query_text}")
     print(f"Top K: {top_k}")
+    print(f"Search in: {search_in}")
 
     # Call the general lookup_text function
     try:
-        results = lookup_text(query_text, top_k)
+        results = lookup_text(query_text, top_k, search_in)
         return jsonify(results)
     except Exception as e:
         print(f"Error during text lookup: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-def lookup_text(query_text, top_k=5):
+def lookup_text(query_text, top_k=5, search_in='description'):
     """
     Given a text query, find and return the most similar text entries in the database.
     
     Args:
         query_text (str): The text to search for.
         top_k (int): Number of top matches to return.
+        search_in (str): Field(s) to search in: "description", "value", or "both".
     
     Returns:
         List of dictionaries containing matches with distance scores and full database details.
     """
-    print(f"Performing text lookup for query: '{query_text}' with top_k={top_k}")
+    print(f"Performing text lookup for query: '{query_text}' with top_k={top_k}, search_in={search_in}")
     
     # Extract features from query text
     query_features = helpers.extract_text_features(query_text)
@@ -584,7 +588,7 @@ def lookup_text(query_text, top_k=5):
     db = get_db()
 
     # Find the most similar text entries
-    similar_texts_df = helpers.find_most_similar_texts(query_features, db, top_k=top_k)
+    similar_texts_df = helpers.find_most_similar_texts(query_features, db, top_k=top_k, search_in=search_in)
     print(f"Found {len(similar_texts_df)} similar texts")
 
     # Get detailed information for each match
@@ -917,6 +921,21 @@ def lookup_entry():
     return jsonify(row_dict)
 
 
+@app.route('/validate_admin_password', methods=['POST'])
+def validate_admin_password():
+    """
+    Validates the admin password sent in the request JSON.
+    Expects JSON: { "password": "<password>" }
+    Returns: { "success": true } if correct, else { "success": false }
+    """
+    data = request.get_json()
+    password = data.get('password') if data else None
+    admin_password = os.environ.get('FINAL_SQL_ADMIN_PASSWORD')
+
+    if password and admin_password and password == admin_password:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False})
 
 @app.teardown_appcontext
 def close_db(error):

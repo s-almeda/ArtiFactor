@@ -309,7 +309,6 @@
                     return;
                 }
                 
-                // Test password by making a dummy API call
                 const isValid = await validatePassword(password);
                 if (isValid) {
                     adminPassword = password;
@@ -342,29 +341,25 @@
 
         async function validatePassword(password) {
             try {
-                // Test the password with the same validation system used by staging_review
-                const response = await fetch('/staging_review/process_individual_artist/test', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        password: password
-                    })
-                });
-                
-                const result = await response.json();
-                // If it returns an error about file not found, that means password was accepted
-                // If it returns an error about incorrect password, that means password was rejected
-                if (result.error && result.error.includes('Incorrect password')) {
-                    return false;
-                } else {
-                    return true; // Password was accepted (even if file wasn't found)
-                }
+            // Call a dedicated endpoint that checks the password against the environment variable
+            const response = await fetch('/validate_admin_password', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                password: password
+                })
+            });
+
+            const result = await response.json();
+            // The backend should return { success: true } if password matches
+            return !!result.success;
             } catch (error) {
-                return false;
+            return false;
             }
         }
+
 
         function showMainContent() {
             document.getElementById('main-content').style.display = 'block';

@@ -33,6 +33,7 @@ docker run -d -p 8080:8080 \
     -v "$HOME/model_cache:/root/.cache/torch/hub" \
     -v "$HOME/transformers_cache:/root/.cache/transformers" \
     -e RUNNING_IN_DOCKER=true \
+    -e FINAL_SQL_ADMIN_PASSWORD="${FINAL_SQL_ADMIN_PASSWORD:-Girimehkala}" \
     --name $IMAGE_NAME $FULL_IMAGE_PATH
 
 echo "Container is running! Use 'docker logs $IMAGE_NAME' to check logs."

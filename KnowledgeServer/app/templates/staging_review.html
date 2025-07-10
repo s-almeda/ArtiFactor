@@ -63,6 +63,8 @@
         </div>
 
     <div id="artist-list" class="artist-list" style="display: none;"></div>
+    <!-- Floating Save Changes Button -->
+    <button id="floatingSaveBtn" class="btn btn-primary" style="display:none;position:fixed;top:50%;right:32px;z-index:1000;font-size:1.1em;padding:14px 28px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:#007bff;color:#fff;transition:background 0.2s;">💾 Save Changes</button>
     <div id="artistModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -1176,6 +1178,31 @@ function showError(message) {
     errorDiv.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
 }
+
+// Floating Save Changes button logic
+(function() {
+    const floatBtn = document.getElementById('floatingSaveBtn');
+    if (!floatBtn) return;
+    // Show/hide based on artist list
+    const observer = new MutationObserver(() => {
+        if (document.getElementById('artist-list').style.display !== 'none') {
+            floatBtn.style.display = 'block';
+        } else {
+            floatBtn.style.display = 'none';
+        }
+    });
+    observer.observe(document.getElementById('artist-list'), { attributes: true, attributeFilter: ['style'] });
+    // Click triggers the same save as the main button
+    floatBtn.onclick = function() {
+        // Find the visible artist form
+        const form = document.querySelector('.artist-item');
+        if (form) {
+            // Find the save button in the form and trigger click
+            const saveBtn = form.querySelector('button.btn.btn-primary');
+            if (saveBtn) saveBtn.click();
+        }
+    };
+})();
 </script>
 </body>
 </html>
