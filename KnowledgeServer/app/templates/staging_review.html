@@ -64,7 +64,7 @@
 
     <div id="artist-list" class="artist-list" style="display: none;"></div>
     <!-- Floating Save Changes Button -->
-    <button id="floatingSaveBtn" class="btn btn-primary" style="display:none;position:fixed;top:50%;right:32px;z-index:1000;font-size:1.1em;padding:14px 28px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:#007bff;color:#fff;transition:background 0.2s;">💾 Save Changes</button>
+    <button id="floatingSaveBtn" class="btn btn-primary" style="display:none;position:fixed;top:50%;right:32px;z-index:1000;font-size:1.1em;padding:14px 28px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:#007bff;color:#fff;transition:background 0.2s, transform 0.1s;">💾 Save Changes</button>
     <div id="artistModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -280,7 +280,7 @@ window.openAssignKeywordModal = function(keyword, keywordId, buttonElement) {
     html += `<button type='button' id='assignModalSelectAllBtn' style='font-size:0.95em;padding:4px 14px;border-radius:5px;background:#e0e0e0;color:#333;border:none;cursor:pointer;'>Select All</button>`;
     html += `<button type='button' id='assignModalDeselectAllBtn' style='font-size:0.95em;padding:4px 14px;border-radius:5px;background:#e0e0e0;color:#333;border:none;cursor:pointer;'>Deselect All</button>`;
     html += `</div>`;
-    html += `<div id='assignModalGrid' style="max-height:340px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:16px;">`;
+    html += `<div id='assignModalGrid' style="max-height:550px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:16px;">`;
     // For each artwork, show image and selection state
     artist.artworks.forEach((aw, idx) => {
         const awKeywords = [];
@@ -711,9 +711,17 @@ window.addArtistKeyword = async function(form, artistIdx) {
                 copyButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;';
                 copyButton.onclick = function() { window.copyKeywordToAllArtworks(keyword, keywordId, copyButton); };
                 
+                // Add "Assign" button
+                const assignButton = document.createElement('button');
+                assignButton.type = 'button';
+                assignButton.textContent = 'Assign';
+                assignButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                assignButton.onclick = function() { window.openAssignKeywordModal(keyword, keywordId, assignButton); };
+                
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 div.appendChild(copyButton);
+                div.appendChild(assignButton);
                 group.appendChild(div);
                 
                 existingKeywords.add(keyword);
@@ -827,9 +835,27 @@ window.addArtworkKeyword = async function(form, artistIdx, awidx) {
                 copyBtn.onclick = function() {
                     window.copyKeywordToAllArtworks(keyword, keywordId, copyBtn);
                 };
+                
+                // Assign button
+                const assignBtn = document.createElement('button');
+                assignBtn.type = 'button';
+                assignBtn.textContent = 'Assign';
+                assignBtn.style.fontSize = '0.8em';
+                assignBtn.style.padding = '2px 6px';
+                assignBtn.style.marginLeft = '4px';
+                assignBtn.style.background = '#28a745';
+                assignBtn.style.color = 'white';
+                assignBtn.style.border = 'none';
+                assignBtn.style.borderRadius = '3px';
+                assignBtn.style.cursor = 'pointer';
+                assignBtn.onclick = function() {
+                    window.openAssignKeywordModal(keyword, keywordId, assignBtn);
+                };
+                
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 div.appendChild(copyBtn);
+                div.appendChild(assignBtn);
                 group.appendChild(div);
                 existingKeywords.add(keyword);
                 addedCount++;
@@ -905,6 +931,14 @@ window.copyKeywordToAllArtworks = function(keyword, keywordId, buttonElement) {
                 newButton.textContent = 'Copy to All';
                 newButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;';
                 newButton.onclick = function() { window.copyKeywordToAllArtworks(keyword, keywordId, newButton); };
+                
+                // Add "Assign" button
+                const newAssignButton = document.createElement('button');
+                newAssignButton.type = 'button';
+                newAssignButton.textContent = 'Assign';
+                newAssignButton.style.cssText = 'font-size: 0.8em; padding: 2px 6px; margin-left: 4px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;';
+                newAssignButton.onclick = function() { window.openAssignKeywordModal(keyword, keywordId, newAssignButton); };
+                
                 // Compose the new div
                 const newDiv = document.createElement('div');
                 newDiv.style.display = 'flex';
@@ -913,6 +947,7 @@ window.copyKeywordToAllArtworks = function(keyword, keywordId, buttonElement) {
                 newDiv.appendChild(newCheckbox);
                 newDiv.appendChild(newLabel);
                 newDiv.appendChild(newButton);
+                newDiv.appendChild(newAssignButton);
                 group.appendChild(newDiv);
                 changedCount++;
             }
@@ -1326,6 +1361,14 @@ function showError(message) {
     observer.observe(document.getElementById('artist-list'), { attributes: true, attributeFilter: ['style'] });
     // Click triggers the same save as the main button
     floatBtn.onclick = function() {
+        // Provide immediate visual feedback
+        const originalText = floatBtn.innerHTML;
+        const originalBg = floatBtn.style.background;
+        
+        floatBtn.innerHTML = '✓ Saving...';
+        floatBtn.style.background = '#28a745';
+        floatBtn.style.transform = 'scale(0.95)';
+        
         // Find the visible artist form
         const form = document.querySelector('.artist-item');
         if (form) {
@@ -1333,6 +1376,13 @@ function showError(message) {
             const saveBtn = form.querySelector('button.btn.btn-primary');
             if (saveBtn) saveBtn.click();
         }
+        
+        // Reset button appearance after a short delay
+        setTimeout(() => {
+            floatBtn.innerHTML = originalText;
+            floatBtn.style.background = originalBg;
+            floatBtn.style.transform = 'scale(1)';
+        }, 1000);
     };
 })();
 </script>

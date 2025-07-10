@@ -89,12 +89,14 @@ class LimitReachedException(Exception):
     pass
 
 class WikiArtScraper:
-    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000", clear: bool = False):
+    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000", clear: bool = False, artist_keyword_distance: float = 0.7, artwork_keyword_distance: float = 0.95):
         self.download = download
         self.limit = limit
         self.depth = depth
         self.clear = clear
         self.api_base_url = api_base_url.rstrip('/')
+        self.artist_keyword_distance = artist_keyword_distance
+        self.artwork_keyword_distance = artwork_keyword_distance
         
         # Session for WikiArt scraping
         self.session = requests.Session()
@@ -329,8 +331,28 @@ class WikiArtScraper:
             search_text_parts.append(artist_info['wikipedia']['description'])
         search_text = ' '.join(search_text_parts)
         print(f"    Searching for keywords with text: {search_text[:100]}...")
-        # Find similar keywords using API
+        # Find similar keywords using API (broad search)
         similar_keywords = self.lookup_keywords_via_api(search_text, top_k=10, search_in="both")
+
+        # --- Tight keyword search: for each value in wikipedia description, search_in="value", tight threshold ---
+        tight_keywords = []
+        if 'wikipedia' in artist_info and 'description' in artist_info['wikipedia']:
+            wiki_desc = artist_info['wikipedia']['description']
+            if wiki_desc and isinstance(wiki_desc, str):
+            # Split description into sentences or phrases for more granular search
+                for value in re.split(r'[.;\n]', wiki_desc):
+                    value = value.strip()
+                    if value:
+                        results = self.lookup_keywords_via_api(value, top_k=3, search_in="value")
+                        for result in results:
+                            if result.get('distance') is not None and result['distance'] < 0.58:
+                                tight_keywords.append(result)
+
+        # Merge both sets, dedup by entry_id
+        all_keywords = {k['entry_id']: k for k in similar_keywords}
+        for k in tight_keywords:
+            all_keywords[k['entry_id']] = k
+        similar_keywords = list(all_keywords.values())
         #print(f"[DEBUG] get_artist_keywords: similar_keywords={similar_keywords}")
         # Combine existing and new keywords
         final_keyword_ids = existing_keywords_ids.copy()
@@ -342,8 +364,8 @@ class WikiArtScraper:
             keyword_text = result.get('value')
             distance = result.get('distance')
             #print(f"[DEBUG] Considering keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
-            # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.8:
+            # Only add if not already present and distance indicates relevance (use self.artist_keyword_distance)
+            if keyword_id not in existing_ids_set and distance is not None and distance < self.artist_keyword_distance:
                 final_keyword_ids.append(keyword_id)
                 final_keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -361,18 +383,37 @@ class WikiArtScraper:
         # Start with artist keywords
         keyword_ids = artist_keywords_ids.copy()
         keyword_strings = artist_keywords_strings.copy()
-        # Extract text for semantic matching
-        search_text_parts = [artwork_title]
+        # Extract text for semantic matching - artwork title is given priority
+        search_text_parts = [artwork_title]  # Artwork title comes first for semantic weight
         # Add artwork-specific data
         if 'descriptions' in artwork_data and 'wikiart' in artwork_data['descriptions']:
             wikiart_desc = artwork_data['descriptions']['wikiart']
-            for field in ['medium', 'style', 'genre', 'period', 'series']:
-                if field in wikiart_desc:
-                    search_text_parts.append(wikiart_desc[field])
-        search_text = ' '.join(search_text_parts)
-        print(f"      Searching for artwork keywords with text: {search_text[:100]}...")
-        # Find additional similar keywords using API
-        similar_keywords = self.lookup_keywords_via_api(search_text, top_k=5, search_in="value")
+            # Append all fields from wikiart_desc, not just a fixed list
+            for _, value in wikiart_desc.items():
+                if value and isinstance(value, str):
+                    search_text_parts.append(value)
+            search_text = ' '.join(search_text_parts)
+            print(f"      Searching for artwork keywords with title '{artwork_title}' + metadata: {search_text[:100]}...")
+
+            # 1. Broad search: combined text, search_in="both", normal threshold
+            similar_keywords = self.lookup_keywords_via_api(search_text, top_k=6, search_in="both")
+
+            # 2. Tight search: for each value in wikiart_desc, search_in="value", tight threshold (0.5)
+            tight_keywords = []
+            if 'descriptions' in artwork_data and 'wikiart' in artwork_data['descriptions']:
+                wikiart_desc = artwork_data['descriptions']['wikiart']
+                for _, value in wikiart_desc.items():
+                    if value and isinstance(value, str):
+                        results = self.lookup_keywords_via_api(value, top_k=3, search_in="value")
+                        for result in results:
+                            if result.get('distance') is not None and result['distance'] < 0.65:
+                                tight_keywords.append(result)
+
+        # Merge both sets, dedup by entry_id
+        all_keywords = {k['entry_id']: k for k in similar_keywords}
+        for k in tight_keywords:
+            all_keywords[k['entry_id']] = k
+        similar_keywords = list(all_keywords.values())
         #print(f"[DEBUG] get_artwork_keywords: similar_keywords={similar_keywords}")
         # Track which IDs we already have to avoid duplicates
         existing_ids_set = set(keyword_ids)
@@ -382,8 +423,8 @@ class WikiArtScraper:
             keyword_text = result.get('value')
             distance = result.get('distance')
             #print(f"[DEBUG] Considering artwork keyword: id={keyword_id}, text={keyword_text}, distance={distance}")
-            # Only add if not already present and distance indicates relevance
-            if keyword_id not in existing_ids_set and distance is not None and distance < 0.8:
+            # Only add if not already present and distance indicates relevance (use self.artwork_keyword_distance)
+            if keyword_id not in existing_ids_set and distance is not None and distance < self.artwork_keyword_distance:
                 keyword_ids.append(keyword_id)
                 keyword_strings.append(keyword_text)
                 existing_ids_set.add(keyword_id)
@@ -1442,6 +1483,7 @@ def main():
 
         
 
+
     parser = argparse.ArgumentParser(description='Scrape WikiArt data to staging JSON')
     parser.add_argument('--download', type=str, choices=['true', 'false'], 
                        default='false', help='Download images to local storage')
@@ -1449,14 +1491,15 @@ def main():
                        help='Maximum number of items to scrape')
     parser.add_argument('--api-url', type=str, default='http://localhost:8080',
                        help='Base URL for the Flask API')
-    
-
     # add per-artist artwork depth
     parser.add_argument('--depth', type=int, default=10, 
                    help='Number of artworks to scrape per artist from all-works page')
-
     parser.add_argument('--clear', type=str, choices=['true', 'false'],
                        default='false', help='Hard reset: delete staging files and progress log, start from beginning of artist list')
+    parser.add_argument('--artistKeywordDistance', type=float, default=0.7,
+                       help='Distance threshold for attaching artist keywords (default: 0.7)')
+    parser.add_argument('--artworkKeywordDistance', type=float, default=0.95,
+                       help='Distance threshold for attaching artwork keywords (default: 0.95)')
     args = parser.parse_args()
 
      #check connection to api-url; retry 5 times and quit if not reachable
@@ -1486,7 +1529,9 @@ def main():
             limit=args.limit,
             api_base_url=args.api_url,
             depth=args.depth,
-            clear=args.clear.lower() == 'true'
+            clear=args.clear.lower() == 'true',
+            artist_keyword_distance=args.artistKeywordDistance,
+            artwork_keyword_distance=args.artworkKeywordDistance
         )
         try:
             scraper.run_scraping()
