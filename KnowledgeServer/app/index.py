@@ -97,19 +97,17 @@ app.register_blueprint(health_check_bp)
 from templates.staging_review import staging_review_bp
 app.register_blueprint(staging_review_bp)
 
+from templates.data_cleaner import data_cleaner_bp
+app.register_blueprint(data_cleaner_bp)
+
 # Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
-if os.getenv('ADMIN_MODE', '').lower() == 'true':
-    from templates.admin import admin_bp
-    app.register_blueprint(admin_bp)
-    from templates.artist_lookup import artist_lookup_bp
-    app.register_blueprint(artist_lookup_bp)
-    from templates.data_cleaner import data_cleaner_bp
-    app.register_blueprint(data_cleaner_bp)
+# DEPRECATED
+# if os.getenv('ADMIN_MODE', '').lower() == 'true':
+#     from templates.admin import admin_bp
+#     app.register_blueprint(admin_bp)
+#     from templates.artist_lookup import artist_lookup_bp
+#     app.register_blueprint(artist_lookup_bp)
 
-# Add this import at the top of your file if not already there:
-# from flask import render_template, jsonify, request
-
-# Replace your existing "/" route with this new one:
 
 @app.route("/")
 def browse_database():

@@ -909,3 +909,375 @@ def fix_related_keywords():
             'success': False,
             'error': str(e)
         })
+
+@data_cleaner_bp.route('/search_all_related_artworks', methods=['POST'])
+def search_all_related_artworks():
+    """Search for artworks related to all artists without images by checking relatedKeywordIds"""
+    try:
+        print("=== DEBUG: Starting bulk related artworks search ===")
+        from index import get_db
+        db = get_db()
+        
+        # First get all artists without images
+        artists_cursor = db.execute("""
+            SELECT entry_id, value, images, artist_aliases 
+            FROM text_entries 
+            WHERE isArtist = 1 
+            AND (images IS NULL OR images = '' OR images = '[]')
+        """)
+        
+        artists_with_matches = []
+        artists_without_matches = []
+        
+        for artist_row in artists_cursor.fetchall():
+            artist_entry_id = artist_row['entry_id']
+            artist_name = artist_row['value']
+            artist_aliases = artist_row['artist_aliases']
+            
+            # Parse aliases if available
+            aliases = []
+            if artist_aliases:
+                try:
+                    aliases = json.loads(artist_aliases)
+                except json.JSONDecodeError:
+                    aliases = []
+            
+            # Search for images that have this artist's entry_id in their relatedKeywordIds
+            related_images = []
+            cursor = db.execute("""
+                SELECT image_id, value, artist_names, relatedKeywordIds 
+                FROM image_entries 
+                WHERE relatedKeywordIds LIKE ?
+            """, (f'%"{artist_entry_id}"%',))
+            
+            for row in cursor.fetchall():
+                image_id = row['image_id']
+                value = row['value']
+                artist_names = row['artist_names']
+                related_keyword_ids = row['relatedKeywordIds']
+                
+                # Verify that the artist_entry_id is actually in the JSON array
+                try:
+                    keyword_ids = json.loads(related_keyword_ids) if related_keyword_ids else []
+                    if artist_entry_id in keyword_ids:
+                        related_images.append({
+                            'image_id': image_id,
+                            'value': value,
+                            'artist_names': json.loads(artist_names) if artist_names else [],
+                            'relatedKeywordIds': keyword_ids
+                        })
+                except json.JSONDecodeError:
+                    continue
+            
+            artist_data = {
+                'entry_id': artist_entry_id,
+                'value': artist_name,
+                'aliases': aliases,
+                'related_images': related_images,
+                'total_related': len(related_images)
+            }
+            
+            if len(related_images) > 0:
+                artists_with_matches.append(artist_data)
+            else:
+                artists_without_matches.append(artist_data)
+        
+        print(f"DEBUG: Found {len(artists_with_matches)} artists with matches, {len(artists_without_matches)} without matches")
+        
+        return jsonify({
+            'success': True,
+            'artists_with_matches': artists_with_matches,
+            'artists_without_matches': artists_without_matches,
+            'total_with_matches': len(artists_with_matches),
+            'total_without_matches': len(artists_without_matches)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in search_all_related_artworks: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/execute_artist_updates', methods=['POST'])
+def execute_artist_updates():
+    """Execute updates: add image IDs to artists and remove artists with no matches"""
+    try:
+        print("=== DEBUG: Starting execute artist updates ===")
+        from index import get_db
+        db = get_db()
+        
+        data = request.json
+        artists_with_matches = data.get('artists_with_matches', [])
+        artists_without_matches = data.get('artists_without_matches', [])
+        
+        updated_artists = 0
+        removed_artists = 0
+        
+        # Update artists with matches - add image IDs to their images array
+        for artist in artists_with_matches:
+            artist_entry_id = artist['entry_id']
+            related_images = artist['related_images']
+            
+            if related_images:
+                # Get current images array
+                cursor = db.execute("SELECT images FROM text_entries WHERE entry_id = ?", (artist_entry_id,))
+                row = cursor.fetchone()
+                
+                if row:
+                    try:
+                        current_images = json.loads(row['images']) if row['images'] and row['images'] != '[]' else []
+                    except json.JSONDecodeError:
+                        current_images = []
+                    
+                    # Add new image IDs (avoid duplicates)
+                    new_image_ids = [img['image_id'] for img in related_images]
+                    for img_id in new_image_ids:
+                        if img_id not in current_images:
+                            current_images.append(img_id)
+                    
+                    # Update the database
+                    new_images_json = json.dumps(current_images)
+                    db.execute(
+                        "UPDATE text_entries SET images = ? WHERE entry_id = ?",
+                        (new_images_json, artist_entry_id)
+                    )
+                    updated_artists += 1
+                    print(f"DEBUG: Updated artist {artist_entry_id} with {len(new_image_ids)} new images")
+        
+        # Remove artists without matches
+        for artist in artists_without_matches:
+            artist_entry_id = artist['entry_id']
+            cursor = db.execute(
+                "DELETE FROM text_entries WHERE entry_id = ? AND isArtist = 1",
+                (artist_entry_id,)
+            )
+            if cursor.rowcount > 0:
+                removed_artists += 1
+                print(f"DEBUG: Removed artist {artist_entry_id}")
+        
+        # Commit all changes
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'updated_artists': updated_artists,
+            'removed_artists': removed_artists,
+            'message': f'Successfully updated {updated_artists} artists with new images and removed {removed_artists} artists without any artwork'
+        })
+        
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR in execute_artist_updates: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/check_artist_image_integrity', methods=['POST'])
+def check_artist_image_integrity():
+    """Check integrity between artists and their images"""
+    try:
+        print("=== DEBUG: Starting artist-image integrity check ===")
+        from index import get_db
+        db = get_db()
+        
+        integrity_issues = []
+        
+        # Get all artists with images
+        cursor = db.execute("""
+            SELECT entry_id, value, images 
+            FROM text_entries 
+            WHERE isArtist = 1 
+            AND images IS NOT NULL 
+            AND images != '' 
+            AND images != '[]'
+        """)
+        
+        for row in cursor.fetchall():
+            artist_entry_id = row['entry_id']
+            artist_name = row['value']
+            images_json = row['images']
+            
+            try:
+                image_ids = json.loads(images_json)
+                if not isinstance(image_ids, list):
+                    continue
+                
+                for image_id in image_ids:
+                    # Check if image exists
+                    image_cursor = db.execute("""
+                        SELECT image_id, value, artist_names, relatedKeywordIds 
+                        FROM image_entries 
+                        WHERE image_id = ?
+                    """, (image_id,))
+                    
+                    image_row = image_cursor.fetchone()
+                    
+                    if not image_row:
+                        # Image doesn't exist
+                        integrity_issues.append({
+                            'type': 'missing_image',
+                            'artist_entry_id': artist_entry_id,
+                            'artist_name': artist_name,
+                            'image_id': image_id,
+                            'description': f"Artist '{artist_name}' references non-existent image {image_id}"
+                        })
+                    else:
+                        # Image exists, check if artist is properly linked back
+                        image_artist_names = json.loads(image_row['artist_names']) if image_row['artist_names'] else []
+                        image_related_ids = json.loads(image_row['relatedKeywordIds']) if image_row['relatedKeywordIds'] else []
+                        
+                        # Check if artist name is in image's artist_names
+                        if artist_name not in image_artist_names:
+                            integrity_issues.append({
+                                'type': 'missing_artist_name',
+                                'artist_entry_id': artist_entry_id,
+                                'artist_name': artist_name,
+                                'image_id': image_id,
+                                'image_value': image_row['value'],
+                                'current_artist_names': image_artist_names,
+                                'description': f"Image '{image_row['value']}' doesn't have artist '{artist_name}' in artist_names"
+                            })
+                        
+                        # Check if artist entry_id is in image's relatedKeywordIds
+                        if artist_entry_id not in image_related_ids:
+                            integrity_issues.append({
+                                'type': 'missing_related_keyword',
+                                'artist_entry_id': artist_entry_id,
+                                'artist_name': artist_name,
+                                'image_id': image_id,
+                                'image_value': image_row['value'],
+                                'current_related_ids': image_related_ids,
+                                'description': f"Image '{image_row['value']}' doesn't have artist entry_id '{artist_entry_id}' in relatedKeywordIds"
+                            })
+                            
+            except json.JSONDecodeError:
+                integrity_issues.append({
+                    'type': 'malformed_json',
+                    'artist_entry_id': artist_entry_id,
+                    'artist_name': artist_name,
+                    'images_json': images_json,
+                    'description': f"Artist '{artist_name}' has malformed images JSON"
+                })
+        
+        print(f"DEBUG: Found {len(integrity_issues)} integrity issues")
+        
+        return jsonify({
+            'success': True,
+            'integrity_issues': integrity_issues,
+            'total_issues': len(integrity_issues)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_artist_image_integrity: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/fix_artist_image_integrity', methods=['POST'])
+def fix_artist_image_integrity():
+    """Fix artist-image integrity issues"""
+    try:
+        print("=== DEBUG: Starting artist-image integrity fix ===")
+        from index import get_db
+        db = get_db()
+        
+        # Get the integrity issues from the request
+        data = request.json
+        integrity_issues = data.get('integrity_issues', [])
+        
+        if not integrity_issues:
+            return jsonify({
+                'success': False,
+                'error': 'No integrity issues provided'
+            })
+        
+        fixed_count = 0
+        
+        for issue in integrity_issues:
+            issue_type = issue['type']
+            
+            if issue_type == 'missing_image':
+                # Remove the non-existent image ID from artist's images list
+                artist_entry_id = issue['artist_entry_id']
+                image_id = issue['image_id']
+                
+                # Get current images
+                cursor = db.execute("SELECT images FROM text_entries WHERE entry_id = ?", (artist_entry_id,))
+                row = cursor.fetchone()
+                if row:
+                    try:
+                        current_images = json.loads(row['images'])
+                        if image_id in current_images:
+                            current_images.remove(image_id)
+                            new_images_json = json.dumps(current_images)
+                            db.execute("UPDATE text_entries SET images = ? WHERE entry_id = ?", 
+                                     (new_images_json, artist_entry_id))
+                            fixed_count += 1
+                    except json.JSONDecodeError:
+                        pass
+                        
+            elif issue_type == 'missing_artist_name':
+                # Add artist name to image's artist_names
+                image_id = issue['image_id']
+                artist_name = issue['artist_name']
+                
+                cursor = db.execute("SELECT artist_names FROM image_entries WHERE image_id = ?", (image_id,))
+                row = cursor.fetchone()
+                if row:
+                    try:
+                        current_names = json.loads(row['artist_names']) if row['artist_names'] else []
+                        if artist_name not in current_names:
+                            current_names.append(artist_name)
+                            new_names_json = json.dumps(current_names)
+                            db.execute("UPDATE image_entries SET artist_names = ? WHERE image_id = ?",
+                                     (new_names_json, image_id))
+                            fixed_count += 1
+                    except json.JSONDecodeError:
+                        # Create new list with just this artist
+                        new_names_json = json.dumps([artist_name])
+                        db.execute("UPDATE image_entries SET artist_names = ? WHERE image_id = ?",
+                                 (new_names_json, image_id))
+                        fixed_count += 1
+                        
+            elif issue_type == 'missing_related_keyword':
+                # Add artist entry_id to image's relatedKeywordIds
+                image_id = issue['image_id']
+                artist_entry_id = issue['artist_entry_id']
+                
+                cursor = db.execute("SELECT relatedKeywordIds FROM image_entries WHERE image_id = ?", (image_id,))
+                row = cursor.fetchone()
+                if row:
+                    try:
+                        current_ids = json.loads(row['relatedKeywordIds']) if row['relatedKeywordIds'] else []
+                        if artist_entry_id not in current_ids:
+                            current_ids.append(artist_entry_id)
+                            new_ids_json = json.dumps(current_ids)
+                            db.execute("UPDATE image_entries SET relatedKeywordIds = ? WHERE image_id = ?",
+                                     (new_ids_json, image_id))
+                            fixed_count += 1
+                    except json.JSONDecodeError:
+                        # Create new list with just this artist entry_id
+                        new_ids_json = json.dumps([artist_entry_id])
+                        db.execute("UPDATE image_entries SET relatedKeywordIds = ? WHERE image_id = ?",
+                                 (new_ids_json, image_id))
+                        fixed_count += 1
+        
+        # Commit all changes
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'fixed_count': fixed_count,
+            'message': f'Successfully fixed {fixed_count} integrity issues'
+        })
+        
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR in fix_artist_image_integrity: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })

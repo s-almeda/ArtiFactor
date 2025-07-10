@@ -43,3 +43,5 @@ backend/database.db
 
 .cache
 KnowledgeServer/app/generated_maps/*
+LOCALDB/staging/*
+*.json

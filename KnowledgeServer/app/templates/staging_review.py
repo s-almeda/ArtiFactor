@@ -719,3 +719,239 @@ def approve_final_sql():
         return jsonify({'success': True, 'message': 'All SQL commands executed successfully.'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+# --- NEW ROUTES FOR INDIVIDUAL ARTIST PROCESSING ---
+
+@staging_review_bp.route('/generate_final_sql_json', methods=['POST'])
+def generate_final_sql_json():
+    """Generate final SQL-ready JSON from all processed artist files"""
+    try:
+        # Get all processed artist files
+        files = glob.glob(os.path.join(STAGING_DIR, 'staging_artist_*.json'))
+        
+        if not files:
+            return jsonify({
+                'success': False,
+                'error': 'No artist files found to process'
+            })
+        
+        # Create timestamp for filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        final_filename = f'final_sql_ready_{timestamp}.json'
+        final_file_path = os.path.join(STAGING_DIR, final_filename)
+        
+        # Process all files and generate SQL data
+        text_entries = []
+        image_entries = []
+        stats = {'total_artists': 0, 'total_artworks': 0}
+        
+        for file_path in files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                artist = data.get('artist', {})
+                if not artist:
+                    continue
+                
+                # Process artist entry
+                artist_entry = create_sql_entry_from_artist(artist)
+                if artist_entry:
+                    text_entries.append(artist_entry)
+                    stats['total_artists'] += 1
+                
+                # Process artwork entries
+                for artwork in artist.get('artworks', []):
+                    artwork_entry = create_sql_entry_from_artwork(artwork)
+                    if artwork_entry:
+                        image_entries.append(artwork_entry)
+                        stats['total_artworks'] += 1
+                        
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+                continue
+        
+        # Save final SQL-ready JSON
+        final_data = {
+            'metadata': {
+                'timestamp': timestamp,
+                'total_artists': stats['total_artists'],
+                'total_artworks': stats['total_artworks'],
+                'source_files': len(files)
+            },
+            'text_entries': text_entries,
+            'image_entries': image_entries
+        }
+        
+        with open(final_file_path, 'w', encoding='utf-8') as f:
+            json.dump(final_data, f, indent=2, ensure_ascii=False)
+        
+        return jsonify({
+            'success': True,
+            'filename': final_filename,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@staging_review_bp.route('/download_final_json/<filename>')
+def download_final_json(filename):
+    """Download the final SQL JSON file"""
+    try:
+        safe_filename = os.path.basename(filename)
+        file_path = os.path.join(STAGING_DIR, safe_filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'error': 'File not found'})
+        
+        return send_file(file_path, as_attachment=True, download_name=safe_filename)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@staging_review_bp.route('/process_individual_artist/<filename>', methods=['POST'])
+def process_individual_artist(filename):
+    """Process a single artist file and generate SQL commands for immediate execution"""
+    try:
+        data = request.get_json()
+        password = data.get('password')
+        
+        # Verify password
+        ADMIN_PASSWORD = os.environ.get('FINAL_SQL_ADMIN_PASSWORD', 'letmein')
+        if password != ADMIN_PASSWORD:
+            return jsonify({'success': False, 'error': 'Incorrect password'})
+        
+        # Load the artist file
+        safe_filename = os.path.basename(filename)
+        file_path = os.path.join(STAGING_DIR, safe_filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'error': 'Artist file not found'})
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            artist_data = json.load(f)
+        
+        artist = artist_data.get('artist', {})
+        if not artist:
+            return jsonify({'success': False, 'error': 'No artist data found in file'})
+        
+        # Generate and execute SQL commands
+        db_path = os.path.abspath(os.path.join(STAGING_DIR, '..', 'knowledgebase.db'))
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        
+        executed_commands = []
+        
+        try:
+            # Process artist entry
+            artist_entry = create_sql_entry_from_artist(artist)
+            if artist_entry:
+                sql_cmd = generate_sql_command(artist_entry, 'text_entries')
+                cur.execute(sql_cmd['sql'], sql_cmd['values'])
+                executed_commands.append(f"Artist: {artist.get('name', '')}")
+            
+            # Process artwork entries
+            for artwork in artist.get('artworks', []):
+                artwork_entry = create_sql_entry_from_artwork(artwork)
+                if artwork_entry:
+                    sql_cmd = generate_sql_command(artwork_entry, 'image_entries')
+                    cur.execute(sql_cmd['sql'], sql_cmd['values'])
+                    executed_commands.append(f"Artwork: {artwork.get('value', '')}")
+            
+            conn.commit()
+            conn.close()
+            
+            # Move processed file to completed folder
+            completed_dir = os.path.join(STAGING_DIR, 'completed')
+            os.makedirs(completed_dir, exist_ok=True)
+            completed_path = os.path.join(completed_dir, safe_filename)
+            os.rename(file_path, completed_path)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully processed {len(executed_commands)} entries',
+                'executed_commands': executed_commands
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            return jsonify({'success': False, 'error': f'Database error: {str(e)}'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+def create_sql_entry_from_artist(artist):
+    """Convert artist data to SQL entry format"""
+    try:
+        entry_id = artist.get('existing_id') or artist.get('generated_entry_id')
+        if not entry_id:
+            # Generate new ID
+            timestamp = int(time.time())
+            random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            entry_id = f"{timestamp:x}{random_part}"
+        
+        return {
+            'entry_id': entry_id,
+            'value': artist.get('name', ''),
+            'images': json.dumps([]),
+            'isArtist': 1,
+            'type': 'artist',
+            'artist_aliases': json.dumps(artist.get('artist_aliases', [])),
+            'descriptions': json.dumps(artist.get('descriptions', {})),
+            'relatedKeywordIds': artist.get('RelatedKeywordIds', '[]'),
+            'relatedKeywordStrings': artist.get('RelatedKeywordStrings', '[]'),
+            'sql_action': 'UPDATE' if artist.get('is_existing') else 'INSERT'
+        }
+    except Exception as e:
+        print(f"Error creating artist SQL entry: {e}")
+        return None
+
+def create_sql_entry_from_artwork(artwork):
+    """Convert artwork data to SQL entry format"""
+    try:
+        image_id = artwork.get('image_id') or artwork.get('existing_id')
+        if not image_id:
+            # Generate new ID
+            timestamp = int(time.time())
+            random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            image_id = f"{timestamp:x}{random_part}"
+        
+        return {
+            'image_id': image_id,
+            'value': artwork.get('value', ''),
+            'artist_names': json.dumps(artwork.get('artist_names', [])),
+            'image_urls': json.dumps(artwork.get('image_urls', {})),
+            'filename': artwork.get('filename', ''),
+            'rights': artwork.get('rights', ''),
+            'descriptions': json.dumps(artwork.get('descriptions', {})),
+            'relatedKeywordIds': artwork.get('relatedKeywordIds', '[]'),
+            'relatedKeywordStrings': artwork.get('relatedKeywordStrings', '[]'),
+            'sql_action': 'UPDATE' if artwork.get('is_existing') else 'INSERT'
+        }
+    except Exception as e:
+        print(f"Error creating artwork SQL entry: {e}")
+        return None
+
+def generate_sql_command(entry, table_name):
+    """Generate SQL command from entry data"""
+    if table_name == 'text_entries':
+        fields = ['entry_id', 'value', 'images', 'isArtist', 'type', 'artist_aliases', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+    else:  # image_entries
+        fields = ['image_id', 'value', 'artist_names', 'image_urls', 'filename', 'rights', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']
+    
+    values = [entry.get(f) for f in fields]
+    
+    if entry.get('sql_action') == 'INSERT':
+        sql = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({', '.join(['?']*len(fields))})"
+    else:
+        set_clause = ', '.join([f"{f}=?" for f in fields[1:]])
+        sql = f"UPDATE {table_name} SET {set_clause} WHERE {fields[0]}=?"
+        # For UPDATE, reorder values: [value, ...other_fields, entry_id]
+        values = values[1:] + [values[0]]
+    
+    return {'sql': sql, 'values': values}

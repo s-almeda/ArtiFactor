@@ -43,15 +43,21 @@
             <!-- Final submission controls -->
             <div class="final-controls" style="margin-top: 20px; padding: 15px; border: 2px solid #007bff; border-radius: 8px; background: #f8f9fa;">
                 <h3><i class="fas fa-database"></i> Final Database Submission</h3>
-                <p>After reviewing and editing individual artist files, generate the final SQL-ready JSON:</p>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <p>After reviewing and editing individual artist files:</p>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <button id="generateFinalJson" class="btn btn-primary" style="font-size: 1.1em; padding: 10px 20px;">
                         <i class="fas fa-cogs"></i> Generate Final SQL JSON
                     </button>
                     <button id="downloadFinalJson" class="btn btn-success" style="display: none; font-size: 1.1em; padding: 10px 20px;">
                         <i class="fas fa-download"></i> Download Final JSON
                     </button>
+                    <a href="/staging_review/final_sql_review" class="btn btn-warning" style="font-size: 1.1em; padding: 10px 20px; text-decoration: none;">
+                        <i class="fas fa-database"></i> Commit to Database
+                    </a>
                     <div id="finalJsonStatus" style="margin-left: 10px; font-weight: bold;"></div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                    Use "Commit to Database" to process individual artist files and commit them directly to the database.
                 </div>
             </div>
         </div>
