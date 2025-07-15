@@ -1,7 +1,7 @@
 """
 update_embeddings.py
 =====================
-This script combines the functionality of extracting text and image features into a single script.
+This script combines the functionality of extracting text, image, and CLIP multimodal features into a single script.
 
 It updates the database with features for any new rows in the `text_entries` and `image_entries` tables
 that don't already have embeddings.
@@ -10,7 +10,13 @@ that don't already have embeddings.
     - Processes `text_entries` table and updates `vec_description_features` and `vec_value_features` tables.
 2. For image entries:
     - Processes `image_entries` table and updates `vec_image_features` table.
-3. Skips rows that already have embeddings in the respective tables.
+3. For CLIP multimodal features:
+    - Processes `image_entries` table and updates `vec_clip_features` table with combined image and text embeddings.
+4. Skips rows that already have embeddings in the respective tables (unless CLIP embeddings are remade).
+
+Usage:
+    python3 update_embeddings.py                    # Normal update mode
+    python3 update_embeddings.py --clip remake      # Remake all CLIP embeddings from scratch
 """
 
 import sqlite3
@@ -27,12 +33,30 @@ import sqlean as sqlite3
 from transformers import CLIPModel, CLIPProcessor
 import json
 import requests
+import argparse
+import sys
 
 # LOCALDB = "LOCALDB"
 
-def update_embeddings():
+def update_embeddings(remake_clip=False):
     # Configure logging
     logging.basicConfig(level=logging.INFO)
+
+    # Show confirmation prompt
+    operation_description = []
+    if remake_clip:
+        operation_description.append("remaking CLIP from scratch")
+    else:
+        operation_description.append("updating CLIP")
+    
+    operation_description.append("updating ResNet50 and MiniLM")
+    
+    confirmation_msg = f"Will be {', '.join(operation_description)}. Continue? (y/n): "
+    user_input = input(confirmation_msg).strip().lower()
+    
+    if user_input not in ['y', 'yes']:
+        print("Operation cancelled.")
+        return
 
     # Connect to SQLite database
     # db_path = os.path.join(LOCALDB, "knowledgebase.db")
@@ -92,6 +116,16 @@ def update_embeddings():
             updated_text_entries.append(value)  # Track updated text entry
             logging.info(f"✅ - Inserted description features for entry_id {entry_id}:{value}.")
 
+            # Commit every 250 entries to save progress
+            if len(updated_text_entries) % 250 == 0:
+                conn.commit()
+                logging.info(f"💾 Committed progress: {len(updated_text_entries)} text description entries processed.")
+
+
+    # commit after finishing description features
+    conn.commit()
+    logging.info("Committed description changes to the database.")
+
     # Process `vec_value_features`
     for entry_id, _, value, _, _ in text_entries:
         # Skip if already in `vec_value_features`
@@ -108,6 +142,14 @@ def update_embeddings():
             ''', (entry_id, features_array.tobytes()))
             logging.info(f"✅ - Inserted value features for entry_id {entry_id}:{value}.")
 
+            # Commit every 250 entries to save progress
+            if len(updated_text_entries) % 250 == 0:
+                conn.commit()
+                logging.info(f"💾 Committed progress: {len(updated_text_entries)} text value entries processed.")
+
+    # commit after finishing value features
+    conn.commit()
+    logging.info("Committed value changes to the database.")
     # --- IMAGE FEATURES ---
     logging.info("Updating image features...")
 
@@ -119,7 +161,7 @@ def update_embeddings():
     ''')
 
     # Retrieve image entries
-    cursor.execute('SELECT image_id, value, filename FROM image_entries')
+    cursor.execute('SELECT image_id, value, image_urls, filename FROM image_entries')
     image_entries = cursor.fetchall()
     logging.info(f"Fetched {len(image_entries)} image entries.")
 
@@ -212,13 +254,24 @@ def update_embeddings():
         ''', (image_id, features.tobytes()))
         updated_image_entries.append(value)  # Track updated image entry
 
+        # Commit every 250 entries to save progress
+        if len(updated_image_entries) % 10 == 0:
+            conn.commit()
+            logging.info(f"💾 Committed progress: {len(updated_image_entries)} image entries processed.")
+
         
         logging.info(f"✅ Inserted features for image_id {image_id}: {value}.")
 
-    
+    # Commit any remaining changes
+    conn.commit()
+    logging.info(f"💾 Committed progress: {len(updated_image_entries)} image entries processed.")
+
     
     # --- CLIP MULTIMODAL FEATURES ---
-    logging.info("Updating CLIP multimodal features...")
+    if remake_clip:
+        logging.info("Remaking ALL CLIP multimodal features from scratch...")
+    else:
+        logging.info("Updating CLIP multimodal features...")
 
     # Create virtual table if it doesn't exist
     cursor.execute('''
@@ -244,14 +297,23 @@ def update_embeddings():
         FROM image_entries i
     ''')
     clip_candidates = cursor.fetchall()
-    logging.info(f"Found {len(clip_candidates)} images to process for CLIP.")
+    if remake_clip:
+        logging.info(f"Found {len(clip_candidates)} images to REMAKE for CLIP (will process ALL).")
+    else:
+        logging.info(f"Found {len(clip_candidates)} images to process for CLIP (will skip existing).")
 
     for image_id, title, filename, artist_names_json, descriptions_json, keywords_json in clip_candidates:
-        # Skip if already processed
+        # Check if already processed
         cursor.execute('SELECT 1 FROM vec_clip_features WHERE image_id = ?', (image_id,))
-        if cursor.fetchone():
+        existing_record = cursor.fetchone()
+        
+        if existing_record and not remake_clip:
             logging.info(f"Skipping image_id {image_id} (CLIP features already exist).")
             continue
+        elif existing_record and remake_clip:
+            # Delete existing entry if remaking
+            cursor.execute('DELETE FROM vec_clip_features WHERE image_id = ?', (image_id,))
+            logging.info(f"Deleted existing CLIP features for image_id {image_id} (remaking).")
 
         if not filename:
             logging.warning(f"Skipping image_id {image_id} due to missing filename.")
@@ -273,35 +335,16 @@ def update_embeddings():
             if title:
                 text_parts.append(title)
             
-            # Add artist names and fetch artist info
+            # Add artist names (no additional artist info lookup)
             if artist_names_json:
                 try:
                     artist_names = json.loads(artist_names_json)
                     if artist_names:
                         text_parts.append(f"by {', '.join(artist_names[:3])}")
-                        
-                        # Look up each artist in text_entries
-                        for artist_name in artist_names[:2]:  # Limit to first 2
-                            cursor.execute('''
-                                SELECT descriptions FROM text_entries 
-                                WHERE LOWER(value) = LOWER(?) AND isArtist = 1
-                            ''', (artist_name,))
-                            artist_row = cursor.fetchone()
-                            if artist_row and artist_row[0]:
-                                try:
-                                    artist_desc = json.loads(artist_row[0])
-                                    # Extract all values from artist description
-                                    for source, content in artist_desc.items():
-                                        if isinstance(content, dict):
-                                            for key, value in content.items():
-                                                if isinstance(value, str) and value.strip():
-                                                    text_parts.append(f"{key}: {value}")
-                                except json.JSONDecodeError:
-                                    pass
                 except json.JSONDecodeError:
                     pass
             
-            # Add artwork descriptions
+            # Add artwork descriptions (values only, no keys)
             if descriptions_json:
                 try:
                     desc = json.loads(descriptions_json)
@@ -309,7 +352,8 @@ def update_embeddings():
                         if isinstance(content, dict):
                             for key, value in content.items():
                                 if isinstance(value, str) and value.strip():
-                                    text_parts.append(f"{key}: {value}")
+                                    # Only add the value, not the key
+                                    text_parts.append(value)
                         elif isinstance(content, str) and content.strip():
                             text_parts.append(content)
                 except json.JSONDecodeError:
@@ -319,15 +363,15 @@ def update_embeddings():
             if keywords_json:
                 try:
                     keywords = json.loads(keywords_json)
-                    if keywords[:5]:
-                        text_parts.append(' '.join(keywords[:5]))
+                    if keywords:
+                        text_parts.extend(keywords)  # Add all keywords individually
                 except json.JSONDecodeError:
                     pass
             
             # Combine text (limit length for CLIP)
-            combined_text = ' '.join(text_parts)
-            if len(combined_text) > 200:
-                combined_text = combined_text[:197] + "..."
+            combined_text = ', '.join(text_parts)  # Use comma separation for better readability
+            if len(combined_text) > 300:  # Increased limit to accommodate more descriptive text
+                combined_text = combined_text[:297] + "..."
             
             # Process with CLIP
             inputs = clip_processor(text=combined_text, images=image, return_tensors="pt", 
@@ -356,6 +400,11 @@ def update_embeddings():
             
             updated_clip_entries.append(title or image_id)
             logging.info(f"✅ Inserted CLIP features for {image_id}: {title}")
+
+            # Commit every 250 entries to save progress
+            if len(updated_clip_entries) % 250 == 0:
+                conn.commit()
+                logging.info(f"💾 Committed progress: {len(updated_clip_entries)} CLIP entries processed.")
             
         except Exception as e:
             logging.error(f"Error processing CLIP features for {image_id}: {e}")
@@ -390,4 +439,12 @@ def update_embeddings():
     
 
 if __name__ == "__main__":
-    update_embeddings()
+    parser = argparse.ArgumentParser(description='Update embeddings in the database')
+    parser.add_argument('--clip', choices=['remake'], 
+                       help='Specify "remake" to regenerate all CLIP embeddings from scratch')
+    
+    args = parser.parse_args()
+    
+    remake_clip = args.clip == 'remake'
+    
+    update_embeddings(remake_clip=remake_clip)

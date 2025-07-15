@@ -10,19 +10,42 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     gcloud compute scp docker_run.sh resnet50wikiart:~
 fi
 
-# Prompt user about LOCALDB script changes
-echo "Have you made changes to LOCALDB files: scrape_to_staging.py, update_embeddings.py, or artist_names.txt?"
-read -p "If yes, press 'y' to copy them to the remote instance:" -n 1 -r
+# Prompt user about scrape_to_staging.py changes
+echo "Have you made changes to LOCALDB/scrape_to_staging.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Copying LOCALDB files to remote instance..."
+    echo "Copying scrape_to_staging.py to remote instance..."
     gcloud compute scp ./app/LOCALDB/scrape_to_staging.py resnet50wikiart:~/LOCALDB/
+fi
+
+# Prompt user about update_embeddings.py changes
+echo "Have you made changes to LOCALDB/update_embeddings.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying update_embeddings.py to remote instance..."
     gcloud compute scp ./app/LOCALDB/update_embeddings.py resnet50wikiart:~/LOCALDB/
+fi
+
+# Prompt user about artist_names.txt changes
+echo "Have you made changes to LOCALDB/artist_names.txt?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying artist_names.txt to remote instance..."
     gcloud compute scp ./app/LOCALDB/artist_names.txt resnet50wikiart:~/LOCALDB/
-fi      
+fi
 
 
-
+# Prompt user about Docker image/app changes
+echo "Have you made changes to the Docker image / Flask app (e.g., that runs via ./bootstrap.sh)?"
+read -p "If yes, press 'y' to locally push/ remotely pull the Docker image (otherwise, script will exit): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "No changes to Docker image/app. Exiting."
+    exit 0
+fi
 # Push Docker image to Google Container Registry
 docker push gcr.io/artifactor-449507/resnet50wikiart:latest
 

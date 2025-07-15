@@ -8,6 +8,7 @@ preparing the data for staging review before database updates.
 Usage:
     python scrape_to_staging.py --download true --limit 50
     python scrape_to_staging.py --download false --limit 100
+    python scrape_to_staging.py --artist "Vincent van Gogh" --limit 10  # Test single artist
 """
 
 import argparse
@@ -89,7 +90,7 @@ class LimitReachedException(Exception):
     pass
 
 class WikiArtScraper:
-    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000", clear: bool = False, artist_keyword_distance: float = 0.7, artwork_keyword_distance: float = 0.95):
+    def __init__(self, download: bool = False, limit: int = 5, depth: int = 5, api_base_url: str = "http://localhost:5000", clear: bool = False, artist_keyword_distance: float = 0.7, artwork_keyword_distance: float = 0.95, single_artist: Optional[str] = None):
         self.download = download
         self.limit = limit
         self.depth = depth
@@ -97,6 +98,7 @@ class WikiArtScraper:
         self.api_base_url = api_base_url.rstrip('/')
         self.artist_keyword_distance = artist_keyword_distance
         self.artwork_keyword_distance = artwork_keyword_distance
+        self.single_artist = single_artist
         
         # Session for WikiArt scraping
         self.session = requests.Session()
@@ -336,17 +338,54 @@ class WikiArtScraper:
 
         # --- Tight keyword search: for each value in wikipedia description, search_in="value", tight threshold ---
         tight_keywords = []
-        if 'wikipedia' in artist_info and 'description' in artist_info['wikipedia']:
-            wiki_desc = artist_info['wikipedia']['description']
-            if wiki_desc and isinstance(wiki_desc, str):
-            # Split description into sentences or phrases for more granular search
-                for value in re.split(r'[.;\n]', wiki_desc):
-                    value = value.strip()
-                    if value:
-                        results = self.lookup_keywords_via_api(value, top_k=3, search_in="value")
+        # Tight keyword search: for each value in wikiart structured data, search_in="value", tight threshold
+        if 'structured_data' in artist_info:
+            wikiart_desc = artist_info['structured_data']
+            for _, value in wikiart_desc.items():
+                if value and isinstance(value, str):
+                    # Split comma-separated values and search each part separately
+                    value_parts = [v.strip() for v in value.split(',') if v.strip()]
+                    for part in value_parts:
+                    # Always search the actual value name
+                        results = self.lookup_keywords_via_api(part, top_k=3, search_in="value")
                         for result in results:
-                            if result.get('distance') is not None and result['distance'] < 0.58:
+                            if result.get('distance') is not None and result['distance'] < 0.5:
                                 tight_keywords.append(result)
+                            # Manual keyword mapping for specific cases
+                        manual_keyword_map = {
+                            "marina": ["nautical"],
+                            "nude painting (nu)": ["Nude"],
+                            "oil, panel": ["Oil on Panel"],
+                            "rococo": ["rococo art and design"],
+                            "lithography": ["lithograph"],
+                            "etching": ["etching/engraving"],
+                            "sketch and study": ["Study", "Drawing"],
+                            "battle painting": ["Conflict", "War"],
+                            "religious painting": ["Related to Religion"],
+                            "animal painting": ["animals"],
+                            "allegorical painting": ["Allegory"],
+                            "Italian": ["Italy"],
+                            "French": ["France"],
+                            "German": ["Germany"],
+                            "Spanish": ["Spain"],
+                            "Netherlands": ["Dutch"],
+                            "Chinese": ["China"],
+                            "Japanese": ["Japan"],
+                            "Tokyo": ["Japan"],
+                            "Russian": ["Russia"],
+                            "American": ["USA", "United States", "America"],
+                            "Concrete Art": ["Concretism"],
+                            "Concretism": ["Concrete Art"],
+                            "Abstract": ["Abstract Art"],
+                            "Abstract painting": ["Abstract Art"],
+                        }
+                        part_lower = part.lower()
+                        if part_lower in manual_keyword_map:
+                            for manual_kw in manual_keyword_map[part_lower]:
+                                manual_results = self.lookup_keywords_via_api(manual_kw, top_k=2, search_in="value")
+                                for result in manual_results:
+                                    if result.get('distance') is not None and result['distance'] < 0.5:
+                                        tight_keywords.append(result)
 
         # Merge both sets, dedup by entry_id
         all_keywords = {k['entry_id']: k for k in similar_keywords}
@@ -396,7 +435,15 @@ class WikiArtScraper:
             print(f"      Searching for artwork keywords with title '{artwork_title}' + metadata: {search_text[:100]}...")
 
             # 1. Broad search: combined text, search_in="both", normal threshold
-            similar_keywords = self.lookup_keywords_via_api(search_text, top_k=6, search_in="both")
+            # Combine results from both searches, avoiding duplicates by entry_id
+            keywords_both = self.lookup_keywords_via_api(search_text, top_k=6, search_in="both")
+            keywords_value = self.lookup_keywords_via_api(search_text, top_k=6, search_in="value")
+            # Use a dict to deduplicate by entry_id
+            similar_keywords_dict = {k['entry_id']: k for k in keywords_both}
+            for k in keywords_value:
+                similar_keywords_dict[k['entry_id']] = k
+            similar_keywords = list(similar_keywords_dict.values())
+
 
             # 2. Tight search: for each value in wikiart_desc, search_in="value", tight threshold (0.5)
             tight_keywords = []
@@ -404,10 +451,49 @@ class WikiArtScraper:
                 wikiart_desc = artwork_data['descriptions']['wikiart']
                 for _, value in wikiart_desc.items():
                     if value and isinstance(value, str):
-                        results = self.lookup_keywords_via_api(value, top_k=3, search_in="value")
-                        for result in results:
-                            if result.get('distance') is not None and result['distance'] < 0.65:
-                                tight_keywords.append(result)
+                        # Split comma-separated values and search each part separately
+                        value_parts = [v.strip() for v in value.split(',') if v.strip()]
+                        for part in value_parts:
+                            # Always search the actual value name
+                            results = self.lookup_keywords_via_api(part, top_k=3, search_in="value")
+                            for result in results:
+                                if result.get('distance') is not None and result['distance'] < 0.5:
+                                    tight_keywords.append(result)
+                            # Manual keyword mapping for specific cases
+                            manual_keyword_map = {
+                                "marina": ["nautical"],
+                                "nude painting (nu)": ["Nude"],
+                                "oil, panel": ["Oil on Panel"],
+                                "rococo": ["rococo art and design"],
+                                "lithography": ["lithograph"],
+                                "etching": ["etching/engraving"],
+                                "sketch and study": ["Study", "Drawing"],  # Now maps to both "Study" and "Drawing"
+                                "battle painting": ["Conflict", "War"],
+                                "religious painting": ["Related to Religion"],
+                                "animal painting": ["animals"],
+                                "allegorical painting": ["Allegory"],
+                                "Italian": ["Italy"],
+                                "French": ["France"],
+                                "German": ["Germany"],
+                                "Spanish": ["Spain"],
+                                "Netherlands": ["Dutch"],
+                                "Chinese": ["China"],
+                                "Japanese": ["Japan"],
+                                "Tokyo": ["Japan"],
+                                "Russian": ["Russia"],
+                                "American": ["USA", "United States", "America"],
+                                "Concrete Art": ["Concretism"],
+                                "Concretism": ["Concrete Art"],
+                                "Abstract": ["Abstract Art"],
+                                "Abstract painting": ["Abstract Art"],
+                            }
+                            part_lower = part.lower()
+                            if part_lower in manual_keyword_map:
+                                for manual_kw in manual_keyword_map[part_lower]:
+                                    manual_results = self.lookup_keywords_via_api(manual_kw, top_k=2, search_in="value")
+                                    for result in manual_results:
+                                        if result.get('distance') is not None and result['distance'] < 0.5:
+                                            tight_keywords.append(result)
 
         # Merge both sets, dedup by entry_id
         all_keywords = {k['entry_id']: k for k in similar_keywords}
@@ -516,6 +602,7 @@ class WikiArtScraper:
         
         try:
             # Get Wikipedia article content (stop at first <br />)
+            # 
             wiki_tab = soup.find('div', id='info-tab-wikipediaArticle')
             if wiki_tab:
                 first_p = wiki_tab.find('p')
@@ -725,6 +812,63 @@ class WikiArtScraper:
             if wikiart_data:
                 artwork_data['descriptions']['wikiart'] = wikiart_data
             
+            # Get artwork description from info-tab-description
+            description_tab = soup.find('div', id='info-tab-description')
+            if description_tab:
+                first_p = description_tab.find('p', itemprop='description')
+                if first_p:
+                    content_parts = []
+                    for element in first_p.contents:
+                        if hasattr(element, 'name') and element.name in ['br', 'p']:
+                            break
+                        if hasattr(element, 'get_text'):
+                            content_parts.append(element.get_text())
+                        else:
+                            content_parts.append(str(element))
+                    
+                    description_text = ''.join(content_parts).strip()
+                    if description_text:
+                        if 'wikiart' not in artwork_data['descriptions']:
+                            artwork_data['descriptions']['wikiart'] = {}
+                        artwork_data['descriptions']['wikiart']['description'] = description_text
+                        print(f"        Found artwork description: {description_text[:100]}...")
+            
+            # Get Wikipedia description from info-tab-wikipediadescription
+            wikipedia_tab = soup.find('div', id='info-tab-wikipediadescription')
+            if wikipedia_tab:
+                first_p = wikipedia_tab.find('p')
+                if first_p:
+                    content_parts = []
+                    for element in first_p.contents:
+                        if hasattr(element, 'name') and element.name in ['br', 'p']:
+                            break
+                        if hasattr(element, 'get_text'):
+                            content_parts.append(element.get_text())
+                        else:
+                            content_parts.append(str(element))
+                    
+                    wikipedia_text = ''.join(content_parts).strip()
+                    if wikipedia_text:
+                        if 'wikiart' not in artwork_data['descriptions']:
+                            artwork_data['descriptions']['wikiart'] = {}
+                        
+                        # If we already have a description, save Wikipedia separately
+                        if 'description' in artwork_data['descriptions']['wikiart']:
+                            artwork_data['descriptions']['wikiart']['wikipedia'] = wikipedia_text
+                            print(f"        Found artwork Wikipedia text (additional): {wikipedia_text[:100]}...")
+                        else:
+                            # If no description yet, use Wikipedia as description
+                            artwork_data['descriptions']['wikiart']['description'] = wikipedia_text
+                            print(f"        Found artwork Wikipedia text (as description): {wikipedia_text[:100]}...")
+                
+                # Get Wikipedia link
+                wiki_link = wikipedia_tab.find('a', class_='wiki-link')
+                if wiki_link and wiki_link.get('href'):
+                    if 'wikiart' not in artwork_data['descriptions']:
+                        artwork_data['descriptions']['wikiart'] = {}
+                    artwork_data['descriptions']['wikiart']['wikipediaLink'] = wiki_link['href'].strip()
+                    print(f"        Found artwork Wikipedia link: {wiki_link['href'].strip()}")
+            
             # Parse image URLs from ng-init JSON
             main_element = soup.find('main', attrs={'ng-controller': 'ArtworkViewCtrl'})
             if main_element and main_element.get('ng-init'):
@@ -809,6 +953,22 @@ class WikiArtScraper:
 
     def get_artist_names_to_scrape(self) -> List[str]:
         """Get list of artist names to scrape from artist_names.txt file, excluding already processed ones"""
+        
+        # If single artist is specified, use only that artist
+        if self.single_artist:
+            cleaned = self.clean_artist_name(self.single_artist)
+            if not cleaned:
+                print(f"Error: Invalid artist name provided: '{self.single_artist}'")
+                return []
+            
+            # Check if already processed (but allow reprocessing for testing)
+            if cleaned in self.processed_artists:
+                print(f"Note: Artist '{cleaned}' was already processed, but running again for testing")
+            
+            print(f"Testing with single artist: {cleaned}")
+            return [cleaned]
+        
+        # Otherwise, proceed with file-based approach
         artist_names_file = os.path.join(BASE_DIR, "artist_names.txt")
         
         if not os.path.exists(artist_names_file):
@@ -1148,7 +1308,8 @@ class WikiArtScraper:
                 existing_artwork = self.find_existing_artwork(artwork['title'], actual_name)
                 is_existing_artwork = existing_artwork is not None
                 if is_existing_artwork:
-                    print(f"      🔎 Found existing artwork: {artwork['title']} by {actual_name} -> {existing_artwork['image_id']}")
+                    print(f"      ⏭️  Skipping existing artwork: {artwork['title']} by {actual_name}")
+                    continue  # Skip to next artwork instead of processing further
                 else:
                     print(f"      ✅ New artwork: {artwork['title']} by {actual_name}")
                     # Check if adding this artwork would exceed the limit
@@ -1206,56 +1367,10 @@ class WikiArtScraper:
                 print(f"    Error processing artwork {artwork['title']}: {e}")
                 continue
 
-        # --- Add all existing DB artworks for this artist (not already included) ---
-        if is_existing:
-            db_artist = self.existing_artists[actual_name]
-            db_artworks = []
-            try:
-                cursor = self.db.execute('SELECT * FROM image_entries WHERE json_extract(artist_names, "$[0]") = ?', (actual_name,))
-                db_artworks = cursor.fetchall()
-            except Exception as e:
-                print(f"    Error loading DB artworks for {actual_name}: {e}")
-            # Build set of image_ids already included
-            included_image_ids = set(a['image_id'] for a in artist_data['artworks'] if a.get('image_id'))
-            for row in db_artworks:
-                row_dict = dict(row)
-                if row_dict.get('image_id') in included_image_ids:
-                    continue
-                # Parse all JSON/text fields as needed
-                def parse_json_field(val):
-                    if not val:
-                        return None
-                    try:
-                        return json.loads(val)
-                    except Exception:
-                        return val
-                
-                # Parse existing keywords
-                existing_keyword_ids = parse_json_field(row_dict.get('relatedKeywordIds')) or []
-                existing_keyword_strings = parse_json_field(row_dict.get('relatedKeywordStrings')) or []
-                
-                # IMPORTANT: Ensure artist's entry_id is in relatedKeywordIds and artist name is in relatedKeywordStrings
-                artist_entry_id = artist_data.get('existing_id') or artist_data.get('generated_entry_id')
-                if artist_entry_id not in existing_keyword_ids:
-                    existing_keyword_ids.insert(0, artist_entry_id)
-                if actual_name not in existing_keyword_strings:
-                    existing_keyword_strings.insert(0, actual_name)
-                
-                # Compose artwork entry with all available fields from DB
-                db_artwork = {
-                    'value': row_dict.get('value', ''),  # Use 'value' for consistency
-                    'image_id': row_dict.get('image_id', ''),
-                    'is_existing': True,
-                    'existing_id': row_dict.get('image_id', ''),
-                    'artist_names': parse_json_field(row_dict.get('artist_names')) or [actual_name],
-                    'image_urls': parse_json_field(row_dict.get('image_urls')) or {},
-                    'filename': row_dict.get('filename', ''),
-                    'rights': row_dict.get('rights', ''),
-                    'descriptions': parse_json_field(row_dict.get('descriptions')) or {},
-                    'relatedKeywordIds': json.dumps(existing_keyword_ids),  # Store as JSON string with artist ID
-                    'relatedKeywordStrings': json.dumps(existing_keyword_strings)  # Store as JSON string with artist name
-                }
-                artist_data['artworks'].append(db_artwork)
+        # --- Skip adding existing DB artworks since we only want to create files for new content ---
+        # This section was previously adding existing artworks to the staging file,
+        # but since we want to avoid creating staging files for artists with no new content,
+        # we'll skip this step entirely.
 
         # Validate that artist has some meaningful data or artworks
         if not artist_data['artworks'] and not is_existing:
@@ -1267,21 +1382,12 @@ class WikiArtScraper:
             self.update_progress_log(artist_name, "ERROR", "New artist with no artworks")
             return None
             
-        # For existing artists, also skip if they have very little meaningful data
+        # For existing artists, skip if they have no new artworks (all were existing)
         if is_existing and not artist_data['artworks']:
-            wikiart_desc = artist_data.get('descriptions', {}).get('wikiart', {})
-            has_meaningful_data = any([
-                wikiart_desc.get('birth'),
-                wikiart_desc.get('death'), 
-                wikiart_desc.get('nationality'),
-                wikiart_desc.get('art_movement'),
-                wikiart_desc.get('description')
-            ])
-            if not has_meaningful_data:
-                print(f"    Skipping existing artist with no artworks and minimal data: {artist_name}")
-                self.add_to_summary_log(artist_name, "ERROR", "Existing artist with no artworks and minimal data")
-                self.update_progress_log(artist_name, "ERROR", "Existing artist with no artworks and minimal data")
-                return None
+            print(f"    Skipping existing artist with no new artworks: {artist_name}")
+            self.add_to_summary_log(artist_name, "SKIPPED", "Existing artist with no new artworks")
+            self.update_progress_log(artist_name, "SKIPPED", "Existing artist with no new artworks")
+            return None
 
         # Success! Log the result
         artwork_count = len(artist_data['artworks'])
@@ -1296,6 +1402,9 @@ class WikiArtScraper:
         print(f"Starting scraping process...")
         print(f"Download enabled: {self.download}")
         print(f"Limit: {self.limit}")
+        print(f"Single artist mode: {'Yes' if self.single_artist else 'No'}")
+        if self.single_artist:
+            print(f"Testing with artist: {self.single_artist}")
         print(f"Progress log: {self.progress_log_file}")
         print(f"Loaded {len(self.existing_artists)} existing artists")
         print(f"Loaded {len(self.existing_keywords)} existing keywords")
@@ -1393,7 +1502,7 @@ class WikiArtScraper:
         """Add an entry to the artist summary log"""
         self.artist_summary_log.append({
             "artist": artist_name,
-            "status": status,  # "SUCCESS" or "ERROR"
+            "status": status,  # "SUCCESS", "SKIPPED", or "ERROR"
             "message": message,
             "timestamp": datetime.now().isoformat()
         })
@@ -1409,6 +1518,7 @@ class WikiArtScraper:
         
         success_count = 0
         error_count = 0
+        skipped_count = 0
         
         for entry in self.artist_summary_log:
             artist = entry["artist"]
@@ -1418,12 +1528,15 @@ class WikiArtScraper:
             if status == "SUCCESS":
                 print(f"{artist} -- SUCCESS -- {message}")
                 success_count += 1
+            elif status == "SKIPPED":
+                print(f"{artist} -- SKIPPED -- {message}")
+                skipped_count += 1
             else:  # ERROR
                 print(f"{artist} -- ERROR -- {message}")
                 error_count += 1
         
         print(f"\n{'-'*60}")
-        print(f"SUMMARY: {success_count} successful, {error_count} errors, {len(self.artist_summary_log)} total")
+        print(f"SUMMARY: {success_count} successful, {skipped_count} skipped, {error_count} errors, {len(self.artist_summary_log)} total")
         print(f"{'-'*60}")
     
 
@@ -1500,6 +1613,8 @@ def main():
                        help='Distance threshold for attaching artist keywords (default: 0.7)')
     parser.add_argument('--artworkKeywordDistance', type=float, default=0.95,
                        help='Distance threshold for attaching artwork keywords (default: 0.95)')
+    parser.add_argument('--artist', type=str, 
+                       help='Test with a single artist name instead of using artist_names.txt file')
     args = parser.parse_args()
 
      #check connection to api-url; retry 5 times and quit if not reachable
@@ -1531,7 +1646,8 @@ def main():
             depth=args.depth,
             clear=args.clear.lower() == 'true',
             artist_keyword_distance=args.artistKeywordDistance,
-            artwork_keyword_distance=args.artworkKeywordDistance
+            artwork_keyword_distance=args.artworkKeywordDistance,
+            single_artist=args.artist
         )
         try:
             scraper.run_scraping()
