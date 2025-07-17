@@ -766,16 +766,16 @@ def handle_voronoi_adjacency_analysis():
             'traceback': traceback.format_exc() if debug else None
         }), 500
 
-def analyze_voronoi_adjacency(voronoi_data, dprint):
+def find_voronoi_adjacency_pairs(voronoi_data, dprint):
     """
-    Analyze adjacency relationships between Voronoi regions using Shapely.
+    Find and identify optimal pairs of adjacent Voronoi regions.
     
     Args:
         voronoi_data: Voronoi data containing cells with vertices
         dprint: Debug print function
     
     Returns:
-        Dict with adjacency analysis results and visualization data
+        Dict with adjacency analysis results (no visualization data)
     """
     try:
         cells = voronoi_data.get('cells', [])
@@ -789,7 +789,7 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
         
         dprint(f"Analyzing adjacency for {k} Voronoi regions...")
         
-        # Step 1: Create Shapely polygons for each region
+        # Step 1: Create Shapely polygons from Voronoi vertices
         polygons = {}
         for cell in cells:
             region_id = cell['id']
@@ -816,7 +816,7 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
                 'error': 'Need at least 2 valid polygons for adjacency analysis'
             }
         
-        # Step 2: Build adjacency matrix and calculate boundary lengths
+        # Step 2: Build adjacency matrix using poly_i.touches(poly_j)
         dprint(f"Building adjacency matrix for {len(polygons)} valid regions...")
         adjacency_matrix = [[0 for _ in range(k)] for _ in range(k)]
         boundary_lengths = {}  # (region_i, region_j) -> length
@@ -834,7 +834,7 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
                         adjacency_matrix[region_i][region_j] = 1
                         adjacency_matrix[region_j][region_i] = 1
                         
-                        # Extract shared boundary and calculate length
+                        # Step 3: Calculate boundary lengths via intersection.length
                         boundary_length = 0
                         try:
                             intersection = poly_i.intersection(poly_j)
@@ -865,7 +865,7 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
                         
                         dprint(f"✓ Regions {region_i} and {region_j} are adjacent (boundary length: {boundary_length:.3f})")
         
-        # Step 3: Create optimal pairs based on longest shared boundaries
+        # Step 4: Greedy optimal pairing (longest shared boundary)
         dprint(f"Creating optimal pairs based on longest shared boundaries...")
         paired_regions = set()
         optimal_pairs = []
@@ -897,9 +897,66 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
                 paired_regions.add(best_partner)
                 dprint(f"✓ Paired regions {region_id} and {best_partner} (shared boundary length: {best_length:.3f})")
         
-        # Step 4: Create color assignments for optimal pairs
-        # Step 4: Create color assignments for optimal pairs
-        dprint(f"Creating color assignments for {len(optimal_pairs)} optimal pairs...")
+        # Calculate basic statistics
+        total_possible_adjacencies = (k * (k - 1)) // 2
+        total_adjacencies = len(shared_boundaries)
+        adjacency_percentage = (total_adjacencies / total_possible_adjacencies * 100) if total_possible_adjacencies > 0 else 0
+        
+        # Convert boundary_lengths keys from tuples to strings for JSON serialization
+        boundary_lengths_serializable = {
+            f"{min(key)}-{max(key)}": v for key, v in boundary_lengths.items()
+        }
+        
+        return {
+            'success': True,
+            'adjacencyData': {
+                'adjacencyMatrix': adjacency_matrix,
+                'optimalPairs': optimal_pairs,
+                'sharedBoundaries': shared_boundaries,
+                'boundaryLengths': boundary_lengths_serializable
+            },
+            'basicStats': {
+                'totalRegions': k,
+                'validPolygons': len(polygons),
+                'totalAdjacencies': total_adjacencies,
+                'optimalPairs': len(optimal_pairs),
+                'unpairedRegions': len(region_ids) - (len(optimal_pairs) * 2),
+                'totalPossibleAdjacencies': total_possible_adjacencies,
+                'adjacencyPercentage': round(adjacency_percentage, 1)
+            },
+            'regionIds': region_ids
+        }
+        
+    except Exception as e:
+        dprint(f"Error in adjacency analysis: {e}")
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def apply_adjacency_visualization_colors(adjacency_result, dprint):
+    """
+    Apply color assignments and cosmetics based on optimal pairs.
+    
+    Args:
+        adjacency_result: Result from find_voronoi_adjacency_pairs()
+        dprint: Debug print function
+    
+    Returns:
+        Dict with visualization data and enhanced statistics
+    """
+    try:
+        if not adjacency_result['success']:
+            return adjacency_result
+        
+        adjacency_data = adjacency_result['adjacencyData']
+        basic_stats = adjacency_result['basicStats']
+        region_ids = adjacency_result['regionIds']
+        optimal_pairs = adjacency_data['optimalPairs']
+        shared_boundaries = adjacency_data['sharedBoundaries']
+        
+        dprint(f"Applying visualization colors for {len(optimal_pairs)} optimal pairs...")
         
         # Color palette for paired regions
         pair_colors = [
@@ -921,7 +978,7 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
             # Convert back to hex
             return f'#{r:02x}{g:02x}{b:02x}'
         
-        # Assign colors to optimal pairs
+        # Assign colors: paired regions → same color, unpaired → gray
         for idx, (region_a, region_b) in enumerate(optimal_pairs):
             color = pair_colors[idx % len(pair_colors)]
             
@@ -929,14 +986,11 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
             region_colors[str(region_a)] = color
             region_colors[str(region_b)] = color
         
-        # Assign default colors to unpaired regions
+        # Assign default gray to unpaired regions
         default_color = '#cccccc'  # Light gray
         for region_id in region_ids:
             if str(region_id) not in region_colors:
                 region_colors[str(region_id)] = default_color
-        
-        # Step 5: Assign boundary colors based on pairing
-        dprint(f"Assigning boundary colors based on optimal pairs...")
         
         # Create a mapping of paired regions for quick lookup
         paired_with = {}
@@ -944,7 +998,8 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
             paired_with[region_a] = region_b
             paired_with[region_b] = region_a
         
-        # Color each boundary
+        # Color boundaries: paired → darker region color, unpaired → black
+        dprint(f"Assigning boundary colors based on optimal pairs...")
         for boundary in shared_boundaries:
             region_a, region_b = boundary['regionIds']
             boundary_key = f"{min(region_a, region_b)}-{max(region_a, region_b)}"
@@ -962,50 +1017,50 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
                 boundary['isPaired'] = False
                 dprint(f"✓ Non-paired boundary {region_a}-{region_b}: black")
         
-        # Step 6: Calculate statistics
-        total_possible_adjacencies = (k * (k - 1)) // 2
-        total_adjacencies = len(shared_boundaries)
-        adjacency_percentage = (total_adjacencies / total_possible_adjacencies * 100) if total_possible_adjacencies > 0 else 0
-        
-        stats = {
-            'totalRegions': k,
-            'validPolygons': len(polygons),
-            'totalAdjacencies': total_adjacencies,
-            'optimalPairs': len(optimal_pairs),
-            'unpairedRegions': len(region_ids) - (len(optimal_pairs) * 2),
-            'totalPossibleAdjacencies': total_possible_adjacencies,
-            'adjacencyPercentage': round(adjacency_percentage, 1),
+        # Enhanced statistics with visualization info
+        enhanced_stats = {
+            **basic_stats,
             'sharedBoundaries': len(shared_boundaries),
             'pairedBoundaries': len([b for b in shared_boundaries if b.get('isPaired', False)]),
             'unpairedBoundaries': len([b for b in shared_boundaries if not b.get('isPaired', False)])
         }
         
-        dprint(f"Optimal pairing stats: {stats}")
-        
-        # Convert boundary_lengths keys from tuples to strings for JSON serialization
-        boundary_lengths_serializable = {
-            f"{min(k)}-{max(k)}": v for k, v in boundary_lengths.items()
-        }
+        dprint(f"Visualization color assignment complete: {enhanced_stats}")
         
         return {
             'success': True,
-            'adjacencyData': {
-                'adjacencyMatrix': adjacency_matrix,
-                'optimalPairs': optimal_pairs,
-                'sharedBoundaries': shared_boundaries,
-                'boundaryLengths': boundary_lengths_serializable
-            },
+            'adjacencyData': adjacency_data,
             'visualizationData': {
                 'regionColors': region_colors,
                 'boundaryColors': boundary_colors
             },
-            'stats': stats
+            'stats': enhanced_stats
         }
         
     except Exception as e:
-        dprint(f"Error in adjacency analysis: {e}")
+        dprint(f"Error in visualization color assignment: {e}")
         traceback.print_exc()
         return {
             'success': False,
             'error': str(e)
         }
+
+def analyze_voronoi_adjacency(voronoi_data, dprint):
+    """
+    Main adjacency analysis function that coordinates finding pairs and applying visualization.
+    
+    Args:
+        voronoi_data: Voronoi data containing cells with vertices
+        dprint: Debug print function
+    
+    Returns:
+        Dict with adjacency analysis results and visualization data
+    """
+    # Step 1: Find and identify pairs
+    pair_result = find_voronoi_adjacency_pairs(voronoi_data, dprint)
+    
+    if not pair_result['success']:
+        return pair_result
+    
+    # Step 2: Apply cosmetics and visualization colors
+    return apply_adjacency_visualization_colors(pair_result, dprint)
