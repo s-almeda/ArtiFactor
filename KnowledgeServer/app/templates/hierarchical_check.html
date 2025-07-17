@@ -409,9 +409,9 @@
                     currentMapData = data;
                     currentAdjacencyData = null; // Reset adjacency data
                     
-                    // Enable adjacency analysis button, disable merge button (need adjacency first)
+                    // Enable both adjacency analysis and merge buttons
                     document.getElementById('adjacencyBtn').disabled = false;
-                    document.getElementById('mergeBtn').disabled = true;
+                    document.getElementById('mergeBtn').disabled = false;
                     
                     // Draw the hierarchical visualization
                     if (data.imagePoints && data.voronoiData) {
@@ -470,10 +470,7 @@
                     // Store adjacency data
                     currentAdjacencyData = data;
                     
-                    // Enable merge button if there are pairs to merge
-                    if (adjStats.optimalPairs > 0) {
-                        document.getElementById('mergeBtn').disabled = false;
-                    }
+                    // Merge button is already enabled - it works independently of adjacency analysis
                     
                     // Update visualization with adjacency highlighting
                     drawAdjacencyVisualization(currentMapData.imagePoints, currentMapData.voronoiData, data);
