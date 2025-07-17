@@ -14,6 +14,8 @@ import traceback
 import math
 from config import BASE_DIR
 import helperfunctions as hf
+from shapely.geometry import Polygon, Point
+from shapely.ops import unary_union
 
 MAPS_DIR = os.path.join(BASE_DIR, 'generated_maps')
 os.makedirs(MAPS_DIR, exist_ok=True)
@@ -644,3 +646,366 @@ def not_found(error):
 @hierarchical_map_api_bp.errorhandler(500)
 def internal_error(error):
     return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+@hierarchical_map_api_bp.route('/adjacency-analysis', methods=['POST'])
+def adjacency_analysis():
+    """
+    Perform adjacency analysis on the given Voronoi diagram data.
+    
+    Expects JSON body with the following fields:
+    - voronoiData: List of Voronoi region polygons (as lists of [x, y] coordinates)
+    - imagePoints: List of image points with 'entryId', 'x', 'y'
+    
+    Returns JSON response with adjacency information.
+    """
+    try:
+        data = request.get_json()
+        voronoi_data = data.get('voronoiData')
+        image_points = data.get('imagePoints')
+        
+        if not voronoi_data or not image_points:
+            return jsonify({'success': False, 'error': 'Invalid input data'}), 400
+        
+        # Convert Voronoi regions to Shapely polygons
+        polygons = [Polygon(region) for region in voronoi_data]
+        
+        # Perform unary union to merge overlapping polygons
+        merged_polygon = unary_union(polygons)
+        
+        # Find adjacent regions for each image point
+        adjacency_list = []
+        for point in image_points:
+            point_geom = Point(point['x'], point['y'])
+            
+            # Find all polygons that contain this point
+            containing_regions = [i for i, poly in enumerate(polygons) if poly.contains(point_geom)]
+            
+            adjacency_list.append({
+                'entryId': point['entryId'],
+                'adjacentRegions': containing_regions
+            })
+        
+        return jsonify({
+            'success': True,
+            'adjacencyData': adjacency_list
+        })
+    
+    except Exception as e:
+        print(f"Error during adjacency analysis: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@hierarchical_map_api_bp.route('/analyze_voronoi_adjacency', methods=['POST'])
+def handle_voronoi_adjacency_analysis():
+    """
+    Analyzes adjacency relationships in a Voronoi map and returns enhanced data
+    with color-coded adjacent regions and highlighted boundaries.
+    
+    Expected request JSON:
+    {
+        "voronoiData": {...},  // Voronoi data from hierarchical map generation
+        "debug": true/false    // Optional debug flag
+    }
+    
+    Returns JSON response with adjacency analysis and visualization data.
+    """
+    print("Received request for Voronoi adjacency analysis...")
+    
+    try:
+        # ---- PROCESS THE REQUEST ---- #
+        if not request.json:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        voronoi_data = request.json.get('voronoiData')
+        debug = request.json.get('debug', False)
+        
+        if not voronoi_data:
+            return jsonify({
+                'success': False,
+                'error': 'No voronoiData provided'
+            }), 400
+        
+        def dprint(*args, **kwargs):
+            if debug:
+                print(*args, **kwargs)
+        
+        dprint(f"\n=== Starting Voronoi adjacency analysis ===")
+        
+        # Analyze adjacency relationships
+        adjacency_result = analyze_voronoi_adjacency(voronoi_data, dprint)
+        
+        if not adjacency_result['success']:
+            return jsonify(adjacency_result), 500
+        
+        # Build response with adjacency and visualization data
+        response = {
+            'success': True,
+            'originalVoronoiData': voronoi_data,
+            'adjacencyData': adjacency_result['adjacencyData'],
+            'visualizationData': adjacency_result['visualizationData'],
+            'stats': adjacency_result['stats']
+        }
+        
+        dprint(f"\n=== Adjacency analysis complete ===")
+        return jsonify(response)
+    
+    except Exception as e:
+        print(f"Error during adjacency analysis: {e}")
+        if request.json and request.json.get('debug'):
+            traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc() if debug else None
+        }), 500
+
+def analyze_voronoi_adjacency(voronoi_data, dprint):
+    """
+    Analyze adjacency relationships between Voronoi regions using Shapely.
+    
+    Args:
+        voronoi_data: Voronoi data containing cells with vertices
+        dprint: Debug print function
+    
+    Returns:
+        Dict with adjacency analysis results and visualization data
+    """
+    try:
+        cells = voronoi_data.get('cells', [])
+        k = len(cells)
+        
+        if k < 2:
+            return {
+                'success': False,
+                'error': 'Need at least 2 regions for adjacency analysis'
+            }
+        
+        dprint(f"Analyzing adjacency for {k} Voronoi regions...")
+        
+        # Step 1: Create Shapely polygons for each region
+        polygons = {}
+        for cell in cells:
+            region_id = cell['id']
+            vertices = cell.get('vertices', [])
+            
+            if len(vertices) < 3:
+                dprint(f"⚠ Region {region_id} has insufficient vertices ({len(vertices)}), skipping")
+                continue
+            
+            try:
+                # Create polygon from vertices
+                polygon = Polygon(vertices)
+                if polygon.is_valid:
+                    polygons[region_id] = polygon
+                    dprint(f"✓ Created polygon for region {region_id}")
+                else:
+                    dprint(f"⚠ Invalid polygon for region {region_id}")
+            except Exception as e:
+                dprint(f"⚠ Failed to create polygon for region {region_id}: {e}")
+        
+        if len(polygons) < 2:
+            return {
+                'success': False,
+                'error': 'Need at least 2 valid polygons for adjacency analysis'
+            }
+        
+        # Step 2: Build adjacency matrix and calculate boundary lengths
+        dprint(f"Building adjacency matrix for {len(polygons)} valid regions...")
+        adjacency_matrix = [[0 for _ in range(k)] for _ in range(k)]
+        boundary_lengths = {}  # (region_i, region_j) -> length
+        shared_boundaries = []
+        
+        region_ids = list(polygons.keys())
+        for i, region_i in enumerate(region_ids):
+            for j, region_j in enumerate(region_ids):
+                if i < j:  # Avoid duplicate checks
+                    poly_i = polygons[region_i]
+                    poly_j = polygons[region_j]
+                    
+                    # Check if polygons touch (share a boundary)
+                    if poly_i.touches(poly_j):
+                        adjacency_matrix[region_i][region_j] = 1
+                        adjacency_matrix[region_j][region_i] = 1
+                        
+                        # Extract shared boundary and calculate length
+                        boundary_length = 0
+                        try:
+                            intersection = poly_i.intersection(poly_j)
+                            boundary_segments = []
+                            
+                            if hasattr(intersection, 'coords'):
+                                # LineString boundary
+                                boundary_coords = list(intersection.coords)
+                                boundary_segments = [boundary_coords]
+                                boundary_length = intersection.length
+                            elif hasattr(intersection, 'geoms'):
+                                # Multiple segments
+                                for geom in intersection.geoms:
+                                    if hasattr(geom, 'coords'):
+                                        boundary_segments.append(list(geom.coords))
+                                        boundary_length += geom.length
+                            
+                            if boundary_segments:
+                                shared_boundaries.append({
+                                    'regionIds': [region_i, region_j],
+                                    'boundarySegments': boundary_segments,
+                                    'length': boundary_length
+                                })
+                                boundary_lengths[(region_i, region_j)] = boundary_length
+                                
+                        except Exception as e:
+                            dprint(f"⚠ Failed to extract boundary for regions {region_i}-{region_j}: {e}")
+                        
+                        dprint(f"✓ Regions {region_i} and {region_j} are adjacent (boundary length: {boundary_length:.3f})")
+        
+        # Step 3: Create optimal pairs based on longest shared boundaries
+        dprint(f"Creating optimal pairs based on longest shared boundaries...")
+        paired_regions = set()
+        optimal_pairs = []
+        
+        # For each region, find its best pairing partner
+        for region_id in region_ids:
+            if region_id in paired_regions:
+                continue
+                
+            best_partner = None
+            best_length = 0
+            
+            # Find the region this one shares its longest boundary with
+            for other_region in region_ids:
+                if other_region == region_id or other_region in paired_regions:
+                    continue
+                    
+                # Check both possible key orders
+                boundary_key1 = (min(region_id, other_region), max(region_id, other_region))
+                if boundary_key1 in boundary_lengths:
+                    length = boundary_lengths[boundary_key1]
+                    if length > best_length:
+                        best_length = length
+                        best_partner = other_region
+            
+            if best_partner is not None:
+                optimal_pairs.append([region_id, best_partner])
+                paired_regions.add(region_id)
+                paired_regions.add(best_partner)
+                dprint(f"✓ Paired regions {region_id} and {best_partner} (shared boundary length: {best_length:.3f})")
+        
+        # Step 4: Create color assignments for optimal pairs
+        # Step 4: Create color assignments for optimal pairs
+        dprint(f"Creating color assignments for {len(optimal_pairs)} optimal pairs...")
+        
+        # Color palette for paired regions
+        pair_colors = [
+            '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', 
+            '#54a0ff', '#5f27cd', '#00d2d3', '#ff6348', '#ff7675', '#74b9ff'
+        ]
+        
+        region_colors = {}
+        boundary_colors = {}
+        
+        # Function to darken a hex color
+        def darken_color(hex_color, factor=0.7):
+            # Remove # if present
+            hex_color = hex_color.lstrip('#')
+            # Convert to RGB
+            r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            # Darken
+            r, g, b = int(r * factor), int(g * factor), int(b * factor)
+            # Convert back to hex
+            return f'#{r:02x}{g:02x}{b:02x}'
+        
+        # Assign colors to optimal pairs
+        for idx, (region_a, region_b) in enumerate(optimal_pairs):
+            color = pair_colors[idx % len(pair_colors)]
+            
+            # Both regions in the pair get the same color
+            region_colors[str(region_a)] = color
+            region_colors[str(region_b)] = color
+        
+        # Assign default colors to unpaired regions
+        default_color = '#cccccc'  # Light gray
+        for region_id in region_ids:
+            if str(region_id) not in region_colors:
+                region_colors[str(region_id)] = default_color
+        
+        # Step 5: Assign boundary colors based on pairing
+        dprint(f"Assigning boundary colors based on optimal pairs...")
+        
+        # Create a mapping of paired regions for quick lookup
+        paired_with = {}
+        for region_a, region_b in optimal_pairs:
+            paired_with[region_a] = region_b
+            paired_with[region_b] = region_a
+        
+        # Color each boundary
+        for boundary in shared_boundaries:
+            region_a, region_b = boundary['regionIds']
+            boundary_key = f"{min(region_a, region_b)}-{max(region_a, region_b)}"
+            
+            # Check if these two regions are paired together
+            if (region_a in paired_with and paired_with[region_a] == region_b):
+                # This is a shared boundary between paired regions - use darker version of their color
+                base_color = region_colors[str(region_a)]  # Both regions have same color
+                boundary_colors[boundary_key] = darken_color(base_color, 0.6)
+                boundary['isPaired'] = True
+                dprint(f"✓ Paired boundary {region_a}-{region_b}: {boundary_colors[boundary_key]}")
+            else:
+                # This is a boundary between non-paired regions - use black
+                boundary_colors[boundary_key] = '#000000'
+                boundary['isPaired'] = False
+                dprint(f"✓ Non-paired boundary {region_a}-{region_b}: black")
+        
+        # Step 6: Calculate statistics
+        total_possible_adjacencies = (k * (k - 1)) // 2
+        total_adjacencies = len(shared_boundaries)
+        adjacency_percentage = (total_adjacencies / total_possible_adjacencies * 100) if total_possible_adjacencies > 0 else 0
+        
+        stats = {
+            'totalRegions': k,
+            'validPolygons': len(polygons),
+            'totalAdjacencies': total_adjacencies,
+            'optimalPairs': len(optimal_pairs),
+            'unpairedRegions': len(region_ids) - (len(optimal_pairs) * 2),
+            'totalPossibleAdjacencies': total_possible_adjacencies,
+            'adjacencyPercentage': round(adjacency_percentage, 1),
+            'sharedBoundaries': len(shared_boundaries),
+            'pairedBoundaries': len([b for b in shared_boundaries if b.get('isPaired', False)]),
+            'unpairedBoundaries': len([b for b in shared_boundaries if not b.get('isPaired', False)])
+        }
+        
+        dprint(f"Optimal pairing stats: {stats}")
+        
+        # Convert boundary_lengths keys from tuples to strings for JSON serialization
+        boundary_lengths_serializable = {
+            f"{min(k)}-{max(k)}": v for k, v in boundary_lengths.items()
+        }
+        
+        return {
+            'success': True,
+            'adjacencyData': {
+                'adjacencyMatrix': adjacency_matrix,
+                'optimalPairs': optimal_pairs,
+                'sharedBoundaries': shared_boundaries,
+                'boundaryLengths': boundary_lengths_serializable
+            },
+            'visualizationData': {
+                'regionColors': region_colors,
+                'boundaryColors': boundary_colors
+            },
+            'stats': stats
+        }
+        
+    except Exception as e:
+        dprint(f"Error in adjacency analysis: {e}")
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }

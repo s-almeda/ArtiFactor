@@ -266,6 +266,10 @@
             🗺️ Generate Hierarchical Voronoi Map
         </button>
         
+        <button id="adjacencyBtn" onclick="analyzeAdjacency()" disabled style="background-color: #FF8C00; margin-left: 10px;">
+            🔗 Analyze Adjacency
+        </button>
+        
         <div id="status"></div>
         <div id="timer" style="margin-top:8px;font-size:14px;color:#666;display:none;"></div>
         
@@ -288,6 +292,7 @@
 
     <script>
         let currentMapData = null;
+        let currentAdjacencyData = null;
         const regionColors = [
             '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#ff6348',
             '#ff7675', '#74b9ff', '#0984e3', '#00b894', '#00cec9', '#fdcb6e', '#e17055', '#fd79a8', '#6c5ce7', '#a29bfe',
@@ -398,6 +403,10 @@
 
                     // Store map data
                     currentMapData = data;
+                    currentAdjacencyData = null; // Reset adjacency data
+                    
+                    // Enable adjacency analysis button
+                    document.getElementById('adjacencyBtn').disabled = false;
                     
                     // Draw the hierarchical visualization
                     if (data.imagePoints && data.voronoiData) {
@@ -420,7 +429,340 @@
             }
         }
 
+        async function analyzeAdjacency() {
+            if (!currentMapData || !currentMapData.voronoiData) {
+                alert('Please generate a hierarchical map first!');
+                return;
+            }
+
+            const btn = document.getElementById('adjacencyBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            status.className = 'loading';
+            status.textContent = 'Analyzing Voronoi region adjacencies...';
+            status.style.display = 'block';
+
+            try {
+                const response = await fetch('/analyze_voronoi_adjacency', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voronoiData: currentMapData.voronoiData,
+                        debug: document.getElementById('debug').checked
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    status.className = 'success';
+                    const adjStats = data.stats;
+                    status.textContent = `Success! Found ${adjStats.optimalPairs} optimal pairs (${adjStats.pairedBoundaries} paired boundaries, ${adjStats.unpairedBoundaries} unpaired boundaries).`;
+                    
+                    // Store adjacency data
+                    currentAdjacencyData = data;
+                    
+                    // Update visualization with adjacency highlighting
+                    drawAdjacencyVisualization(currentMapData.imagePoints, currentMapData.voronoiData, data);
+                    
+                    // Update stats to include adjacency info
+                    updateStatsWithAdjacency(adjStats);
+                } else {
+                    status.className = 'error';
+                    status.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = `Network error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function updateStatsWithAdjacency(adjStats) {
+            const statsDiv = document.getElementById('stats');
+            const hierarchicalStats = currentMapData.voronoiData?.hierarchicalStats || {};
+            
+            statsDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Total Images</div>
+                    <div class="stat-value">${currentMapData.count}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Voronoi Regions</div>
+                    <div class="stat-value">${hierarchicalStats.totalRegions || currentMapData.generationParams.k}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Optimal Pairs</div>
+                    <div class="stat-value">${adjStats.optimalPairs}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Unpaired Regions</div>
+                    <div class="stat-value">${adjStats.unpairedRegions}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Paired Boundaries</div>
+                    <div class="stat-value">${adjStats.pairedBoundaries}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Method</div>
+                    <div class="stat-value">${currentMapData.method.toUpperCase()}</div>
+                </div>
+            `;
+        }
+
+        function drawAdjacencyVisualization(imagePoints, voronoiData, adjacencyData) {
+            const canvas = document.getElementById('hierarchical-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cells = voronoiData.cells || [];
+            const legendDiv = document.getElementById('region-legend');
+            const regionColors = adjacencyData.visualizationData.regionColors;
+            const boundaryColors = adjacencyData.visualizationData.boundaryColors;
+            const sharedBoundaries = adjacencyData.adjacencyData.sharedBoundaries;
+            
+            // Clear legend
+            legendDiv.innerHTML = '';
+
+            // Find min/max for scaling
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            imagePoints.forEach(pt => {
+                if (pt.x < minX) minX = pt.x;
+                if (pt.x > maxX) maxX = pt.x;
+                if (pt.y < minY) minY = pt.y;
+                if (pt.y > maxY) maxY = pt.y;
+            });
+
+            const pad = 40;
+            const plotW = canvas.width - pad * 2;
+            const plotH = canvas.height - pad * 2;
+
+            // Helper function to scale coordinates
+            const scalePoint = (x, y) => ({
+                x: pad + ((x - minX) / (maxX - minX)) * plotW,
+                y: pad + ((y - minY) / (maxY - minY)) * plotH
+            });
+
+            // Draw Voronoi regions with adjacency colors
+            cells.forEach((cell, idx) => {
+                const regionId = cell.id.toString();
+                const color = regionColors[regionId] || '#cccccc';
+                
+                if (cell.vertices && cell.vertices.length > 2) {
+                    ctx.beginPath();
+                    
+                    // Scale vertices to canvas
+                    const scaledVertices = cell.vertices.map(v => scalePoint(v[0], v[1]));
+                    
+                    // Draw region polygon
+                    ctx.moveTo(scaledVertices[0].x, scaledVertices[0].y);
+                    for (let i = 1; i < scaledVertices.length; i++) {
+                        ctx.lineTo(scaledVertices[i].x, scaledVertices[i].y);
+                    }
+                    ctx.closePath();
+                    
+                    // Fill with adjacency color (more opaque for adjacent regions)
+                    if (color === '#cccccc') {
+                        ctx.fillStyle = color + '40'; // Light gray for non-adjacent
+                    } else {
+                        ctx.fillStyle = color + '60'; // More opaque for adjacent pairs
+                    }
+                    ctx.fill();
+                    
+                    // Stroke with region color
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Draw region centroid
+                if (cell.centroid && cell.centroid.length === 2) {
+                    const scaled = scalePoint(cell.centroid[0], cell.centroid[1]);
+                    
+                    // Draw centroid as a larger circle
+                    ctx.beginPath();
+                    ctx.arc(scaled.x, scaled.y, 8, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.strokeStyle = "#000";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Add white center dot
+                    ctx.beginPath();
+                    ctx.arc(scaled.x, scaled.y, 3, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#fff";
+                    ctx.fill();
+
+                    // Draw region label
+                    ctx.font = "12px Arial";
+                    ctx.fillStyle = "#000";
+                    ctx.textAlign = "center";
+                    ctx.fillText(cell.clusterLabel || `R${cell.id}`, scaled.x, scaled.y - 12);
+                }
+
+                // Add to legend with pairing status
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                const isPaired = color !== '#cccccc';
+                const status = isPaired ? ' (Paired)' : ' (Unpaired)';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${color}"></div>
+                    <span>${cell.clusterLabel || `Region ${cell.id + 1}`} (${cell.pointCount})${status}</span>
+                `;
+                legendDiv.appendChild(legendItem);
+            });
+
+            // Draw shared boundaries with appropriate colors
+            sharedBoundaries.forEach(boundary => {
+                const boundaryKey = `${Math.min(...boundary.regionIds)}-${Math.max(...boundary.regionIds)}`;
+                const color = boundaryColors[boundaryKey] || '#000000';
+                const isPaired = boundary.isPaired || false;
+                
+                boundary.boundarySegments.forEach(segment => {
+                    if (segment.length >= 2) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = isPaired ? 5 : 3; // Thicker lines for paired boundaries
+                        
+                        const startScaled = scalePoint(segment[0][0], segment[0][1]);
+                        ctx.moveTo(startScaled.x, startScaled.y);
+                        
+                        for (let i = 1; i < segment.length; i++) {
+                            const scaled = scalePoint(segment[i][0], segment[i][1]);
+                            ctx.lineTo(scaled.x, scaled.y);
+                        }
+                        
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            // Draw image points on top
+            imagePoints.forEach(pt => {
+                const scaled = scalePoint(pt.x, pt.y);
+                
+                // Get region color if available
+                let pointColor = "#333";
+                if (pt.hierarchicalInfo && pt.hierarchicalInfo.regionId !== undefined) {
+                    const regionId = pt.hierarchicalInfo.regionId.toString();
+                    pointColor = regionColors[regionId] || "#333";
+                }
+                
+                ctx.beginPath();
+                ctx.arc(scaled.x, scaled.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = pointColor;
+                ctx.fill();
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+
+            // Add hover functionality (same as before)
+            canvas.onmousemove = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                
+                let hoverIdx = null;
+                imagePoints.forEach((pt, i) => {
+                    const scaled = scalePoint(pt.x, pt.y);
+                    if (Math.hypot(mx - scaled.x, my - scaled.y) < 8) {
+                        hoverIdx = i;
+                    }
+                });
+                
+                // Redraw to clear previous tooltip
+                drawAdjacencyVisualization(imagePoints, voronoiData, adjacencyData);
+                
+                if (hoverIdx !== null) {
+                    const pt = imagePoints[hoverIdx];
+                    // Draw tooltip
+                    ctx.save();
+                    ctx.font = "12px Arial";
+                    ctx.textAlign = "left";
+                    
+                    let label = pt.artworkData?.value || pt.entryId;
+                    let artist = "";
+                    try {
+                        const names = JSON.parse(pt.artworkData?.artist_names || "[]");
+                        artist = Array.isArray(names) ? names.join(", ") : names;
+                    } catch { 
+                        artist = pt.artworkData?.artist_names || "Unknown";
+                    }
+                    
+                    let region = "";
+                    if (pt.hierarchicalInfo) {
+                        const regionId = pt.hierarchicalInfo.regionId.toString();
+                        const isPaired = regionColors[regionId] !== '#cccccc';
+                        region = (pt.hierarchicalInfo.regionLabel || `Region ${pt.hierarchicalInfo.regionId + 1}`) + 
+                                (isPaired ? ' (Paired)' : ' (Unpaired)');
+                    }
+                    
+                    const text = `${label}\n${artist}\n${region}`;
+                    const lines = text.split('\n');
+                    const tw = Math.max(...lines.map(l => ctx.measureText(l).width));
+                    const th = lines.length * 16 + 10;
+                    
+                    let tx = mx + 10, ty = my - th - 10;
+                    if (tx + tw + 20 > canvas.width) tx = canvas.width - tw - 20;
+                    if (ty < 0) ty = my + 10;
+                    
+                    // Draw background rectangle
+                    ctx.beginPath();
+                    ctx.rect(tx, ty, tw + 20, th);
+                    ctx.fillStyle = "#222";
+                    ctx.globalAlpha = 0.92;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                    ctx.strokeStyle = "#fff";
+                    ctx.stroke();
+                    
+                    // Draw text
+                    ctx.fillStyle = "#fff";
+                    ctx.textAlign = "left";
+                    lines.forEach((l, i) => {
+                        ctx.fillText(l, tx + 10, ty + 18 + i * 16);
+                    });
+                    ctx.restore();
+                }
+            };
+
+            canvas.onmouseleave = function() {
+                drawAdjacencyVisualization(imagePoints, voronoiData, adjacencyData);
+            };
+
+            // Add legend items for boundary types
+            const pairedBoundaryItem = document.createElement('div');
+            pairedBoundaryItem.className = 'legend-item';
+            pairedBoundaryItem.innerHTML = `
+                <div class="legend-color" style="background-color: #333; width: 20px; height: 3px; border-radius: 0;"></div>
+                <span>Paired Boundaries (Darker Region Color)</span>
+            `;
+            legendDiv.appendChild(pairedBoundaryItem);
+
+            const unpairedBoundaryItem = document.createElement('div');
+            unpairedBoundaryItem.className = 'legend-item';
+            unpairedBoundaryItem.innerHTML = `
+                <div class="legend-color" style="background-color: #000000; width: 20px; height: 2px; border-radius: 0;"></div>
+                <span>Unpaired Boundaries (Black)</span>
+            `;
+            legendDiv.appendChild(unpairedBoundaryItem);
+        }
+
         function drawHierarchicalVisualization(imagePoints, voronoiData) {
+            // If we have adjacency data, use the adjacency visualization instead
+            if (currentAdjacencyData) {
+                drawAdjacencyVisualization(imagePoints, voronoiData, currentAdjacencyData);
+                return;
+            }
+
+            // Original hierarchical visualization code
             const canvas = document.getElementById('hierarchical-canvas');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -445,7 +787,7 @@
             const plotW = canvas.width - pad * 2;
             const plotH = canvas.height - pad * 2;
 
-            // Draw Voronoi regions
+            // Draw Voronoi regions (original colors)
             cells.forEach((cell, idx) => {
                 const color = regionColors[idx % regionColors.length];
                 
@@ -532,7 +874,7 @@
                 ctx.stroke();
             });
 
-            // Add hover functionality
+            // Add hover functionality (same as original)
             canvas.onmousemove = function(e) {
                 const rect = canvas.getBoundingClientRect();
                 const mx = e.clientX - rect.left;
@@ -614,6 +956,9 @@
             if (legendDiv) {
                 legendDiv.innerHTML = '';
             }
+            // Reset adjacency data
+            currentAdjacencyData = null;
+            document.getElementById('adjacencyBtn').disabled = true;
         }
 
         // Test on Enter key
