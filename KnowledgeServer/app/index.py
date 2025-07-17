@@ -89,7 +89,8 @@ app = Flask(__name__, static_folder='static')
 # Add API routes for artwork similarity space mapping functionalities
 from templates.map_api import map_api_bp
 app.register_blueprint(map_api_bp)
-
+from templates.hierarchical_map_api import hierarchical_map_api_bp
+app.register_blueprint(hierarchical_map_api_bp)
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
