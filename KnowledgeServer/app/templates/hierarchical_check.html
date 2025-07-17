@@ -407,6 +407,7 @@
 
                     // Store map data
                     currentMapData = data;
+                    currentMapData.mergeIterations = 0; // Initialize merge counter
                     currentAdjacencyData = null; // Reset adjacency data
                     
                     // Enable both adjacency analysis and merge buttons
@@ -521,24 +522,41 @@
                 if (data.success) {
                     status.className = 'success';
                     const mergeStats = data.mergeStats;
-                    status.textContent = `Success! Merged ${mergeStats.mergedPairs} pairs into single regions. Total regions: ${mergeStats.originalRegions} → ${mergeStats.mergedRegions}`;
                     
-                    // Update current map data with merged data
-                    currentMapData.voronoiData = data.mergedVoronoiData;
-                    currentMapData.imagePoints = data.mergedImagePoints;
-                    
-                    // Reset adjacency data since regions have changed
-                    currentAdjacencyData = null;
-                    
-                    // Disable adjacency and merge buttons (need new analysis)
-                    document.getElementById('adjacencyBtn').disabled = true;
-                    document.getElementById('mergeBtn').disabled = true;
-                    
-                    // Update visualization with merged regions
-                    drawHierarchicalVisualization(currentMapData.imagePoints, currentMapData.voronoiData);
-                    
-                    // Update stats to include merge info
-                    updateStatsWithMerge(mergeStats);
+                    if (mergeStats.mergedPairs > 0) {
+                        // Increment merge iteration counter
+                        currentMapData.mergeIterations = (currentMapData.mergeIterations || 0) + 1;
+                        
+                        status.textContent = `Success! Merge iteration ${currentMapData.mergeIterations}: Merged ${mergeStats.mergedPairs} pairs. Total regions: ${mergeStats.originalRegions} → ${mergeStats.mergedRegions}`;
+                        
+                        // Update current map data with merged data
+                        currentMapData.voronoiData = data.mergedVoronoiData;
+                        currentMapData.imagePoints = data.mergedImagePoints;
+                        
+                        // Reset adjacency data since regions have changed
+                        currentAdjacencyData = null;
+                        
+                        // Update button text for repeated merging
+                        const mergeBtn = document.getElementById('mergeBtn');
+                        mergeBtn.innerHTML = `🔗 Merge Again! (${currentMapData.mergeIterations + 1})`;
+                        mergeBtn.disabled = false; // Keep enabled for repeated merging
+                        
+                        // Keep adjacency button enabled
+                        document.getElementById('adjacencyBtn').disabled = false;
+                        
+                        // Update visualization with merged regions
+                        drawHierarchicalVisualization(currentMapData.imagePoints, currentMapData.voronoiData);
+                        
+                        // Update stats to include merge info
+                        updateStatsWithMerge(mergeStats);
+                    } else {
+                        status.textContent = `No adjacent pairs found to merge. Map fully optimized after ${currentMapData.mergeIterations || 0} merge iterations with ${mergeStats.mergedRegions} final regions.`;
+                        
+                        // Disable merge button if no more pairs can be merged
+                        const mergeBtn = document.getElementById('mergeBtn');
+                        mergeBtn.disabled = true;
+                        mergeBtn.innerHTML = '🔗 No More Pairs to Merge';
+                    }
                 } else {
                     status.className = 'error';
                     status.textContent = `Error: ${data.error}`;
@@ -592,15 +610,15 @@
                     <div class="stat-value">${currentMapData.count}</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Original Regions</div>
-                    <div class="stat-value">${mergeStats.originalRegions}</div>
+                    <div class="stat-label">Merge Iterations</div>
+                    <div class="stat-value">${currentMapData.mergeIterations || 0}</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Merged Regions</div>
+                    <div class="stat-label">Current Regions</div>
                     <div class="stat-value">${mergeStats.mergedRegions}</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Pairs Merged</div>
+                    <div class="stat-label">Last Merge: Pairs</div>
                     <div class="stat-value">${mergeStats.mergedPairs}</div>
                 </div>
                 <div class="stat-box">
@@ -1059,7 +1077,11 @@
             // Reset adjacency data
             currentAdjacencyData = null;
             document.getElementById('adjacencyBtn').disabled = true;
-            document.getElementById('mergeBtn').disabled = true;
+            
+            // Reset merge button to original state
+            const mergeBtn = document.getElementById('mergeBtn');
+            mergeBtn.disabled = true;
+            mergeBtn.innerHTML = '🔗 Merge Paired Regions';
         }
 
         // Test on Enter key
