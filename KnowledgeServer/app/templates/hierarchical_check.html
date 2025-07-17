@@ -270,6 +270,10 @@
             🔗 Analyze Adjacency
         </button>
         
+        <button id="mergeBtn" onclick="mergeRegions()" disabled style="background-color: #4CAF50; margin-left: 10px;">
+            🔗 Merge Paired Regions
+        </button>
+        
         <div id="status"></div>
         <div id="timer" style="margin-top:8px;font-size:14px;color:#666;display:none;"></div>
         
@@ -405,8 +409,9 @@
                     currentMapData = data;
                     currentAdjacencyData = null; // Reset adjacency data
                     
-                    // Enable adjacency analysis button
+                    // Enable adjacency analysis button, disable merge button (need adjacency first)
                     document.getElementById('adjacencyBtn').disabled = false;
+                    document.getElementById('mergeBtn').disabled = true;
                     
                     // Draw the hierarchical visualization
                     if (data.imagePoints && data.voronoiData) {
@@ -465,11 +470,78 @@
                     // Store adjacency data
                     currentAdjacencyData = data;
                     
+                    // Enable merge button if there are pairs to merge
+                    if (adjStats.optimalPairs > 0) {
+                        document.getElementById('mergeBtn').disabled = false;
+                    }
+                    
                     // Update visualization with adjacency highlighting
                     drawAdjacencyVisualization(currentMapData.imagePoints, currentMapData.voronoiData, data);
                     
                     // Update stats to include adjacency info
                     updateStatsWithAdjacency(adjStats);
+                } else {
+                    status.className = 'error';
+                    status.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = `Network error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function mergeRegions() {
+            if (!currentMapData || !currentMapData.voronoiData) {
+                alert('Please generate a hierarchical map first!');
+                return;
+            }
+
+            const btn = document.getElementById('mergeBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            status.className = 'loading';
+            status.textContent = 'Merging paired Voronoi regions...';
+            status.style.display = 'block';
+
+            try {
+                const response = await fetch('/merge_voronoi_regions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        voronoiData: currentMapData.voronoiData,
+                        imagePoints: currentMapData.imagePoints,
+                        debug: document.getElementById('debug').checked
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    status.className = 'success';
+                    const mergeStats = data.mergeStats;
+                    status.textContent = `Success! Merged ${mergeStats.mergedPairs} pairs into single regions. Total regions: ${mergeStats.originalRegions} → ${mergeStats.mergedRegions}`;
+                    
+                    // Update current map data with merged data
+                    currentMapData.voronoiData = data.mergedVoronoiData;
+                    currentMapData.imagePoints = data.mergedImagePoints;
+                    
+                    // Reset adjacency data since regions have changed
+                    currentAdjacencyData = null;
+                    
+                    // Disable adjacency and merge buttons (need new analysis)
+                    document.getElementById('adjacencyBtn').disabled = true;
+                    document.getElementById('mergeBtn').disabled = true;
+                    
+                    // Update visualization with merged regions
+                    drawHierarchicalVisualization(currentMapData.imagePoints, currentMapData.voronoiData);
+                    
+                    // Update stats to include merge info
+                    updateStatsWithMerge(mergeStats);
                 } else {
                     status.className = 'error';
                     status.textContent = `Error: ${data.error}`;
@@ -506,6 +578,37 @@
                 <div class="stat-box">
                     <div class="stat-label">Paired Boundaries</div>
                     <div class="stat-value">${adjStats.pairedBoundaries}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Method</div>
+                    <div class="stat-value">${currentMapData.method.toUpperCase()}</div>
+                </div>
+            `;
+        }
+
+        function updateStatsWithMerge(mergeStats) {
+            const statsDiv = document.getElementById('stats');
+            
+            statsDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Total Images</div>
+                    <div class="stat-value">${currentMapData.count}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Original Regions</div>
+                    <div class="stat-value">${mergeStats.originalRegions}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Merged Regions</div>
+                    <div class="stat-value">${mergeStats.mergedRegions}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Pairs Merged</div>
+                    <div class="stat-value">${mergeStats.mergedPairs}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Unmerged Regions</div>
+                    <div class="stat-value">${mergeStats.unmergedRegions}</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Method</div>
@@ -959,6 +1062,7 @@
             // Reset adjacency data
             currentAdjacencyData = null;
             document.getElementById('adjacencyBtn').disabled = true;
+            document.getElementById('mergeBtn').disabled = true;
         }
 
         // Test on Enter key

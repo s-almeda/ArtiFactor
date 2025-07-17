@@ -1064,3 +1064,251 @@ def analyze_voronoi_adjacency(voronoi_data, dprint):
     
     # Step 2: Apply cosmetics and visualization colors
     return apply_adjacency_visualization_colors(pair_result, dprint)
+
+@hierarchical_map_api_bp.route('/merge_voronoi_regions', methods=['POST'])
+def handle_voronoi_region_merge():
+    """
+    Merges optimal pairs of adjacent Voronoi regions into single regions.
+    
+    Expected request JSON:
+    {
+        "voronoiData": {...},  // Voronoi data from hierarchical map generation
+        "imagePoints": [...],  // Image points with hierarchical info
+        "debug": true/false    // Optional debug flag
+    }
+    
+    Returns JSON response with merged regions and updated image points.
+    """
+    print("Received request for Voronoi region merging...")
+    
+    try:
+        # ---- PROCESS THE REQUEST ---- #
+        if not request.json:
+            return jsonify({
+                'success': False,
+                'error': 'No JSON data provided'
+            }), 400
+        
+        voronoi_data = request.json.get('voronoiData')
+        image_points = request.json.get('imagePoints')
+        debug = request.json.get('debug', False)
+        
+        if not voronoi_data:
+            return jsonify({
+                'success': False,
+                'error': 'No voronoiData provided'
+            }), 400
+            
+        if not image_points:
+            return jsonify({
+                'success': False,
+                'error': 'No imagePoints provided'
+            }), 400
+        
+        def dprint(*args, **kwargs):
+            if debug:
+                print(*args, **kwargs)
+        
+        dprint(f"\n=== Starting Voronoi region merging ===")
+        
+        # Step 1: Find adjacency pairs using existing function
+        adjacency_result = find_voronoi_adjacency_pairs(voronoi_data, dprint)
+        
+        if not adjacency_result['success']:
+            return jsonify(adjacency_result), 500
+        
+        # Step 2: Merge paired regions
+        merge_result = merge_paired_voronoi_regions(
+            voronoi_data, 
+            image_points, 
+            adjacency_result, 
+            dprint
+        )
+        
+        if not merge_result['success']:
+            return jsonify(merge_result), 500
+        
+        # Build response with merged map data
+        response = {
+            'success': True,
+            'originalVoronoiData': voronoi_data,
+            'mergedVoronoiData': merge_result['mergedVoronoiData'],
+            'originalImagePoints': image_points,
+            'mergedImagePoints': merge_result['mergedImagePoints'],
+            'mergeStats': merge_result['mergeStats'],
+            'adjacencyData': adjacency_result['adjacencyData']
+        }
+        
+        dprint(f"\n=== Region merging complete ===")
+        return jsonify(response)
+    
+    except Exception as e:
+        print(f"Error during region merging: {e}")
+        if request.json and request.json.get('debug'):
+            traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc() if debug else None
+        }), 500
+
+def merge_paired_voronoi_regions(voronoi_data, image_points, adjacency_result, dprint):
+    """
+    Merge optimal pairs of adjacent regions into single regions.
+    
+    Args:
+        voronoi_data: Original Voronoi data containing cells
+        image_points: Original image points with hierarchical info
+        adjacency_result: Result from find_voronoi_adjacency_pairs()
+        dprint: Debug print function
+    
+    Returns:
+        Dict with merged regions and updated image points
+    """        
+    try:
+        cells = voronoi_data.get('cells', [])
+        optimal_pairs = adjacency_result['adjacencyData']['optimalPairs']
+        
+        dprint(f"Merging {len(optimal_pairs)} optimal pairs from {len(cells)} original regions...")
+        
+        # Create mapping of region ID to cell data
+        region_lookup = {cell['id']: cell for cell in cells}
+        
+        # Track which regions have been merged
+        merged_region_ids = set()
+        merged_cells = []
+        region_id_mapping = {}  # old_region_id -> new_region_id
+        
+        # Step 1: Process optimal pairs - merge them into single regions
+        for pair_idx, (region_a, region_b) in enumerate(optimal_pairs):
+            if region_a in merged_region_ids or region_b in merged_region_ids:
+                dprint(f"⚠ Skipping pair ({region_a}, {region_b}) - already merged")
+                continue
+            
+            cell_a = region_lookup.get(region_a)
+            cell_b = region_lookup.get(region_b)
+            
+            if not cell_a or not cell_b:
+                dprint(f"⚠ Missing cell data for pair ({region_a}, {region_b})")
+                continue
+            
+            try:
+                # Create polygons from vertices
+                poly_a = Polygon(cell_a['vertices'])
+                poly_b = Polygon(cell_b['vertices'])
+                
+                # Merge the two polygons using unary_union
+                merged_polygon = unary_union([poly_a, poly_b])
+                
+                # Extract outer boundary vertices (no holes)
+                if hasattr(merged_polygon, 'exterior'):
+                    # Single polygon result
+                    merged_vertices = list(merged_polygon.exterior.coords[:-1])  # Remove duplicate last point
+                    merged_centroid = [merged_polygon.centroid.x, merged_polygon.centroid.y]
+                else:
+                    dprint(f"⚠ Complex geometry result for pair ({region_a}, {region_b}), using convex hull")
+                    # Fall back to convex hull if result is complex
+                    merged_vertices = list(merged_polygon.convex_hull.exterior.coords[:-1])
+                    merged_centroid = [merged_polygon.convex_hull.centroid.x, merged_polygon.convex_hull.centroid.y]
+                
+                # Create new merged cell
+                new_region_id = len(merged_cells)  # Use index as new ID
+                merged_cell = {
+                    'id': new_region_id,
+                    'vertices': merged_vertices,
+                    'centroid': merged_centroid,
+                    'clusterLabel': f"Merged Region {new_region_id + 1}",
+                    'pointCount': cell_a['pointCount'] + cell_b['pointCount'],
+                    'imageIds': cell_a.get('imageIds', []) + cell_b.get('imageIds', []),
+                    'originalRegions': [region_a, region_b],
+                    'mergedFromPair': True
+                }
+                
+                merged_cells.append(merged_cell)
+                
+                # Update mapping for both original regions
+                region_id_mapping[region_a] = new_region_id
+                region_id_mapping[region_b] = new_region_id
+                
+                # Mark as processed
+                merged_region_ids.add(region_a)
+                merged_region_ids.add(region_b)
+                
+                dprint(f"✓ Merged regions {region_a} and {region_b} into new region {new_region_id}")
+                
+            except Exception as e:
+                dprint(f"⚠ Failed to merge regions {region_a} and {region_b}: {e}")
+        
+        # Step 2: Add unmerged regions as-is
+        for cell in cells:
+            region_id = cell['id']
+            if region_id not in merged_region_ids:
+                # Keep original region but update ID for consistency
+                new_region_id = len(merged_cells)
+                unmerged_cell = {
+                    **cell,
+                    'id': new_region_id,
+                    'clusterLabel': cell.get('clusterLabel', f"Region {new_region_id + 1}"),
+                    'mergedFromPair': False
+                }
+                merged_cells.append(unmerged_cell)
+                region_id_mapping[region_id] = new_region_id
+                dprint(f"✓ Kept unmerged region {region_id} as new region {new_region_id}")
+        
+        # Step 3: Update image points with new region assignments
+        updated_image_points = []
+        for point in image_points:
+            updated_point = dict(point)  # Copy original point
+            
+            if 'hierarchicalInfo' in point:
+                old_region_id = point['hierarchicalInfo']['regionId']
+                if old_region_id in region_id_mapping:
+                    new_region_id = region_id_mapping[old_region_id]
+                    new_region_cell = merged_cells[new_region_id]
+                    
+                    # Update hierarchical info
+                    updated_point['hierarchicalInfo'] = {
+                        **point['hierarchicalInfo'],
+                        'regionId': new_region_id,
+                        'regionLabel': new_region_cell['clusterLabel'],
+                        'regionCentroid': new_region_cell['centroid'],
+                        'originalRegionId': old_region_id,
+                        'wasMerged': new_region_cell['mergedFromPair']
+                    }
+                else:
+                    dprint(f"⚠ No mapping found for region {old_region_id}")
+            
+            updated_image_points.append(updated_point)
+        
+        # Step 4: Create merged voronoi data structure
+        merged_voronoi_data = {
+            'cells': merged_cells,
+            'k': len(merged_cells),
+            'algorithm': 'hierarchical k-means + Voronoi + merge',
+            'boundingBox': voronoi_data.get('boundingBox'),
+            'mergeStats': {
+                'originalRegions': len(cells),
+                'mergedRegions': len(merged_cells),
+                'optimalPairs': len(optimal_pairs),
+                'mergedPairs': len([c for c in merged_cells if c.get('mergedFromPair', False)]),
+                'unmergedRegions': len([c for c in merged_cells if not c.get('mergedFromPair', False)])
+            }
+        }
+        
+        merge_stats = merged_voronoi_data['mergeStats']
+        dprint(f"Merge complete: {merge_stats}")
+        
+        return {
+            'success': True,
+            'mergedVoronoiData': merged_voronoi_data,
+            'mergedImagePoints': updated_image_points,
+            'mergeStats': merge_stats
+        }
+        
+    except Exception as e:
+        dprint(f"Error in region merging: {e}")
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
