@@ -232,7 +232,7 @@
                         🔧 Fix All Keyword Issues
                     </button>
                     <div class="loading" id="keywords-fix-loading">Fixing keyword references...</div>
-                    <p class="warning-text">⚠️ This will remove invalid IDs and rebuild the strings list from valid references.</p>
+                    <p class="warning-text">⚠️ This will add missing IDs for valid keyword strings, add missing strings for valid IDs, and remove any truly invalid references.</p>
                 </div>
 
                 <!-- Keywords Issues List -->
@@ -243,9 +243,41 @@
             <div id="keywords-success" class="success-message" style="display: none;"></div>
         </div>
 
+        <!-- Duplicate Images Section -->
+        <div class="cleaner-section">
+            <h3>🔍 Look for Duplicate Images</h3>
+            <p>Find artworks by the same artist with very similar names that might be duplicates</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkDuplicateImages()" id="duplicates-check-btn">
+                    🔍 Check for Duplicate Images
+                </button>
+                <div class="loading" id="duplicates-check-loading">Searching for duplicate artworks...</div>
+            </div>
 
+            <!-- Duplicates Results Section -->
+            <div id="duplicates-results" style="display: none;">
+                <div class="results-header">
+                    <h4 id="duplicates-results-title"></h4>
+                    <div id="duplicates-results-summary"></div>
+                </div>
 
+                <!-- Duplicates Fix Button -->
+                <div id="duplicates-fix-section" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="processDuplicates()" id="duplicates-fix-btn">
+                        🔧 Process Selected Duplicates
+                    </button>
+                    <div class="loading" id="duplicates-fix-loading">Processing duplicate artworks...</div>
+                    <p class="warning-text">⚠️ This will merge selected duplicate artworks, combining their data and removing redundant entries.</p>
+                </div>
 
+                <!-- Duplicates List -->
+                <div id="duplicates-list"></div>
+            </div>
+
+            <!-- Duplicates Success Message -->
+            <div id="duplicates-success" class="success-message" style="display: none;"></div>
+        </div>
 
         <!-- Future Cleaning Options -->
         <div class="cleaner-section">
@@ -1570,17 +1602,20 @@
                 
                 // Count different types of issues
                 let invalidIdCount = 0;
+                let invalidStringCount = 0;
                 let mismatchCount = 0;
                 data.issues.forEach(issue => {
-                    if (issue.has_invalid_ids) invalidIdCount++;
-                    if (issue.strings_mismatch) mismatchCount++;
+                    if (issue.invalid_ids && issue.invalid_ids.length > 0) invalidIdCount++;
+                    if (issue.invalid_strings && issue.invalid_strings.length > 0) invalidStringCount++;
+                    if (!issue.ids_match || !issue.strings_match) mismatchCount++;
                 });
                 
                 summaryEl.innerHTML = `
                     <div class="warning">
                         <strong>${data.total_issues}</strong> entries have keyword reference issues<br>
                         <strong>${invalidIdCount}</strong> have invalid keyword IDs<br>
-                        <strong>${mismatchCount}</strong> have mismatched keyword strings<br>
+                        <strong>${invalidStringCount}</strong> have invalid keyword strings<br>
+                        <strong>${mismatchCount}</strong> have mismatched keyword arrays<br>
                         <small>Total valid entries in database: ${data.total_valid_entries}</small>
                     </div>
                 `;
@@ -1590,8 +1625,10 @@
                 let issuesHtml = '<div class="keyword-issues-list">';
                 data.issues.forEach(issue => {
                     let issueTypes = [];
-                    if (issue.has_invalid_ids) issueTypes.push('Invalid IDs');
-                    if (issue.strings_mismatch) issueTypes.push('String Mismatch');
+                    if (issue.invalid_ids && issue.invalid_ids.length > 0) issueTypes.push('Invalid IDs');
+                    if (issue.invalid_strings && issue.invalid_strings.length > 0) issueTypes.push('Invalid Strings');
+                    if (!issue.ids_match) issueTypes.push('ID Mismatch');
+                    if (!issue.strings_match) issueTypes.push('String Mismatch');
                     
                     let invalidIdsHtml = '';
                     if (issue.invalid_ids && issue.invalid_ids.length > 0) {
@@ -1600,19 +1637,24 @@
                         ).join(', ')}`;
                     }
                     
-                    let stringsComparisonHtml = '';
-                    if (issue.strings_mismatch) {
-                        const currentStrings = issue.current_strings || [];
-                        const correctStrings = issue.correct_strings || [];
-                        stringsComparisonHtml = `
+                    let invalidStringsHtml = '';
+                    if (issue.invalid_strings && issue.invalid_strings.length > 0) {
+                        invalidStringsHtml = `<br><strong>Invalid Strings:</strong> ${issue.invalid_strings.map(str => 
+                            `<span class="invalid-id">"${str}"</span>`
+                        ).join(', ')}`;
+                    }
+                    
+                    let arraysComparisonHtml = '';
+                    if (!issue.ids_match || !issue.strings_match) {
+                        arraysComparisonHtml = `
                             <div class="strings-comparison">
                                 <div class="current-strings">
-                                    <strong>Current Strings:</strong><br>
-                                    ${currentStrings.length > 0 ? currentStrings.map(s => `"${s}"`).join(', ') : '<em>None</em>'}
+                                    <strong>Current IDs:</strong> [${issue.current_ids ? issue.current_ids.map(id => `"${id}"`).join(', ') : ''}]<br>
+                                    <strong>Current Strings:</strong> [${issue.current_strings ? issue.current_strings.map(s => `"${s}"`).join(', ') : ''}]
                                 </div>
                                 <div class="correct-strings">
-                                    <strong>Should Be:</strong><br>
-                                    ${correctStrings.length > 0 ? correctStrings.map(s => `"${s}"`).join(', ') : '<em>None</em>'}
+                                    <strong>Corrected IDs:</strong> [${issue.corrected_ids ? issue.corrected_ids.map(id => `"${id}"`).join(', ') : ''}]<br>
+                                    <strong>Corrected Strings:</strong> [${issue.corrected_strings ? issue.corrected_strings.map(s => `"${s}"`).join(', ') : ''}]
                                 </div>
                             </div>
                         `;
@@ -1627,8 +1669,10 @@
                             </div>
                             <div class="entry-details">
                                 <strong>Valid IDs:</strong> ${issue.valid_ids && issue.valid_ids.length > 0 ? issue.valid_ids.join(', ') : '<em>None</em>'}
+                                <strong>Valid Strings:</strong> ${issue.valid_strings && issue.valid_strings.length > 0 ? issue.valid_strings.map(s => `"${s}"`).join(', ') : '<em>None</em>'}
                                 ${invalidIdsHtml}
-                                ${stringsComparisonHtml}
+                                ${invalidStringsHtml}
+                                ${arraysComparisonHtml}
                             </div>
                         </div>
                     `;
@@ -1647,7 +1691,7 @@
                 return;
             }
             
-            if (!confirm(`Are you sure you want to fix ${currentKeywordIssues.length} entries? This will remove invalid IDs and rebuild the keyword strings.`)) {
+            if (!confirm(`Are you sure you want to fix ${currentKeywordIssues.length} entries? This will add missing IDs for valid strings, add missing strings for valid IDs, and remove invalid references.`)) {
                 console.log("DEBUG: User cancelled fix operation");
                 return;
             }
@@ -1705,6 +1749,299 @@
                 loading.style.display = 'none';
             });
         }
+
+        let currentDuplicates = [];
+
+        function checkDuplicateImages() {
+            console.log("DEBUG: Starting duplicate images check...");
+            const checkBtn = document.getElementById('duplicates-check-btn');
+            const loading = document.getElementById('duplicates-check-loading');
+            const resultsDiv = document.getElementById('duplicates-results');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            
+            fetch('/check_duplicate_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Received duplicate images data:", data);
+                if (data.success) {
+                    currentDuplicates = data.duplicate_groups || [];
+                    displayDuplicatesResults(data);
+                } else {
+                    alert('Error checking for duplicates: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Error in checkDuplicateImages:', error);
+                alert('Failed to check for duplicate images');
+            })
+            .finally(() => {
+                checkBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function displayDuplicatesResults(data) {
+            console.log("DEBUG: Displaying duplicates results:", data);
+            const resultsDiv = document.getElementById('duplicates-results');
+            const titleEl = document.getElementById('duplicates-results-title');
+            const summaryEl = document.getElementById('duplicates-results-summary');
+            const fixSection = document.getElementById('duplicates-fix-section');
+            const duplicatesList = document.getElementById('duplicates-list');
+            
+            if (data.total_duplicate_groups === 0) {
+                titleEl.textContent = '✅ No Duplicate Images Found';
+                summaryEl.innerHTML = '<div class="success">No potential duplicate artworks found!</div>';
+                fixSection.style.display = 'none';
+                duplicatesList.innerHTML = '';
+            } else {
+                titleEl.textContent = `⚠️ Found ${data.total_duplicate_groups} Groups of Potential Duplicates`;
+                
+                let totalItems = 0;
+                data.duplicate_groups.forEach(group => {
+                    totalItems += group.items.length;
+                });                    summaryEl.innerHTML = `
+                        <div class="warning">
+                            <strong>${data.total_duplicate_groups}</strong> groups of similar artworks found<br>
+                            <strong>${totalItems}</strong> total artworks involved<br>
+                            <small>Select items you want to merge. Unselected groups will be marked as "not duplicates" to avoid future review.</small>
+                        </div>
+                    `;
+                fixSection.style.display = 'block';
+                
+                // Display duplicate groups
+                let duplicatesHtml = '<div class="duplicates-groups-list">';
+                data.duplicate_groups.forEach((group, groupIndex) => {
+                    const itemCount = group.items.length;
+                    const itemsClass = itemCount === 2 ? 'duplicate-items two-items' : 'duplicate-items';
+                    
+                    duplicatesHtml += `
+                        <div class="duplicate-group">
+                            <div class="group-header">
+                                <h4>Group ${groupIndex + 1}: "${group.normalized_title}" by ${group.artist_name}</h4>
+                                <div class="group-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllInGroup(${groupIndex})">Select All</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllInGroup(${groupIndex})">Deselect All</button>
+                                </div>
+                            </div>
+                            <div class="${itemsClass}">
+                    `;
+                    
+                    group.items.forEach((item, itemIndex) => {
+                        const itemId = `group-${groupIndex}-item-${itemIndex}`;
+                        
+                        duplicatesHtml += `
+                            <div class="duplicate-item" id="${itemId}">
+                                <div class="item-checkbox">
+                                    <input type="checkbox" id="checkbox-${itemId}" onchange="toggleDuplicateItem('${itemId}')">
+                                    <label for="checkbox-${itemId}"></label>
+                                </div>
+                                <div class="item-image">
+                                    ${item.best_image_url ? 
+                                        `<img src="${item.best_image_url}" alt="${item.value}" onclick="showLargeImage('${item.best_image_url}', '${item.value.replace(/'/g, '\\\'')}')" onerror="this.parentElement.innerHTML='<div class=\\'image-error\\'>Image failed to load</div>'" />` : 
+                                        '<div class="image-placeholder">No image available</div>'
+                                    }
+                                </div>
+                                <div class="item-details">
+                                    <strong>Title:</strong> ${item.value}<br>
+                                    <strong>ID:</strong> ${item.image_id}<br>
+                                    <strong>Artist Names:</strong> ${item.artist_names || 'N/A'}<br>
+                                    <strong>Image URL Keys:</strong> ${item.image_url_keys || 'N/A'}<br>
+                                    <strong>Rights:</strong> ${item.rights || 'N/A'}<br>
+                                    <strong>Descriptions:</strong> <div class="field-content">${item.descriptions || 'N/A'}</div>
+                                    <strong>Related Keyword Strings:</strong> ${item.relatedKeywordStrings || 'N/A'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    duplicatesHtml += `
+                            </div>
+                        </div>
+                    `;
+                });
+                duplicatesHtml += '</div>';
+                duplicatesList.innerHTML = duplicatesHtml;
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function toggleDuplicateItem(itemId) {
+            const itemDiv = document.getElementById(itemId);
+            const checkbox = document.getElementById(`checkbox-${itemId}`);
+            
+            if (checkbox.checked) {
+                itemDiv.classList.add('selected');
+            } else {
+                itemDiv.classList.remove('selected');
+            }
+        }
+
+        function selectAllInGroup(groupIndex) {
+            const groupItems = document.querySelectorAll(`[id^="group-${groupIndex}-item-"]`);
+            groupItems.forEach(item => {
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.checked = true;
+                item.classList.add('selected');
+            });
+        }
+
+        function deselectAllInGroup(groupIndex) {
+            const groupItems = document.querySelectorAll(`[id^="group-${groupIndex}-item-"]`);
+            groupItems.forEach(item => {
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                checkbox.checked = false;
+                item.classList.remove('selected');
+            });
+        }
+
+        function processDuplicates() {
+            console.log("DEBUG: Starting process duplicates...");
+            
+            // Collect selected items
+            const selectedItems = [];
+            currentDuplicates.forEach((group, groupIndex) => {
+                const groupSelections = [];
+                group.items.forEach((item, itemIndex) => {
+                    const itemId = `group-${groupIndex}-item-${itemIndex}`;
+                    const checkbox = document.getElementById(`checkbox-${itemId}`);
+                    if (checkbox && checkbox.checked) {
+                        groupSelections.push(item);
+                    }
+                });
+                
+                if (groupSelections.length > 1) {
+                    selectedItems.push({
+                        group_index: groupIndex,
+                        normalized_title: group.normalized_title,
+                        artist_name: group.artist_name,
+                        items: groupSelections
+                    });
+                }
+            });
+            
+            if (selectedItems.length === 0) {
+                alert('No duplicate groups selected for processing');
+                return;
+            }
+            
+            let totalArtworks = 0;
+            selectedItems.forEach(group => {
+                totalArtworks += group.items.length;
+            });
+            
+            if (!confirm(`Are you sure you want to process ${selectedItems.length} groups containing ${totalArtworks} artworks? This will merge duplicates and cannot be undone.`)) {
+                return;
+            }
+            
+            const fixBtn = document.getElementById('duplicates-fix-btn');
+            const loading = document.getElementById('duplicates-fix-loading');
+            const successDiv = document.getElementById('duplicates-success');
+            
+            fixBtn.disabled = true;
+            loading.style.display = 'block';
+            successDiv.style.display = 'none';
+            
+            fetch('/process_duplicate_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    selected_groups: selectedItems,
+                    all_groups: currentDuplicates  // Pass all groups so backend can record unselected pairs as "not duplicates"
+                })
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                console.log("DEBUG: Process duplicates response:", data);
+                if (data.success) {
+                    let message = `✅ Successfully processed ${data.processed_groups || 0} groups!<br>
+                        Merged ${data.total_artworks_processed || 0} artworks into ${data.final_artworks_count || 0} unique entries.`;
+                    
+                    if (data.not_duplicate_pairs_recorded && data.not_duplicate_pairs_recorded > 0) {
+                        message += `<br>📝 Recorded ${data.not_duplicate_pairs_recorded} pairs as "not duplicates" to avoid future review.`;
+                    }
+                    
+                    successDiv.innerHTML = `<div class="success">${message}</div>`;
+                    successDiv.style.display = 'block';
+                    
+                    // Hide the fix section and clear current data
+                    document.getElementById('duplicates-fix-section').style.display = 'none';
+                    currentDuplicates = [];
+                    
+                    setTimeout(() => {
+                        document.getElementById('duplicates-results').style.display = 'none';
+                        loadDatabaseStats(); // Refresh stats
+                    }, 3000);
+                } else {
+                    console.error("DEBUG: Error in process duplicates response:", data.error);
+                    alert('Error processing duplicates: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('DEBUG: Fetch error in process duplicates:', error);
+                alert('Failed to process duplicates');
+            })
+            .finally(() => {
+                fixBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        }
+
+        function showLargeImage(imageUrl, title) {
+            // Create modal overlay if it doesn't exist
+            let modal = document.getElementById('image-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'image-modal';
+                modal.className = 'image-modal';
+                modal.innerHTML = `
+                    <div class="image-modal-content">
+                        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
+                        <img id="modal-image" src="" alt="">
+                        <div class="image-modal-title"></div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Set image and title
+            document.getElementById('modal-image').src = imageUrl;
+            document.getElementById('modal-image').alt = title;
+            document.querySelector('.image-modal-title').textContent = title;
+            
+            // Show modal
+            modal.style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Close modal when clicking outside the image
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('image-modal');
+            if (modal && event.target === modal) {
+                closeImageModal();
+            }
+        });
             
             
     </script>
@@ -2078,6 +2415,211 @@
             color: #6c757d;
             margin-top: 5px;
         }
+
+        /* Duplicate Images Styles */
+        .duplicates-groups-list {
+            margin: 20px 0;
+        }
+
+        .duplicate-group {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin: 15px 0;
+            background: #fff;
+        }
+
+        .group-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-header h4 {
+            margin: 0;
+            flex-grow: 1;
+            color: #495057;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .duplicate-items {
+            padding: 10px;
+            display: grid;
+            gap: 15px;
+            grid-template-columns: 1fr;
+        }
+
+        /* Layout for 2 items side by side for easy comparison */
+        .duplicate-items.two-items {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* For browsers that support :has(), use automatic detection */
+        @supports selector(:has(*)) {
+            .duplicate-items:has(.duplicate-item:nth-child(2):last-child) {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .duplicate-items:has(.duplicate-item:nth-child(3)) {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .duplicate-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+        }
+
+        .duplicate-item.selected {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .item-checkbox {
+            margin-right: 15px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .item-checkbox input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        .item-image {
+            width: 150px;
+            height: 150px;
+            margin-right: 15px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .item-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .item-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+
+        .item-image:hover img {
+            transform: scale(1.1);
+        }
+
+        .image-placeholder, .image-error {
+            color: #6c757d;
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .image-error {
+            color: #dc3545;
+        }
+
+        .item-details {
+            flex-grow: 1;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .item-details strong {
+            color: #495057;
+        }
+
+        .field-content {
+            max-height: 100px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 5px;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+            margin: 3px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Image Modal Styles */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+            z-index: 2001;
+        }
+
+        .image-modal-close:hover {
+            color: #000;
+        }
+
+        .image-modal img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        .image-modal-title {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+        
             </style>
     </body>
 </html>

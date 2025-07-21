@@ -89,7 +89,8 @@ app = Flask(__name__, static_folder='static')
 # Add API routes for artwork similarity space mapping functionalities
 from templates.map_api import map_api_bp
 app.register_blueprint(map_api_bp)
-
+from templates.hierarchical_map_api import hierarchical_map_api_bp
+app.register_blueprint(hierarchical_map_api_bp)
 # Register blueprints for other pages
 from templates.health_check import health_check_bp
 app.register_blueprint(health_check_bp)
@@ -904,19 +905,9 @@ def lookup_entry():
         return jsonify({"error": "Missing or invalid entryId/type"}), 400
 
     db = get_db()
-    if entry_type == 'text':
-        query = "SELECT * FROM text_entries WHERE entry_id = ?"
-    else:
-        query = "SELECT * FROM image_entries WHERE image_id = ?"
-
-    cursor = db.execute(query, (entry_id,))
-    row = cursor.fetchone()
-    if not row:
+    row_dict = helpers.retrieve_by_id(entry_id, db, entry_type=entry_type)
+    if not row_dict:
         return jsonify({"error": "Entry not found"}), 404
-
-    # Convert row to dict and parse any JSON fields if needed
-    row_dict = dict(row)
-    # Optionally, parse JSON fields here if you want (like images, descriptions, etc.)
 
     return jsonify(row_dict)
 

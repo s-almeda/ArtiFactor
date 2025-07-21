@@ -216,8 +216,32 @@ def apply_kmeans_clustering(coordinates_2d, k):
 
 # ====== Functions for retrieving stuff from the database ======
 
+def retrieve_by_id(entry_id, conn, entry_type="image"):
+    """
+    Retrieve a single entry by its ID from either image_entries or text_entries.
 
+    Args:
+        entry_id: ID of the entry (image_id or entry_id)
+        conn: database connection
+        entry_type: "image" (default) or "text"
 
+    Returns:
+        dict: Entry details or None if not found
+    """
+    if entry_type == "text":
+        table = "text_entries"
+        id_column = "entry_id"
+    else:
+        table = "image_entries"
+        id_column = "image_id"
+
+    cursor = conn.execute(f"SELECT * FROM {table} WHERE {id_column} = ?", (entry_id,))
+    row = cursor.fetchone()
+    if row:
+        return dict(row)
+    else:
+        return None
+    
 def convert_row_to_text(row):
     """
     Convert image_entries row into text for CLIP.
@@ -469,6 +493,122 @@ def get_images_from_image_ids(image_ids, conn, max=3):
             break
 
     return result
+
+#-- get precomputed embeddings from the vector tables --#
+
+def get_clip_embeddings(db, image_ids):
+    """Get CLIP embeddings for given image IDs."""
+    if not image_ids:
+        return {}
+    
+    placeholders = ','.join(['?' for _ in image_ids])
+    query = f"""
+        SELECT image_id, embedding 
+        FROM vec_clip_features 
+        WHERE image_id IN ({placeholders})
+    """
+    
+    cursor = db.execute(query, image_ids)
+    results = cursor.fetchall()
+    
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['image_id']] = embedding
+    
+    return embeddings
+
+
+# Get ResNet50 embeddings
+def get_resnet_embeddings(db, image_ids):
+    if not image_ids:
+        return {}
+    placeholders = ','.join(['?' for _ in image_ids])
+    query = f"""
+        SELECT image_id, embedding 
+        FROM vec_image_features 
+        WHERE image_id IN ({placeholders})
+    """
+    cursor = db.execute(query, image_ids)
+    results = cursor.fetchall()
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['image_id']] = embedding
+    return embeddings
+
+
+def get_value_embeddings(db, entry_ids):
+    """Get value embeddings for given text_entries entry_ids (artists and keywords)."""
+    if not entry_ids:
+        return {}
+    
+    placeholders = ','.join(['?' for _ in entry_ids])
+    query = f"""
+        SELECT id, embedding 
+        FROM vec_value_features 
+        WHERE id IN ({placeholders})
+    """
+    
+    cursor = db.execute(query, entry_ids)
+    results = cursor.fetchall()
+    
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['id']] = embedding
+    
+    return embeddings
+def get_description_embeddings(db, entry_ids):
+    """Get description embeddings for given text_entries entry_ids (artists and keywords)."""
+    if not entry_ids:
+        return {}
+    
+    placeholders = ','.join(['?' for _ in entry_ids])
+    query = f"""
+        SELECT id, embedding 
+        FROM vec_description_features 
+        WHERE id IN ({placeholders})
+    """
+    
+    cursor = db.execute(query, entry_ids)
+    results = cursor.fetchall()
+    
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['id']] = embedding
+    
+    return embeddings
+
 
 
 def find_exact_matches(query, conn, artists_only=False):

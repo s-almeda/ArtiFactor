@@ -1,8 +1,29 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 import json
 import sqlite3
+import ast
+import traceback
 
 data_cleaner_bp = Blueprint('data_cleaner', __name__)
+
+@data_cleaner_bp.route('/validate_admin_password', methods=['POST'])
+def validate_admin_password():
+    """Validate admin password for data cleaner access"""
+    try:
+        import os
+        data = request.get_json()
+        password = data.get('password', '')
+        
+        # Get the expected password from environment variable
+        expected_password = os.environ.get('STAGING_ADMIN_PASSWORD', 'default_admin_pass')
+        
+        if password == expected_password:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Invalid password'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @data_cleaner_bp.route('/data_cleaner')
 def data_cleaner():
@@ -776,59 +797,91 @@ def check_keyword_integrity(entry_id, value, keyword_ids_text, keyword_strings_t
                            valid_entry_ids, entry_values, table_name):
     """Helper function to check keyword integrity for a single entry"""
     try:
+        # Create reverse lookup: value -> entry_id for finding missing IDs
+        value_to_entry_id = {v: k for k, v in entry_values.items()}
+        
         # Parse keyword IDs
-        keyword_ids = []
-        invalid_ids = []
+        current_ids = []
         if keyword_ids_text and keyword_ids_text != '[]':
             try:
-                keyword_ids = json.loads(keyword_ids_text)
-                if not isinstance(keyword_ids, list):
-                    keyword_ids = []
+                current_ids = json.loads(keyword_ids_text)
+                if not isinstance(current_ids, list):
+                    current_ids = []
             except json.JSONDecodeError:
                 print(f"DEBUG: JSON decode error for relatedKeywordIds in {table_name} {entry_id}")
-                keyword_ids = []
+                current_ids = []
         
-        # Check for invalid IDs
+        # Parse keyword strings
+        current_strings = []
+        if keyword_strings_text and keyword_strings_text != '[]':
+            try:
+                current_strings = json.loads(keyword_strings_text)
+                if not isinstance(current_strings, list):
+                    current_strings = []
+            except json.JSONDecodeError:
+                print(f"DEBUG: JSON decode error for relatedKeywordStrings in {table_name} {entry_id}")
+                current_strings = []
+        
+        # Step 1: Separate valid and invalid IDs
         valid_ids = []
-        for kid in keyword_ids:
+        invalid_ids = []
+        for kid in current_ids:
             if kid in valid_entry_ids:
                 valid_ids.append(kid)
             else:
                 invalid_ids.append(kid)
         
-        # Parse keyword strings
-        keyword_strings = []
-        if keyword_strings_text and keyword_strings_text != '[]':
-            try:
-                keyword_strings = json.loads(keyword_strings_text)
-                if not isinstance(keyword_strings, list):
-                    keyword_strings = []
-            except json.JSONDecodeError:
-                print(f"DEBUG: JSON decode error for relatedKeywordStrings in {table_name} {entry_id}")
-                keyword_strings = []
+        # Step 2: Separate valid and invalid strings
+        valid_strings = []
+        invalid_strings = []
+        for string in current_strings:
+            if string in value_to_entry_id:
+                valid_strings.append(string)
+            else:
+                invalid_strings.append(string)
         
-        # Build correct strings list from valid IDs
-        correct_strings = []
+        # Step 3: Build the corrected lists
+        corrected_ids = set(valid_ids)  # Start with valid IDs
+        corrected_strings = set()
+        
+        # Add strings for all valid IDs
         for vid in valid_ids:
             if vid in entry_values:
-                correct_strings.append(entry_values[vid])
+                corrected_strings.add(entry_values[vid])
         
-        # Check if there are issues
-        has_invalid_ids = len(invalid_ids) > 0
-        strings_mismatch = set(keyword_strings) != set(correct_strings)
+        # Add IDs for all valid strings
+        for string in valid_strings:
+            if string in value_to_entry_id:
+                corrected_ids.add(value_to_entry_id[string])
+                corrected_strings.add(string)
         
-        if has_invalid_ids or strings_mismatch:
+        # Convert back to sorted lists for consistency
+        corrected_ids_list = sorted(list(corrected_ids))
+        corrected_strings_list = sorted(list(corrected_strings))
+        
+        # Check if current arrays match the corrected ones
+        current_ids_set = set(current_ids)
+        current_strings_set = set(current_strings)
+        
+        ids_match = current_ids_set == corrected_ids
+        strings_match = current_strings_set == corrected_strings
+        
+        # Only return an issue if there are problems to fix
+        if not ids_match or not strings_match or invalid_ids or invalid_strings:
             return {
                 'entry_id': entry_id,
                 'table': table_name,
                 'value': value,
-                'keyword_ids': keyword_ids,
-                'valid_ids': valid_ids,
+                'current_ids': current_ids,
+                'current_strings': current_strings,
+                'corrected_ids': corrected_ids_list,
+                'corrected_strings': corrected_strings_list,
                 'invalid_ids': invalid_ids,
-                'current_strings': keyword_strings,
-                'correct_strings': correct_strings,
-                'has_invalid_ids': has_invalid_ids,
-                'strings_mismatch': strings_mismatch
+                'invalid_strings': invalid_strings,
+                'valid_ids': valid_ids,
+                'valid_strings': valid_strings,
+                'ids_match': ids_match,
+                'strings_match': strings_match
             }
         
         return None
@@ -840,8 +893,16 @@ def check_keyword_integrity(entry_id, value, keyword_ids_text, keyword_strings_t
             'table': table_name,
             'value': value,
             'error': str(e),
-            'has_invalid_ids': True,
-            'strings_mismatch': True
+            'current_ids': [],
+            'current_strings': [],
+            'corrected_ids': [],
+            'corrected_strings': [],
+            'invalid_ids': [],
+            'invalid_strings': [],
+            'valid_ids': [],
+            'valid_strings': [],
+            'ids_match': False,
+            'strings_match': False
         }
 
 @data_cleaner_bp.route('/fix_related_keywords', methods=['POST'])
@@ -865,14 +926,18 @@ def fix_related_keywords():
         for issue in issues:
             entry_id = issue['entry_id']
             table = issue['table']
-            valid_ids = issue.get('valid_ids', [])
-            correct_strings = issue.get('correct_strings', [])
+            corrected_ids = issue.get('corrected_ids', [])
+            corrected_strings = issue.get('corrected_strings', [])
             
             print(f"DEBUG: Fixing {table} entry {entry_id}")
+            print(f"DEBUG: Current IDs: {issue.get('current_ids', [])}")
+            print(f"DEBUG: Current strings: {issue.get('current_strings', [])}")
+            print(f"DEBUG: Corrected IDs: {corrected_ids}")
+            print(f"DEBUG: Corrected strings: {corrected_strings}")
             
             # Prepare the new JSON data
-            new_ids_json = json.dumps(valid_ids)
-            new_strings_json = json.dumps(correct_strings)
+            new_ids_json = json.dumps(corrected_ids)
+            new_strings_json = json.dumps(corrected_strings)
             
             # Determine the correct ID column name
             id_column = 'entry_id' if table == 'text_entries' else 'image_id'
@@ -1277,6 +1342,368 @@ def fix_artist_image_integrity():
     except Exception as e:
         db.rollback()
         print(f"ERROR in fix_artist_image_integrity: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/check_duplicate_images', methods=['POST'])
+def check_duplicate_images():
+    """Find potential duplicate artworks by the same artist with similar names"""
+    try:
+        from index import get_db
+        import re
+        import unicodedata
+        import os
+        from collections import defaultdict
+        
+        db = get_db()
+        
+        # Load previously marked "not duplicates" pairs
+        not_duplicates_file = os.path.join(os.path.dirname(__file__), 'not_duplicates.txt')
+        not_duplicate_pairs = set()
+        
+        if os.path.exists(not_duplicates_file):
+            try:
+                with open(not_duplicates_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and ',' in line:
+                            parts = line.split(',')
+                            if len(parts) >= 2:
+                                # Store pairs in both directions for easy lookup
+                                id1, id2 = parts[0].strip(), parts[1].strip()
+                                not_duplicate_pairs.add((id1, id2))
+                                not_duplicate_pairs.add((id2, id1))
+                print(f"Loaded {len(not_duplicate_pairs)//2} not-duplicate pairs from file")
+            except Exception as e:
+                print(f"Warning: Could not load not_duplicates.txt: {e}")
+                not_duplicate_pairs = set()
+        
+        def normalize_title(title):
+            """Normalize title for comparison: lowercase, no accents, only alphanumeric"""
+            if not title:
+                return ""
+            # Remove accents and diacritics
+            title = unicodedata.normalize('NFD', title)
+            title = ''.join(char for char in title if unicodedata.category(char) != 'Mn')
+            # Convert to lowercase and keep only alphanumeric characters and spaces
+            title = re.sub(r'[^a-zA-Z0-9\s]', '', title.lower())
+            # Normalize whitespace
+            title = ' '.join(title.split())
+            return title
+        
+        # Get all image entries with their artist information
+        cursor = db.execute("""
+            SELECT ie.image_id, ie.value as title, ie.relatedKeywordIds, ie.descriptions, 
+                   ie.image_urls, ie.artist_names, ie.rights, ie.relatedKeywordStrings
+            FROM image_entries ie 
+            WHERE ie.value IS NOT NULL AND ie.value != ''
+            ORDER BY ie.image_id
+        """)
+        
+        image_entries = cursor.fetchall()
+        
+        # Get artist information for all entries
+        artist_lookup = {}
+        cursor = db.execute("SELECT entry_id, value FROM text_entries WHERE value IS NOT NULL")
+        for row in cursor.fetchall():
+            artist_lookup[row['entry_id']] = row['value']
+        
+        # Group by artist and normalized title
+        artist_artworks = defaultdict(lambda: defaultdict(list))
+        
+        for entry in image_entries:
+            # Get artist name from artist_names field
+            artist_name = None
+            if entry['artist_names']:
+                try:
+                    artist_names = json.loads(entry['artist_names'])
+                    if isinstance(artist_names, list) and artist_names:
+                        # Use the first artist name
+                        artist_name = artist_names[0]
+                except:
+                    pass
+            
+            if not artist_name:
+                continue
+                
+            normalized_title = normalize_title(entry['title'])
+            if not normalized_title:
+                continue
+                
+            # Calculate additional information
+            related_keywords_count = 0
+            image_url_keys = []
+            best_image_url = None
+            
+            try:
+                if entry['relatedKeywordIds']:
+                    keywords = json.loads(entry['relatedKeywordIds'])
+                    if isinstance(keywords, list):
+                        related_keywords_count = len(keywords)
+            except:
+                pass
+                
+            # Extract image URL keys and find best image URL
+            try:
+                if entry['image_urls']:
+                    urls = json.loads(entry['image_urls'])
+                    if isinstance(urls, dict):
+                        image_url_keys = list(urls.keys())
+                        # Try to find the best image URL (prefer medium size for display)
+                        for preferred_key in ['medium', 'small', 'normalized', 'large']:
+                            if preferred_key in urls:
+                                best_image_url = urls[preferred_key]
+                                break
+                        # If no preferred key found, use the first available
+                        if not best_image_url and urls:
+                            best_image_url = list(urls.values())[0]
+            except:
+                pass
+            
+            artist_artworks[artist_name][normalized_title].append({
+                'image_id': entry['image_id'],
+                'value': entry['title'],
+                'title': entry['title'],
+                'artist_names': entry['artist_names'],
+                'image_urls': entry['image_urls'],
+                'image_url_keys': ', '.join(image_url_keys),
+                'best_image_url': best_image_url,
+                'rights': entry['rights'],
+                'descriptions': entry['descriptions'],
+                'relatedKeywordStrings': entry['relatedKeywordStrings'],
+                'related_keywords': entry['relatedKeywordIds'],
+                'related_keywords_count': related_keywords_count
+            })
+        
+        # Find groups with multiple artworks (potential duplicates)
+        duplicate_groups = []
+        total_potential_duplicates = 0
+        
+        for artist_name, titles_dict in artist_artworks.items():
+            for normalized_title, artworks in titles_dict.items():
+                if len(artworks) > 1:  # More than one artwork with the same normalized title
+                    # Filter out pairs that have been marked as "not duplicates"
+                    filtered_artworks = []
+                    
+                    for artwork in artworks:
+                        # Check if this artwork should be excluded based on not_duplicate_pairs
+                        should_include = True
+                        for other_artwork in artworks:
+                            if artwork['image_id'] != other_artwork['image_id']:
+                                pair_key = (str(artwork['image_id']), str(other_artwork['image_id']))
+                                if pair_key in not_duplicate_pairs:
+                                    should_include = False
+                                    break
+                        
+                        if should_include:
+                            filtered_artworks.append(artwork)
+                    
+                    # Only include groups that still have potential duplicates after filtering
+                    if len(filtered_artworks) > 1:
+                        duplicate_groups.append({
+                            'artist_name': artist_name,
+                            'normalized_title': normalized_title,
+                            'count': len(filtered_artworks),
+                            'items': filtered_artworks
+                        })
+                        total_potential_duplicates += len(filtered_artworks)
+        
+        # Sort by artist name and count (descending)
+        duplicate_groups.sort(key=lambda x: (x['artist_name'], -x['count']))
+        
+        print(f"Found {len(duplicate_groups)} groups of potential duplicates containing {total_potential_duplicates} artworks")
+        
+        return jsonify({
+            'success': True,
+            'duplicate_groups': duplicate_groups,
+            'total_duplicate_groups': len(duplicate_groups),
+            'total_artworks': total_potential_duplicates
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_duplicate_images: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/process_duplicate_images', methods=['POST'])
+def process_duplicate_images():
+    """Merge selected duplicate artworks and record unselected pairs as not duplicates"""
+    try:
+        from index import get_db
+        import os
+        
+        db = get_db()
+        data = request.get_json()
+        
+        if not data or 'selected_groups' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No selected groups provided'
+            })
+        
+        selected_groups = data['selected_groups']
+        all_groups = data.get('all_groups', [])  # We'll need this to track unselected pairs
+        
+        processed_groups = 0
+        total_merged = 0
+        total_removed = 0
+        not_duplicate_pairs = []
+        
+        for group in selected_groups:
+            items = group.get('items', [])
+            if len(items) < 2:
+                continue  # Need at least 2 items to merge
+            
+            # Find the "best" item to keep (most complete data)
+            def score_completeness(item):
+                score = 0
+                if item.get('title') and item['title'].strip(): score += 2
+                if item.get('descriptions') and item['descriptions'].strip(): score += 3
+                if item.get('image_urls') and item['image_urls'].strip(): score += 2
+                if item.get('wikiart_date') and item['wikiart_date'].strip(): score += 1
+                if item.get('description') and item['description'].strip(): score += 3
+                if item.get('related_keywords'): 
+                    try:
+                        keywords = json.loads(item['related_keywords'])
+                        score += len(keywords) if isinstance(keywords, list) else 0
+                    except:
+                        pass
+                # Prefer longer titles as they might be more descriptive
+                if item.get('title'):
+                    score += len(item['title']) * 0.01
+                return score
+            
+            # Sort by completeness score (descending)
+            items_sorted = sorted(items, key=score_completeness, reverse=True)
+            keep_item = items_sorted[0]
+            remove_items = items_sorted[1:]
+            
+            keep_id = keep_item['image_id']
+            remove_ids = [item['image_id'] for item in remove_items]
+            
+            print(f"Merging group '{group['normalized_title']}' by {group['artist_name']}: keeping {keep_id}, removing {remove_ids}")
+            
+            # Merge data into the kept item
+            merged_title = keep_item['title']
+            merged_descriptions = keep_item.get('descriptions')
+            merged_image_urls = keep_item.get('image_urls')
+            merged_keywords = keep_item['related_keywords']
+            
+            # If the kept item is missing data, try to get it from others
+            for item in remove_items:
+                # Use data from other items if the kept item doesn't have it or if the other item has more complete data
+                if not merged_title and item.get('title'):
+                    merged_title = item['title']
+                elif item.get('title') and len(item['title']) > len(merged_title or ''):
+                    merged_title = item['title']  # Use longer, potentially more descriptive title
+                    
+                if not merged_descriptions and item.get('descriptions'):
+                    merged_descriptions = item['descriptions']
+                elif item.get('descriptions') and len(item['descriptions']) > len(merged_descriptions or ''):
+                    merged_descriptions = item['descriptions']  # Use longer description
+                    
+                if not merged_image_urls and item.get('image_urls'):
+                    merged_image_urls = item['image_urls']
+                    
+                if not merged_keywords and item.get('related_keywords'):
+                    merged_keywords = item['related_keywords']
+            
+            # Update the kept item with merged data
+            cursor = db.execute("""
+                UPDATE image_entries 
+                SET value = ?, descriptions = ?, image_urls = ?, relatedKeywordIds = ?
+                WHERE image_id = ?
+            """, (merged_title, merged_descriptions, merged_image_urls, merged_keywords, keep_id))
+            
+            # Update any text_entries that reference the removed images to point to the kept image
+            for remove_id in remove_ids:
+                # Find text entries that reference this image
+                cursor = db.execute("SELECT entry_id, images FROM text_entries WHERE images LIKE ?", (f'%{remove_id}%',))
+                text_entries = cursor.fetchall()
+                
+                for text_entry in text_entries:
+                    try:
+                        images_json = text_entry['images']
+                        if images_json:
+                            image_ids = json.loads(images_json)
+                            if isinstance(image_ids, list):
+                                # Replace the removed ID with the kept ID (if not already present)
+                                updated_ids = []
+                                for img_id in image_ids:
+                                    if img_id == remove_id:
+                                        if keep_id not in updated_ids:
+                                            updated_ids.append(keep_id)
+                                    elif img_id not in updated_ids:
+                                        updated_ids.append(img_id)
+                                
+                                # Update the text entry
+                                updated_json = json.dumps(updated_ids)
+                                db.execute("UPDATE text_entries SET images = ? WHERE entry_id = ?", 
+                                         (updated_json, text_entry['entry_id']))
+                    except Exception as ref_error:
+                        print(f"Warning: Could not update text entry {text_entry['entry_id']} reference: {ref_error}")
+            
+            # Remove the duplicate image entries
+            for remove_id in remove_ids:
+                db.execute("DELETE FROM image_entries WHERE image_id = ?", (remove_id,))
+                total_removed += 1
+            
+            processed_groups += 1
+            total_merged += len(remove_ids)
+        
+        # Record unselected pairs as "not duplicates" to avoid future review
+        if all_groups:
+            not_duplicates_file = os.path.join(os.path.dirname(__file__), 'not_duplicates.txt')
+            
+            # Create a set of selected group indices for quick lookup
+            selected_group_indices = {group['group_index'] for group in selected_groups if 'group_index' in group}
+            
+            # For groups that were NOT selected for processing, record all pairs as "not duplicates"
+            pairs_to_record = set()
+            for group_index, group in enumerate(all_groups):
+                if group_index not in selected_group_indices and len(group.get('items', [])) > 1:
+                    items = group['items']
+                    # Create pairs from all combinations in this unselected group
+                    for i in range(len(items)):
+                        for j in range(i + 1, len(items)):
+                            id1, id2 = str(items[i]['image_id']), str(items[j]['image_id'])
+                            # Store pairs in a consistent order (smaller ID first)
+                            if id1 < id2:
+                                pairs_to_record.add((id1, id2))
+                            else:
+                                pairs_to_record.add((id2, id1))
+            
+            # Write the pairs to the file
+            if pairs_to_record:
+                try:
+                    with open(not_duplicates_file, 'a') as f:
+                        for id1, id2 in pairs_to_record:
+                            f.write(f"{id1},{id2}\n")
+                    print(f"Recorded {len(pairs_to_record)} pairs as not duplicates")
+                except Exception as e:
+                    print(f"Warning: Could not write to not_duplicates.txt: {e}")
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'processed_groups': processed_groups,
+            'total_artworks_processed': total_merged,
+            'final_artworks_count': processed_groups,  # Number of unique artworks remaining after merge
+            'total_removed': total_removed,
+            'not_duplicate_pairs_recorded': len(pairs_to_record) if 'pairs_to_record' in locals() else 0,
+            'message': f'Successfully processed {processed_groups} groups, merged {total_merged} duplicate artworks'
+        })
+        
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR in process_duplicate_images: {str(e)}")
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
