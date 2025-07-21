@@ -262,6 +262,21 @@
             </div>
         </div>
         
+        <div class="controls">
+            <div class="control-group">
+                <label for="pairingStrategy">Pairing strategy:</label>
+                <select id="pairingStrategy">
+                    <option value="longest_boundary">Longest Boundary (default)</option>
+                    <option value="boundary_segments">Boundary Segments</option>
+                    <option value="boundary_ratio">Boundary Ratio</option>
+                    <option value="compactness">Compactness</option>
+                </select>
+                <small style="display: block; color: #666; margin-top: 5px; font-size: 12px;">
+                    Strategy for optimal region pairing: Longest boundary length, number of boundary segments, boundary ratio, or shape compactness
+                </small>
+            </div>
+        </div>
+        
         <button id="generateBtn" onclick="generateHierarchicalMap()">
             🗺️ Generate Hierarchical Voronoi Map
         </button>
@@ -445,11 +460,14 @@
             const status = document.getElementById('status');
 
             btn.disabled = true;
+            const pairingStrategy = document.getElementById('pairingStrategy').value;
+            const strategyName = document.getElementById('pairingStrategy').selectedOptions[0].text;
             status.className = 'loading';
-            status.textContent = 'Analyzing Voronoi region adjacencies...';
+            status.textContent = `Analyzing Voronoi region adjacencies using ${strategyName}...`;
             status.style.display = 'block';
 
             try {
+                const pairingStrategy = document.getElementById('pairingStrategy').value;
                 const response = await fetch('/analyze_voronoi_adjacency', {
                     method: 'POST',
                     headers: {
@@ -457,6 +475,7 @@
                     },
                     body: JSON.stringify({
                         voronoiData: currentMapData.voronoiData,
+                        pairingStrategy: pairingStrategy,
                         debug: document.getElementById('debug').checked
                     })
                 });
@@ -466,7 +485,8 @@
                 if (data.success) {
                     status.className = 'success';
                     const adjStats = data.stats;
-                    status.textContent = `Success! Found ${adjStats.optimalPairs} optimal pairs (${adjStats.pairedBoundaries} paired boundaries, ${adjStats.unpairedBoundaries} unpaired boundaries).`;
+                    const strategyName = document.getElementById('pairingStrategy').selectedOptions[0].text;
+                    status.textContent = `Success! Using ${strategyName}: Found ${adjStats.optimalPairs} optimal pairs (${adjStats.pairedBoundaries} paired boundaries, ${adjStats.unpairedBoundaries} unpaired boundaries).`;
                     
                     // Store adjacency data
                     currentAdjacencyData = data;
@@ -500,11 +520,14 @@
             const status = document.getElementById('status');
 
             btn.disabled = true;
+            const pairingStrategy = document.getElementById('pairingStrategy').value;
+            const strategyName = document.getElementById('pairingStrategy').selectedOptions[0].text;
             status.className = 'loading';
-            status.textContent = 'Merging paired Voronoi regions...';
+            status.textContent = `Merging paired Voronoi regions using ${strategyName}...`;
             status.style.display = 'block';
 
             try {
+                const pairingStrategy = document.getElementById('pairingStrategy').value;
                 const response = await fetch('/merge_voronoi_regions', {
                     method: 'POST',
                     headers: {
@@ -513,6 +536,7 @@
                     body: JSON.stringify({
                         voronoiData: currentMapData.voronoiData,
                         imagePoints: currentMapData.imagePoints,
+                        pairingStrategy: pairingStrategy,
                         debug: document.getElementById('debug').checked
                     })
                 });
