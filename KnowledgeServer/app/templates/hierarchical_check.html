@@ -435,7 +435,19 @@
                     }
                 } else {
                     status.className = 'error';
-                    status.textContent = `Error: ${data.error}`;
+                    
+                    // Handle timeout errors specially
+                    if (data.timeout) {
+                        status.innerHTML = `
+                            <strong>⏱️ Request Timed Out</strong><br>
+                            ${data.error}<br><br>
+                            <strong>Suggestions:</strong><br>
+                            ${data.suggestions ? data.suggestions.map(s => `• ${s}`).join('<br>') : ''}
+                        `;
+                    } else {
+                        status.textContent = `Error: ${data.error}`;
+                    }
+                    
                     responseDiv.textContent = JSON.stringify(data, null, 2);
                     results.style.display = 'block';
                     clearVisualization();
@@ -583,7 +595,18 @@
                     }
                 } else {
                     status.className = 'error';
-                    status.textContent = `Error: ${data.error}`;
+                    
+                    // Handle timeout errors specially
+                    if (data.timeout) {
+                        status.innerHTML = `
+                            <strong>⏱️ Merge Timed Out</strong><br>
+                            ${data.error}<br><br>
+                            <strong>Suggestions:</strong><br>
+                            ${data.suggestions ? data.suggestions.map(s => `• ${s}`).join('<br>') : ''}
+                        `;
+                    } else {
+                        status.textContent = `Error: ${data.error}`;
+                    }
                 }
             } catch (error) {
                 status.className = 'error';
