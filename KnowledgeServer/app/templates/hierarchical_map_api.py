@@ -17,6 +17,7 @@ from config import BASE_DIR
 import helperfunctions as hf
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
+from timeout_decorator import timeout, TimeoutError
 
 MAPS_DIR = os.path.join(BASE_DIR, 'generated_maps')
 os.makedirs(MAPS_DIR, exist_ok=True)
@@ -112,6 +113,7 @@ def hierarchical_check_page():
     return render_template('hierarchical_check.html')
 
 @hierarchical_map_api_bp.route('/generate_hierarchical_voronoi_map', methods=['GET'])
+@timeout(300)  # 5 minutes timeout for long-running map generation
 def handle_hierarchical_voronoi_map_request():
     """
     Handles a request for a hierarchical Voronoi diagram map.
@@ -249,6 +251,19 @@ def handle_hierarchical_voronoi_map_request():
         dprint(f"\n=== Hierarchical Voronoi map generation complete ===")
         return jsonify(map_response)
     
+    except TimeoutError:
+        print("ERROR: Hierarchical map generation timed out after 5 minutes")
+        return jsonify({
+            'success': False,
+            'error': 'Request timed out. The dataset is too large for the current timeout limit (5 minutes). Try reducing the number of images (n parameter) or consider using caching.',
+            'timeout': True,
+            'suggestions': [
+                'Reduce the number of images (n parameter)',
+                'Enable caching (cache=true) for repeated requests',
+                'Try a smaller number of regions (k parameter)',
+                'Use fewer UMAP iterations or simpler parameters'
+            ]
+        }), 408
     except Exception as e:
         print(f"Error during hierarchical map generation: {e}")
         if request.args.get('debug', 'false').lower() == 'true':
@@ -653,6 +668,7 @@ def format_voronoi_regions(voronoi_data):
 
 
 @hierarchical_map_api_bp.route('/merge_voronoi_regions', methods=['POST'])
+@timeout(180)  # 3 minutes timeout for merging operations
 def handle_voronoi_region_merge():
     """
     Merges optimal pairs of adjacent Voronoi regions into single regions.
@@ -770,6 +786,18 @@ def handle_voronoi_region_merge():
         dprint(f"\n=== Region merging complete ===")
         return jsonify(response)
     
+    except TimeoutError:
+        print("ERROR: Region merging timed out after 3 minutes")
+        return jsonify({
+            'success': False,
+            'error': 'Region merging timed out. The current regions are too complex for the current timeout limit (3 minutes). Try using fewer regions or simpler pairing strategies.',
+            'timeout': True,
+            'suggestions': [
+                'Use fewer initial regions (reduce k parameter)',
+                'Try a simpler pairing strategy (e.g., longest_boundary)',
+                'Enable caching (cache=true) for repeated operations'
+            ]
+        }), 408
     except Exception as e:
         print(f"Error during region merging: {e}")
         if request.json and request.json.get('debug'):
