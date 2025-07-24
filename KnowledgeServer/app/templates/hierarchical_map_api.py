@@ -143,7 +143,7 @@ def handle_hierarchical_voronoi_map_request():
         # ---- PROCESS THE REQUEST ---- #
         n = int(request.args.get('n', 100))
         method = request.args.get('method', 'clip')
-        use_disk = request.args.get('disk', 'true').lower() == 'true'
+        # use_disk = request.args.get('disk', 'true').lower() == 'true'
         debug = request.args.get('debug', 'false').lower() == 'true'
         random = request.args.get('random', 'false').lower() == 'true'
         cache = request.args.get('cache', 'false').lower() == 'true'
@@ -170,7 +170,7 @@ def handle_hierarchical_voronoi_map_request():
         # Cache handling
         if cache:
             # Create comprehensive cache key including all parameters that affect the result
-            cache_key = f"hierarchical_voronoi_n{n}_method{method}_k{k}_nn{n_neighbors}_dist{min_dist}_rs{random_state}_iter{kmeans_iter}_disk{use_disk}_random{random}"
+            cache_key = f"hierarchical_voronoi_n{n}_method{method}_k{k}_nn{n_neighbors}_dist{min_dist}_rs{random_state}_iter{kmeans_iter}_random{random}"
             cache_file = os.path.join(MAPS_DIR, f"{cache_key}.json")
             if os.path.exists(cache_file):
                 dprint(f"Loading from cache: {cache_file}")
@@ -190,7 +190,7 @@ def handle_hierarchical_voronoi_map_request():
         
         # 1. Generate base map data
         base_data = generate_base_map_data(
-            db, n, method, use_disk, random, dprint,
+            db, n, method, random, dprint,
             n_neighbors=n_neighbors, min_dist=min_dist, random_state=random_state
         )
         if not base_data['success']:
@@ -274,7 +274,7 @@ def handle_hierarchical_voronoi_map_request():
             'traceback': traceback.format_exc() if debug else None
         }), 500
 
-def generate_base_map_data(db, n, method, use_disk, random, dprint, n_neighbors=500, min_dist=0.9, random_state=42):
+def generate_base_map_data(db, n, method, random, dprint, n_neighbors=500, min_dist=0.9, random_state=42):
     """
     Extract embeddings and process data for n images.
     Returns dict with: embeddings, processed_data, stats, success, coordinates_2d
@@ -339,12 +339,27 @@ def generate_base_map_data(db, n, method, use_disk, random, dprint, n_neighbors=
         umap_params['random_state'] = int(random_state)
 
     coordinates_2d = hf.reduce_to_2d_umap(embeddings_array, **umap_params)
-    
+    from scipy.spatial import procrustes
+    # Align coordinates to a square orientation using Procrustes analysis
+    # Create a square reference with the same number of points, distributed in a square
+    n_points = coordinates_2d.shape[0]
+    # Distribute points in a square grid as reference
+    side = int(np.ceil(np.sqrt(n_points)))
+    ref_x, ref_y = np.meshgrid(
+        np.linspace(-1, 1, side),
+        np.linspace(-1, 1, side)
+    )
+    reference = np.vstack([ref_x.ravel(), ref_y.ravel()]).T[:n_points]
+
+    # Apply Procrustes: mtx2 is the transformed coordinates_2d
+    mtx1, mtx2, disparity = procrustes(reference, coordinates_2d)
+    coordinates_2d_aligned = mtx2
+
     # Normalize coordinates to [-1, 1] range
-    coords_min = coordinates_2d.min(axis=0)
-    coords_max = coordinates_2d.max(axis=0)
-    coordinates_2d_normalized = 2 * (coordinates_2d - coords_min) / (coords_max - coords_min) - 1
-    
+    coords_min = coordinates_2d_aligned.min(axis=0)
+    coords_max = coordinates_2d_aligned.max(axis=0)
+    coordinates_2d_normalized = 2 * (coordinates_2d_aligned - coords_min) / (coords_max - coords_min) - 1
+
     dprint(f"✓ UMAP complete, normalized to [-1, 1]")
     
     # Package up stats
@@ -380,6 +395,25 @@ def generate_hierarchical_voronoi_diagram(image_points, k, dprint, kmeans_iter=5
         # Extract coordinates as numpy array
         points = np.array([[p['x'], p['y']] for p in image_points], dtype=np.float64)
         dprint(f"Extracted coordinates shape: {points.shape}")
+
+        # STEP 0:  Compute normalized bounding box centered at (0,0), width/height=2, with padding --- #
+        padding = 0.025  # 2.5% padding, adjust as needed
+        min_x, min_y = points.min(axis=0)
+        max_x, max_y = points.max(axis=0)
+        span = max(max_x - min_x, max_y - min_y)
+        span = max(span * (1 + padding), 2.0)  # Ensure at least 2 units
+
+        # The box is centered at (0,0), so:
+        bounding_box = {
+            'min_x': -span / 2,
+            'max_x': span / 2,
+            'min_y': -span / 2,
+            'max_y': span / 2
+        }
+        dprint(f"Normalized bounding box: {bounding_box}")
+
+
+
         
         # Step 1: Apply k-means clustering with k-means++ initialization
         dprint(f"Running k-means clustering with k={k} (using k-means++ initialization, {kmeans_iter} iterations)...")
@@ -431,19 +465,31 @@ def generate_hierarchical_voronoi_diagram(image_points, k, dprint, kmeans_iter=5
         for i in range(k):
             region_idx = vor.point_region[i]  # Get region for centroid i
             region = vor.regions[region_idx]
-            
+
+            # --- Always crop/slice region polygon to the [-1, 1] bounding box --- #
+            from shapely.geometry import Polygon, box as shapely_box
+            crop_box = shapely_box(-1, -1, 1, 1)
+
             if region and -1 not in region:  # Finite region
                 vertices = [vor.vertices[j].tolist() for j in region]
                 vertices = sort_vertices_clockwise(vertices)
-                centroid = calculate_centroid(vertices)
-                
+                # Crop polygon to bounding box
+                poly = Polygon(vertices)
+                cropped_poly = poly.intersection(crop_box)
+                if cropped_poly.is_empty or not hasattr(cropped_poly, "exterior"):
+                    # Fallback: use original vertices if crop fails
+                    cropped_vertices = vertices
+                else:
+                    cropped_vertices = [list(coord) for coord in list(cropped_poly.exterior.coords)[:-1]]
+                centroid = calculate_centroid(cropped_vertices)
+
                 # Find images in this cluster
                 cluster_mask = cluster_labels == i
                 cluster_image_ids = [image_points[j]['entryId'] for j in range(len(image_points)) if cluster_mask[j]]
-                
+
                 cells.append({
                     'id': i,
-                    'vertices': vertices,
+                    'vertices': cropped_vertices,
                     'centroid': centroid,
                     'imageIds': cluster_image_ids,
                     'pointCount': int(cluster_mask.sum()),
@@ -453,14 +499,21 @@ def generate_hierarchical_voronoi_diagram(image_points, k, dprint, kmeans_iter=5
                 # Handle infinite regions by clipping to bounding box
                 vertices = clip_infinite_voronoi_region(vor, i, bounding_box)
                 vertices = sort_vertices_clockwise(vertices)
-                centroid = calculate_centroid(vertices)
-                
+                # Crop polygon to bounding box
+                poly = Polygon(vertices)
+                cropped_poly = poly.intersection(crop_box)
+                if cropped_poly.is_empty or not hasattr(cropped_poly, "exterior"):
+                    cropped_vertices = vertices
+                else:
+                    cropped_vertices = [list(coord) for coord in list(cropped_poly.exterior.coords)[:-1]]
+                centroid = calculate_centroid(cropped_vertices)
+
                 cluster_mask = cluster_labels == i
                 cluster_image_ids = [image_points[j]['entryId'] for j in range(len(image_points)) if cluster_mask[j]]
-                
+
                 cells.append({
                     'id': i,
-                    'vertices': vertices,
+                    'vertices': cropped_vertices,
                     'centroid': centroid,
                     'imageIds': cluster_image_ids,
                     'pointCount': int(cluster_mask.sum()),
@@ -1343,26 +1396,39 @@ def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='longest
         
         dprint(f"Analyzing adjacency for {k} Voronoi regions...")
         
-        # Step 1: Create Shapely polygons from Voronoi vertices
+        # Step 1: Create Shapely polygons from Voronoi vertices, cropped to bounding box
         polygons = {}
+        # Get bounding box from voronoi_data (should have min_x, max_x, min_y, max_y)
+        bounding_box = voronoi_data.get('boundingBox')
+        crop_box = None
+        if bounding_box:
+            from shapely.geometry import box as shapely_box
+            crop_box = shapely_box(
+                bounding_box['min_x'],
+                bounding_box['min_y'],
+                bounding_box['max_x'],
+                bounding_box['max_y']
+            )
         for cell in cells:
             region_id = cell['id']
             vertices = cell.get('vertices', [])
-            
             if len(vertices) < 3:
                 dprint(f"⚠ Region {region_id} has insufficient vertices ({len(vertices)}), skipping")
                 continue
-            
             try:
                 # Create polygon from vertices
                 polygon = Polygon(vertices)
-                if polygon.is_valid:
-                    polygons[region_id] = polygon
-                    dprint(f"✓ Created polygon for region {region_id}")
+                if crop_box is not None:
+                    cropped_polygon = polygon.intersection(crop_box)
                 else:
-                    dprint(f"⚠ Invalid polygon for region {region_id}")
+                    cropped_polygon = polygon
+                if cropped_polygon.is_valid and not cropped_polygon.is_empty:
+                    polygons[region_id] = cropped_polygon
+                    dprint(f"✓ Created cropped polygon for region {region_id}")
+                else:
+                    dprint(f"⚠ Cropped polygon for region {region_id} is invalid or empty")
             except Exception as e:
-                dprint(f"⚠ Failed to create polygon for region {region_id}: {e}")
+                dprint(f"⚠ Failed to create/crop polygon for region {region_id}: {e}")
         
         if len(polygons) < 2:
             return {
