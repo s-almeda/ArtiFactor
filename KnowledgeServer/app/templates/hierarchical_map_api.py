@@ -748,7 +748,7 @@ def handle_voronoi_region_merge():
         voronoi_data = request.json.get('voronoiData')
         image_points = request.json.get('imagePoints')
         debug = request.json.get('debug', False)
-        pairing_strategy = request.json.get('pairingStrategy', 'longest_boundary')
+        pairing_strategy = request.json.get('pairingStrategy', 'compactness')
         cache = request.json.get('cache', False)
         
         if not voronoi_data:
@@ -847,7 +847,6 @@ def handle_voronoi_region_merge():
             'timeout': True,
             'suggestions': [
                 'Use fewer initial regions (reduce k parameter)',
-                'Try a simpler pairing strategy (e.g., longest_boundary)',
                 'Enable caching (cache=true) for repeated operations'
             ]
         }), 408
@@ -906,19 +905,51 @@ def merge_paired_voronoi_regions(voronoi_data, image_points, adjacency_result, d
                 poly_a = Polygon(cell_a['vertices'])
                 poly_b = Polygon(cell_b['vertices'])
                 
+                # Check if they truly share a boundary
+                intersection = poly_a.intersection(poly_b)
+                touches = poly_a.touches(poly_b)
+                
+                # Only merge if they share a boundary
+                if not touches:
+                    dprint(f"⚠ Regions {region_a} and {region_b} don't seem to share a boundary, skipping merge")
+                    continue
+                
+                # Verify that the intersection is a boundary (line), not just a point
+                is_boundary_intersection = intersection.geom_type in ['LineString', 'MultiLineString', 'GeometryCollection']
+                if not is_boundary_intersection:
+                    # Check if they share vertices
+                    vertices_a = set(tuple(np.round(v, 6)) for v in poly_a.exterior.coords)
+                    vertices_b = set(tuple(np.round(v, 6)) for v in poly_b.exterior.coords)
+                    shared_vertices = vertices_a.intersection(vertices_b)
+                    
+                    if len(shared_vertices) < 2:
+                        dprint(f"⚠ Regions {region_a} and {region_b} don't share a proper boundary, just {len(shared_vertices)} vertices, skipping merge")
+                        continue
+                
                 # Merge the two polygons using unary_union
+                # This properly dissolves internal boundaries while preserving exterior shapes
                 merged_polygon = unary_union([poly_a, poly_b])
                 
-                # Extract outer boundary vertices (no holes)
-                if hasattr(merged_polygon, 'exterior'):
-                    # Single polygon result
-                    merged_vertices = list(merged_polygon.exterior.coords[:-1])  # Remove duplicate last point
+                # Extract outer boundary vertices
+                if merged_polygon.geom_type == 'Polygon':
+                    # Simple case: single polygon result
+                    # Extract the exterior boundary, skipping the duplicate closing point
+                    merged_vertices = list(merged_polygon.exterior.coords[:-1])  
                     merged_centroid = [merged_polygon.centroid.x, merged_polygon.centroid.y]
+                    dprint(f"✓ Successfully merged regions {region_a} and {region_b} into a single polygon with {len(merged_vertices)} vertices")
+                    
+                elif merged_polygon.geom_type == 'MultiPolygon':
+                    # This can happen if the polygons only touch at a point
+                    # Take the largest polygon as the merged result
+                    largest_poly = max(merged_polygon.geoms, key=lambda p: p.area)
+                    merged_vertices = list(largest_poly.exterior.coords[:-1])
+                    merged_centroid = [largest_poly.centroid.x, largest_poly.centroid.y]
+                    dprint(f"⚠ Regions {region_a} and {region_b} merged into MultiPolygon - using largest component with {len(merged_vertices)} vertices")
+                    
                 else:
-                    dprint(f"⚠ Complex geometry result for pair ({region_a}, {region_b}), using convex hull")
-                    # Fall back to convex hull if result is complex
-                    merged_vertices = list(merged_polygon.convex_hull.exterior.coords[:-1])
-                    merged_centroid = [merged_polygon.convex_hull.centroid.x, merged_polygon.convex_hull.centroid.y]
+                    # Unexpected geometry type - skip this merge
+                    dprint(f"⚠ Unexpected geometry type after merging: {merged_polygon.geom_type}, skipping merge")
+                    continue
                 
                 # Create new merged cell
                 new_region_id = len(merged_cells)  # Use index as new ID
@@ -1022,171 +1053,8 @@ def merge_paired_voronoi_regions(voronoi_data, image_points, adjacency_result, d
             'error': str(e)
         }
 
-# ===== PAIRING STRATEGY FUNCTIONS =====
-
-def create_optimal_pairs_longest_boundary(region_ids, boundary_lengths, shared_boundaries, polygons, dprint):
-    """
-    Strategy 1: Greedy pairing based on longest shared boundary length.
-    
-    Args:
-        region_ids: List of region IDs
-        boundary_lengths: Dict mapping (region_a, region_b) tuples to boundary lengths
-        shared_boundaries: List of boundary info dicts
-        polygons: Dict mapping region_id to Polygon objects
-        dprint: Debug print function
-    
-    Returns:
-        List of [region_a, region_b] pairs
-    """
-    paired_regions = set()
-    optimal_pairs = []
-    
-    # For each region, find its best pairing partner
-    for region_id in region_ids:
-        if region_id in paired_regions:
-            continue
-            
-        best_partner = None
-        best_length = 0
-        
-        # Find the region this one shares its longest boundary with
-        for other_region in region_ids:
-            if other_region == region_id or other_region in paired_regions:
-                continue
-                
-            # Check both possible key orders
-            boundary_key1 = (min(region_id, other_region), max(region_id, other_region))
-            if boundary_key1 in boundary_lengths:
-                length = boundary_lengths[boundary_key1]
-                if length > best_length:
-                    best_length = length
-                    best_partner = other_region
-        
-        if best_partner is not None:
-            optimal_pairs.append([region_id, best_partner])
-            paired_regions.add(region_id)
-            paired_regions.add(best_partner)
-            dprint(f"✓ Paired regions {region_id} and {best_partner} (shared boundary length: {best_length:.3f})")
-    
-    return optimal_pairs
-
-def create_optimal_pairs_boundary_segments(region_ids, boundary_lengths, shared_boundaries, polygons, dprint):
-    """
-    Strategy 2: Pairing based on number of boundary segments (connectivity).
-    Prioritizes regions that share multiple boundary segments, indicating close adjacency.
-    
-    Args:
-        region_ids: List of region IDs
-        boundary_lengths: Dict mapping (region_a, region_b) tuples to boundary lengths
-        shared_boundaries: List of boundary info dicts
-        polygons: Dict mapping region_id to Polygon objects
-        dprint: Debug print function
-    
-    Returns:
-        List of [region_a, region_b] pairs
-    """
-    paired_regions = set()
-    optimal_pairs = []
-    
-    # Build segment count mapping
-    segment_counts = {}
-    for boundary in shared_boundaries:
-        region_a, region_b = boundary['regionIds']
-        key = (min(region_a, region_b), max(region_a, region_b))
-        segment_counts[key] = len(boundary.get('boundarySegments', []))
-    
-    # For each region, find its best pairing partner based on segment count
-    for region_id in region_ids:
-        if region_id in paired_regions:
-            continue
-            
-        best_partner = None
-        best_segment_count = 0
-        best_length = 0  # Tiebreaker
-        
-        for other_region in region_ids:
-            if other_region == region_id or other_region in paired_regions:
-                continue
-                
-            boundary_key = (min(region_id, other_region), max(region_id, other_region))
-            if boundary_key in segment_counts:
-                segment_count = segment_counts[boundary_key]
-                length = boundary_lengths.get(boundary_key, 0)
-                
-                # Prefer more segments, use length as tiebreaker
-                if (segment_count > best_segment_count or 
-                    (segment_count == best_segment_count and length > best_length)):
-                    best_segment_count = segment_count
-                    best_length = length
-                    best_partner = other_region
-        
-        if best_partner is not None:
-            optimal_pairs.append([region_id, best_partner])
-            paired_regions.add(region_id)
-            paired_regions.add(best_partner)
-            dprint(f"✓ Paired regions {region_id} and {best_partner} ({best_segment_count} segments, length: {best_length:.3f})")
-    
-    return optimal_pairs
-
-def create_optimal_pairs_boundary_ratio(region_ids, boundary_lengths, shared_boundaries, polygons, dprint):
-    """
-    Strategy 3: Pairing based on boundary length as ratio of region perimeters.
-    Prioritizes regions where the shared boundary represents a large portion of each region's perimeter.
-    
-    Args:
-        region_ids: List of region IDs
-        boundary_lengths: Dict mapping (region_a, region_b) tuples to boundary lengths
-        shared_boundaries: List of boundary info dicts
-        polygons: Dict mapping region_id to Polygon objects
-        dprint: Debug print function
-    
-    Returns:
-        List of [region_a, region_b] pairs
-    """
-    paired_regions = set()
-    optimal_pairs = []
-    
-    # Calculate perimeters for all regions
-    perimeters = {}
-    for region_id in region_ids:
-        if region_id in polygons:
-            perimeters[region_id] = polygons[region_id].length
-    
-    # For each region, find its best pairing partner based on boundary ratio
-    for region_id in region_ids:
-        if region_id in paired_regions:
-            continue
-            
-        best_partner = None
-        best_ratio = 0
-        
-        for other_region in region_ids:
-            if other_region == region_id or other_region in paired_regions:
-                continue
-                
-            boundary_key = (min(region_id, other_region), max(region_id, other_region))
-            if boundary_key in boundary_lengths:
-                shared_length = boundary_lengths[boundary_key]
-                
-                # Calculate ratio as shared boundary / average of the two perimeters
-                if region_id in perimeters and other_region in perimeters:
-                    avg_perimeter = (perimeters[region_id] + perimeters[other_region]) / 2
-                    if avg_perimeter > 0:
-                        ratio = shared_length / avg_perimeter
-                        
-                        if ratio > best_ratio:
-                            best_ratio = ratio
-                            best_partner = other_region
-        
-        if best_partner is not None:
-            optimal_pairs.append([region_id, best_partner])
-            paired_regions.add(region_id)
-            paired_regions.add(best_partner)
-            dprint(f"✓ Paired regions {region_id} and {best_partner} (boundary ratio: {best_ratio:.3f})")
-    
-    return optimal_pairs
-
-def create_optimal_pairs_compactness(region_ids, boundary_lengths, shared_boundaries, polygons, dprint):
+# ===== PAIRING STRATEGY  =====
+def create_optimal_pairs_compactness(region_ids, boundary_lengths, polygons, dprint):
     """
     Strategy 4: Pairing based on merged region compactness.
     Prioritizes pairs that would create more compact (circle-like) merged regions.
@@ -1194,58 +1062,74 @@ def create_optimal_pairs_compactness(region_ids, boundary_lengths, shared_bounda
     Args:
         region_ids: List of region IDs
         boundary_lengths: Dict mapping (region_a, region_b) tuples to boundary lengths
-        shared_boundaries: List of boundary info dicts
+        // deprecated: shared_boundaries: List of boundary info dicts
         polygons: Dict mapping region_id to Polygon objects
         dprint: Debug print function
     
     Returns:
         List of [region_a, region_b] pairs
     """
+    # New strategy: merge all adjacent region pairs, prioritize by average point proximity (compactness)
+    import numpy as np
+    pair_candidates = []
+    # Build a lookup for region points (centroids or all points if available)
+    # For now, use centroids from polygons
+    region_centroids = {rid: np.array(polygons[rid].centroid.coords[0]) for rid in region_ids if rid in polygons}
+
+    # Find all adjacent pairs
+    for i, region_a in enumerate(region_ids):
+        for region_b in region_ids[i+1:]:
+            if region_a == region_b:
+                continue
+            boundary_key = (min(region_a, region_b), max(region_a, region_b))
+            if boundary_key in boundary_lengths:
+                # Get boundary length for this pair
+                bl = boundary_lengths[boundary_key]
+                
+                # Calculate average centroid distance (proxy for compactness)
+                if region_a in region_centroids and region_b in region_centroids:
+                    dist = np.linalg.norm(region_centroids[region_a] - region_centroids[region_b])
+                else:
+                    dist = float('inf')
+                
+                # Prefer longer boundaries (more significant adjacency)
+                # For very similar centroid distances, boundary length becomes the deciding factor
+                # This is achieved by using boundary length as a tie-breaker
+                # We normalize the boundary length to be between 0 and 1
+                normalized_bl = min(bl / 5.0, 1.0)  # Cap at 1.0, assuming most boundaries are < 5.0 units
+                
+                # Score is primarily based on distance but adjusted slightly by boundary length
+                # Lower score = better candidate (prioritize close centroids with substantial boundaries)
+                score = dist * (1.05 - normalized_bl * 0.1)  # Small adjustment factor based on boundary
+                
+                pair_candidates.append({
+                    'pair': [region_a, region_b],
+                    'distance': dist,
+                    'boundary_length': bl,
+                    'score': score
+                })
+                
+                dprint(f"Candidate pair: {region_a}-{region_b}, centroid_dist={dist:.4f}, boundary_length={bl:.4f}, score={score:.4f}")
+
+    # Sort all pairs by score (lowest/best score first)
+    pair_candidates.sort(key=lambda x: x['score'])
+
+    # Greedily select pairs, ensuring no region is merged more than once per pass
     paired_regions = set()
     optimal_pairs = []
-    
-    # For each region, find its best pairing partner based on merged compactness
-    for region_id in region_ids:
-        if region_id in paired_regions:
+    for candidate in pair_candidates:
+        a, b = candidate['pair']
+        if a in paired_regions or b in paired_regions:
             continue
-            
-        best_partner = None
-        best_compactness = 0
-        
-        for other_region in region_ids:
-            if other_region == region_id or other_region in paired_regions:
-                continue
-                
-            boundary_key = (min(region_id, other_region), max(region_id, other_region))
-            if boundary_key in boundary_lengths:
-                # Simulate merge and calculate compactness
-                if region_id in polygons and other_region in polygons:
-                    try:
-                        # Merge the polygons
-                        merged = unary_union([polygons[region_id], polygons[other_region]])
-                        
-                        # Calculate compactness = 4π * area / perimeter²
-                        # Higher values indicate more circular/compact shapes
-                        if hasattr(merged, 'area') and hasattr(merged, 'length') and merged.length > 0:
-                            compactness = (4 * math.pi * merged.area) / (merged.length ** 2)
-                            
-                            if compactness > best_compactness:
-                                best_compactness = compactness
-                                best_partner = other_region
-                    except Exception as e:
-                        # Skip if merge fails
-                        dprint(f"⚠ Failed to test merge for regions {region_id}-{other_region}: {e}")
-                        continue
-        
-        if best_partner is not None:
-            optimal_pairs.append([region_id, best_partner])
-            paired_regions.add(region_id)
-            paired_regions.add(best_partner)
-            dprint(f"✓ Paired regions {region_id} and {best_partner} (compactness: {best_compactness:.4f})")
-    
+        optimal_pairs.append([a, b])
+        paired_regions.add(a)
+        paired_regions.add(b)
+        dprint(f"✓ Paired regions {a} and {b} (centroid distance: {candidate['distance']:.4f}, boundary: {candidate['boundary_length']:.4f}, score: {candidate['score']:.4f})")
+
     return optimal_pairs
 
-# ===== END PAIRING STRATEGIES =====
+
+
 
 
 @hierarchical_map_api_bp.route('/adjacency-analysis', methods=['POST'])
@@ -1326,7 +1210,7 @@ def handle_voronoi_adjacency_analysis():
         
         voronoi_data = request.json.get('voronoiData')
         debug = request.json.get('debug', False)
-        pairing_strategy = request.json.get('pairingStrategy', 'longest_boundary')
+        pairing_strategy = request.json.get('pairingStrategy', 'compactness')
         
         if not voronoi_data:
             return jsonify({
@@ -1368,18 +1252,15 @@ def handle_voronoi_adjacency_analysis():
             'traceback': traceback.format_exc() if debug else None
         }), 500
 
-def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='longest_boundary'):
+def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='compactness'):
     """
     Find and identify optimal pairs of adjacent Voronoi regions.
     
     Args:
         voronoi_data: Voronoi data containing cells with vertices
         dprint: Debug print function
-        pairing_strategy: Strategy for pairing regions. Options:
-            - 'longest_boundary': Pair based on longest shared boundary (default)
-            - 'boundary_segments': Pair based on number of boundary segments
-            - 'boundary_ratio': Pair based on boundary length as ratio of perimeters
-            - 'compactness': Pair based on merged region compactness
+        
+        # fyi: pairing_strategy deprecated, using compactness everytime
     
     Returns:
         Dict with adjacency analysis results (no visualization data)
@@ -1450,65 +1331,200 @@ def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='longest
                     poly_j = polygons[region_j]
                     
                     # Check if polygons touch (share a boundary)
-                    if poly_i.touches(poly_j):
+                    touches = poly_i.touches(poly_j)
+                    intersects = poly_i.intersects(poly_j)
+                    min_dist = poly_i.distance(poly_j)
+                    
+                    # Define a tolerance for "near adjacency"
+                    ADJACENCY_TOLERANCE = 0.3
+                    
+                    # Define a tolerance for "near adjacency" to account for floating point precision
+                    ADJACENCY_TOLERANCE = 0.01  # Small tolerance
+                    
+                    # Check for shared vertices (segments sharing endpoints)
+                    vertices_i = set(tuple(np.round(v, 6)) for v in poly_i.exterior.coords)
+                    vertices_j = set(tuple(np.round(v, 6)) for v in poly_j.exterior.coords)
+                    shared_vertices = vertices_i.intersection(vertices_j)
+                    
+                    # Check if there's an actual boundary intersection (most accurate check)
+                    has_shared_boundary = False
+                    if touches:
+                        # Get the intersection to check if it's a boundary
+                        # This works even for complex shared boundaries (series of line segments)
+                        try:
+                            intersection = poly_i.intersection(poly_j)
+                            has_shared_boundary = intersection.geom_type in ['LineString', 'MultiLineString', 'GeometryCollection']
+                            
+                            if has_shared_boundary and hasattr(intersection, 'length'):
+                                boundary_length = intersection.length
+                                dprint(f"    - Regions share boundary with length: {boundary_length:.6f}")
+                        except Exception:
+                            pass
+                    
+                    # Regions are adjacent if:
+                    # 1. They touch according to Shapely AND share a boundary (not just a point)
+                    # 2. They share at least 2 vertices (a line segment)
+                    # 3. They're extremely close (just for floating point precision issues)
+                    is_adjacent = has_shared_boundary or len(shared_vertices) >= 2 or min_dist < ADJACENCY_TOLERANCE
+                    
+                    # Add detailed debug info
+                    if len(shared_vertices) > 0:
+                        dprint(f"    - Regions {region_i} and {region_j} share {len(shared_vertices)} vertices")
+                    
+                    if touches:
+                        dprint(f"    - Regions {region_i} and {region_j} touch according to Shapely")
+                    
+                    if has_shared_boundary:
+                        dprint(f"    - Regions {region_i} and {region_j} have a shared boundary")
+                    
+                    # For debugging: print vertices if not adjacent
+                    if is_adjacent:
                         adjacency_matrix[region_i][region_j] = 1
                         adjacency_matrix[region_j][region_i] = 1
                         
                         # Step 3: Calculate boundary lengths via intersection.length
                         boundary_length = 0
                         try:
+                            # Extract the shared boundary between polygons
                             intersection = poly_i.intersection(poly_j)
                             boundary_segments = []
+                            boundary_length = 0
                             
-                            if hasattr(intersection, 'coords'):
-                                # LineString boundary
-                                boundary_coords = list(intersection.coords)
-                                boundary_segments = [boundary_coords]
-                                boundary_length = intersection.length
-                            elif hasattr(intersection, 'geoms'):
-                                # Multiple segments
-                                for geom in intersection.geoms:
-                                    if hasattr(geom, 'coords'):
-                                        boundary_segments.append(list(geom.coords))
-                                        boundary_length += geom.length
+                            try:
+                                # Extract boundary information based on the geometry type
+                                if intersection.geom_type == 'LineString' or intersection.geom_type == 'LinearRing':
+                                    # Simple case: single line segment boundary
+                                    boundary_segments.append(list(intersection.coords))
+                                    boundary_length = intersection.length
+                                    dprint(f"    - Simple boundary: LineString (length: {boundary_length:.3f})")
+                                
+                                elif intersection.geom_type == 'MultiLineString':
+                                    # Complex case: multiple line segments forming the boundary
+                                    segment_count = 0
+                                    for line in intersection.geoms:
+                                        if line.length > 0:
+                                            boundary_segments.append(list(line.coords))
+                                            boundary_length += line.length
+                                            segment_count += 1
+                                    dprint(f"    - Complex boundary: MultiLineString with {segment_count} segments (length: {boundary_length:.3f})")
+                                
+                                elif intersection.geom_type == 'GeometryCollection':
+                                    # Mixed geometry collection - extract all line segments
+                                    dprint(f"    - Mixed boundary: GeometryCollection with {len(intersection.geoms)} parts")
+                                    for geom in intersection.geoms:
+                                        if geom.geom_type == 'LineString' or geom.geom_type == 'LinearRing':
+                                            boundary_segments.append(list(geom.coords))
+                                            boundary_length += geom.length
+                                        elif geom.geom_type == 'MultiLineString':
+                                            for line in geom.geoms:
+                                                boundary_segments.append(list(line.coords))
+                                                boundary_length += line.length
+                                        # Point contacts don't contribute to boundary length
+                                
+                                elif intersection.geom_type in ['Point', 'MultiPoint']:
+                                    # Point contact - not a true boundary, but record the points
+                                    point_count = 1 if intersection.geom_type == 'Point' else len(intersection.geoms)
+                                    dprint(f"    - Point contact with {point_count} points")
+                                    
+                                    # Create small segments for visualization
+                                    if intersection.geom_type == 'Point':
+                                        pt = list(intersection.coords)[0]
+                                        boundary_segments.append([[pt[0], pt[1]], [pt[0], pt[1]]])
+                                    else:  # MultiPoint
+                                        for point in intersection.geoms:
+                                            pt = list(point.coords)[0]
+                                            boundary_segments.append([[pt[0], pt[1]], [pt[0], pt[1]]])
+                                    
+                                    # Use a small length for point contacts
+                                    boundary_length = 0.01 * point_count
+                                
+                                # For true boundaries, ensure they have a reasonable minimum length
+                                MIN_BOUNDARY_LENGTH = 0.01
+                                if boundary_length < MIN_BOUNDARY_LENGTH:
+                                    boundary_length = MIN_BOUNDARY_LENGTH
+                                
+                                # If we extracted any boundary information, include it
+                                if boundary_segments:
+                                    dprint(f"    - Successfully extracted boundary (total length: {boundary_length:.3f})")
+                                else:
+                                    dprint(f"    - No boundary segments found, using minimum length")
+                                    boundary_length = MIN_BOUNDARY_LENGTH
+                                    # Create a dummy segment for visualization
+                                    midpoint_i = np.array(poly_i.centroid.coords[0])
+                                    midpoint_j = np.array(poly_j.centroid.coords[0])
+                                    dummy_point = (midpoint_i + midpoint_j) / 2
+                                    boundary_segments.append([[dummy_point[0], dummy_point[1]], [dummy_point[0], dummy_point[1]]])
+                                
+                            except Exception as boundary_error:
+                                # Log the error but continue with a minimum length
+                                dprint(f"    ⚠ Error extracting boundary: {str(boundary_error)}")
+                                boundary_length = MIN_BOUNDARY_LENGTH
                             
-                            if boundary_segments:
-                                shared_boundaries.append({
-                                    'regionIds': [region_i, region_j],
-                                    'boundarySegments': boundary_segments,
-                                    'length': boundary_length
-                                })
-                                boundary_lengths[(region_i, region_j)] = boundary_length
+                            # Always create a boundary record, even if extraction had issues
+                            # This ensures adjacency is preserved for merging
+                            shared_boundaries.append({
+                                'regionIds': [region_i, region_j],
+                                'boundarySegments': boundary_segments if boundary_segments else [[[0, 0], [0, 0]]],
+                                'length': boundary_length
+                            })
+                            boundary_lengths[(region_i, region_j)] = boundary_length
                                 
                         except Exception as e:
-                            dprint(f"⚠ Failed to extract boundary for regions {region_i}-{region_j}: {e}")
+                            dprint(f"⚠ Failed to extract boundary for regions {region_i}-{region_j}: {str(e)}")
+                            # Even if extraction fails, we'll still consider them adjacent with a minimum length
+                            boundary_lengths[(region_i, region_j)] = 0.01
+                            dprint(f"    - Using fallback boundary length despite error")
                         
                         dprint(f"✓ Regions {region_i} and {region_j} are adjacent (boundary length: {boundary_length:.3f})")
+                    else:
+                        # Print debug info for non-adjacent pairs
+                        dprint(f"✗ Regions {region_i} and {region_j} are NOT adjacent.")
+                        dprint(f"    - poly_i.touches(poly_j): {touches}")
+                        dprint(f"    - poly_i.intersects(poly_j): {intersects}")
+                        dprint(f"    - poly_i.distance(poly_j): {min_dist:.10f}")
+                        dprint(f"    - Vertices region {region_i}: {list(poly_i.exterior.coords)}")
+                        dprint(f"    - Vertices region {region_j}: {list(poly_j.exterior.coords)}")
+                        # Optionally, print shared points
+                        shared_points = set(tuple(np.round(v, 8)) for v in poly_i.exterior.coords) & set(tuple(np.round(v, 8)) for v in poly_j.exterior.coords)
+                        dprint(f"    - Shared vertices (rounded): {shared_points}")
         
         # Step 4: Create optimal pairs using selected pairing strategy
         dprint(f"Creating optimal pairs using '{pairing_strategy}' strategy...")
         
         # Select pairing strategy function
-        strategy_functions = {
-            'longest_boundary': create_optimal_pairs_longest_boundary,
-            'boundary_segments': create_optimal_pairs_boundary_segments,
-            'boundary_ratio': create_optimal_pairs_boundary_ratio,
-            'compactness': create_optimal_pairs_compactness
-        }
         
-        if pairing_strategy not in strategy_functions:
-            dprint(f"⚠ Unknown pairing strategy '{pairing_strategy}', defaulting to 'longest_boundary'")
-            pairing_strategy = 'longest_boundary'
-        
-        strategy_function = strategy_functions[pairing_strategy]
-        optimal_pairs = strategy_function(
-            region_ids, boundary_lengths, shared_boundaries, polygons, dprint
+        optimal_pairs = create_optimal_pairs_compactness(
+            region_ids, boundary_lengths, polygons, dprint
         )
         
         # Calculate basic statistics
         total_possible_adjacencies = (k * (k - 1)) // 2
         total_adjacencies = len(shared_boundaries)
         adjacency_percentage = (total_adjacencies / total_possible_adjacencies * 100) if total_possible_adjacencies > 0 else 0
+        
+        # Print detailed summary of adjacencies and boundary lengths
+        dprint(f"\nADJACENCY ANALYSIS SUMMARY:")
+        dprint(f"- Total regions: {k}")
+        dprint(f"- Total possible region pairs: {total_possible_adjacencies}")
+        dprint(f"- Total adjacent region pairs: {total_adjacencies} ({adjacency_percentage:.1f}%)")
+        
+        # Show boundary length distribution
+        if boundary_lengths:
+            lengths = list(boundary_lengths.values())
+            min_length = min(lengths)
+            max_length = max(lengths)
+            avg_length = sum(lengths) / len(lengths)
+            dprint(f"- Boundary lengths: min={min_length:.3f}, max={max_length:.3f}, avg={avg_length:.3f}")
+            
+            # Count how many have minimum length
+            min_count = sum(1 for l in lengths if l == 0.01)
+            if min_count > 0:
+                dprint(f"- {min_count} boundaries ({min_count/len(lengths)*100:.1f}%) have minimum length (0.01)")
+            
+        # Show all boundary lengths for debugging
+        dprint("\nDetailed boundary lengths:")
+        for (r1, r2), length in sorted(boundary_lengths.items(), key=lambda x: x[1]):
+            dprint(f"- Regions {r1}-{r2}: {length:.3f}")
         
         # Convert boundary_lengths keys from tuples to strings for JSON serialization
         boundary_lengths_serializable = {
@@ -1520,8 +1536,8 @@ def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='longest
             'adjacencyData': {
                 'adjacencyMatrix': adjacency_matrix,
                 'optimalPairs': optimal_pairs,
-                'sharedBoundaries': shared_boundaries,
-                'boundaryLengths': boundary_lengths_serializable
+                'boundaryLengths': boundary_lengths_serializable,
+                'sharedBoundaries': shared_boundaries
             },
             'basicStats': {
                 'totalRegions': k,
@@ -1653,7 +1669,7 @@ def apply_adjacency_visualization_colors(adjacency_result, dprint):
             'error': str(e)
         }
 
-def analyze_voronoi_adjacency(voronoi_data, dprint, pairing_strategy='longest_boundary'):
+def analyze_voronoi_adjacency(voronoi_data, dprint, pairing_strategy='compactness'):
     """
     Main adjacency analysis function that coordinates finding pairs and applying visualization.
     
