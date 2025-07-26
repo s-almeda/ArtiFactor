@@ -101,13 +101,9 @@ app.register_blueprint(staging_review_bp)
 from templates.data_cleaner import data_cleaner_bp
 app.register_blueprint(data_cleaner_bp)
 
-# Only register admin blueprints if ADMIN_MODE is enabled. these pages can change the database contents
-# DEPRECATED
-# if os.getenv('ADMIN_MODE', '').lower() == 'true':
-#     from templates.admin import admin_bp
-#     app.register_blueprint(admin_bp)
-#     from templates.artist_lookup import artist_lookup_bp
-#     app.register_blueprint(artist_lookup_bp)
+from templates.database_requests import database_requests_bp
+app.register_blueprint(database_requests_bp)
+
 
 
 @app.route("/")
