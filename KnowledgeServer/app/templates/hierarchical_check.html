@@ -506,9 +506,17 @@
                     
                     // Update stats to include adjacency info
                     updateStatsWithAdjacency(adjStats);
+                    
+                    // Update raw JSON response to show the latest adjacency analysis data
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
                 } else {
                     status.className = 'error';
                     status.textContent = `Error: ${data.error}`;
+                    
+                    // Update raw JSON response even when there's an error
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.textContent = JSON.stringify(data, null, 2);
                 }
             } catch (error) {
                 status.className = 'error';
@@ -581,6 +589,10 @@
                         
                         // Update stats to include merge info
                         updateStatsWithMerge(mergeStats);
+                        
+                        // Update raw JSON response to show the latest data after merging
+                        const responseDiv = document.getElementById('response');
+                        responseDiv.textContent = JSON.stringify(data, null, 2);
                     } else {
                         status.textContent = `No adjacent pairs found to merge. Map fully optimized after ${currentMapData.mergeIterations || 0} merge iterations with ${mergeStats.mergedRegions} final regions.`;
                         
@@ -588,6 +600,10 @@
                         const mergeBtn = document.getElementById('mergeBtn');
                         mergeBtn.disabled = true;
                         mergeBtn.innerHTML = '🔗 No More Pairs to Merge';
+                        
+                        // Update raw JSON response even when no pairs are found
+                        const responseDiv = document.getElementById('response');
+                        responseDiv.textContent = JSON.stringify(data, null, 2);
                     }
                 } else {
                     status.className = 'error';

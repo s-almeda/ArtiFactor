@@ -17,6 +17,7 @@ from config import BASE_DIR
 import helperfunctions as hf
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
+from shapely.strtree import STRtree  # Import STRtree for spatial indexing
 from timeout_decorator import timeout, TimeoutError
 
 MAPS_DIR = os.path.join(BASE_DIR, 'generated_maps')
@@ -915,20 +916,57 @@ def merge_paired_voronoi_regions(voronoi_data, image_points, adjacency_result, d
                     continue
                 
                 # Verify that the intersection is a boundary (line), not just a point
-                is_boundary_intersection = intersection.geom_type in ['LineString', 'MultiLineString', 'GeometryCollection']
-                if not is_boundary_intersection:
-                    # Check if they share vertices
+                is_valid_intersection = False
+                
+                # Check for different intersection types
+                if intersection.geom_type in ['LineString', 'MultiLineString']:
+                    # Direct line intersection - valid for merging
+                    is_valid_intersection = True
+                    dprint(f"✓ Regions {region_a} and {region_b} share a {intersection.geom_type} boundary")
+                
+                elif intersection.geom_type == 'GeometryCollection':
+                    # Check for line segments in the collection
+                    for geom in intersection.geoms:
+                        if geom.geom_type in ['LineString', 'MultiLineString']:
+                            is_valid_intersection = True
+                            break
+                    
+                    if is_valid_intersection:
+                        dprint(f"✓ Regions {region_a} and {region_b} share line segments in a GeometryCollection")
+                    else:
+                        dprint(f"⚠ Regions {region_a} and {region_b} have a GeometryCollection intersection without line segments")
+                
+                # If no direct line intersection, check for shared vertices
+                if not is_valid_intersection:
                     vertices_a = set(tuple(np.round(v, 6)) for v in poly_a.exterior.coords)
                     vertices_b = set(tuple(np.round(v, 6)) for v in poly_b.exterior.coords)
                     shared_vertices = vertices_a.intersection(vertices_b)
                     
-                    if len(shared_vertices) < 2:
-                        dprint(f"⚠ Regions {region_a} and {region_b} don't share a proper boundary, just {len(shared_vertices)} vertices, skipping merge")
-                        continue
+                    if len(shared_vertices) >= 2:
+                        is_valid_intersection = True
+                        dprint(f"✓ Regions {region_a} and {region_b} share {len(shared_vertices)} vertices")
+                    else:
+                        dprint(f"⚠ Regions {region_a} and {region_b} don't share a proper boundary")
+                
+                # Skip if there's no valid shared boundary for merging
+                if not is_valid_intersection:
+                    dprint(f"⚠ No valid shared boundary for regions {region_a} and {region_b}, skipping merge")
+                    continue
+                
+                # Merge the two polygons using unary_union
+                # This properly dissolves internal boundaries while preserving exterior shapes
+                # Get pre-merge properties for debugging
+                area_a = poly_a.area
+                area_b = poly_b.area
+                perimeter_a = poly_a.length
+                perimeter_b = poly_b.length
+                dprint(f"    - Region {region_a}: Area={area_a:.3f}, Perimeter={perimeter_a:.3f}, Vertices={len(poly_a.exterior.coords)-1}")
+                dprint(f"    - Region {region_b}: Area={area_b:.3f}, Perimeter={perimeter_b:.3f}, Vertices={len(poly_b.exterior.coords)-1}")
                 
                 # Merge the two polygons using unary_union
                 # This properly dissolves internal boundaries while preserving exterior shapes
                 merged_polygon = unary_union([poly_a, poly_b])
+                dprint(f"    - Merged geometry type: {merged_polygon.geom_type}")
                 
                 # Extract outer boundary vertices
                 if merged_polygon.geom_type == 'Polygon':
@@ -936,20 +974,59 @@ def merge_paired_voronoi_regions(voronoi_data, image_points, adjacency_result, d
                     # Extract the exterior boundary, skipping the duplicate closing point
                     merged_vertices = list(merged_polygon.exterior.coords[:-1])  
                     merged_centroid = [merged_polygon.centroid.x, merged_polygon.centroid.y]
-                    dprint(f"✓ Successfully merged regions {region_a} and {region_b} into a single polygon with {len(merged_vertices)} vertices")
+                    merged_area = merged_polygon.area
+                    merged_perimeter = merged_polygon.length
+                    
+                    dprint(f"✓ Successfully merged regions {region_a} and {region_b}:")
+                    dprint(f"    - Original total area: {area_a + area_b:.3f}, New merged area: {merged_area:.3f}")
+                    dprint(f"    - Original total perimeter: {perimeter_a + perimeter_b:.3f}, New merged perimeter: {merged_perimeter:.3f}")
+                    dprint(f"    - Original vertices: {len(poly_a.exterior.coords)-1 + len(poly_b.exterior.coords)-1}, New vertices: {len(merged_vertices)}")
                     
                 elif merged_polygon.geom_type == 'MultiPolygon':
-                    # This can happen if the polygons only touch at a point
+                    # This can happen if the polygons only touch at a point or if they're not properly connected
                     # Take the largest polygon as the merged result
                     largest_poly = max(merged_polygon.geoms, key=lambda p: p.area)
                     merged_vertices = list(largest_poly.exterior.coords[:-1])
                     merged_centroid = [largest_poly.centroid.x, largest_poly.centroid.y]
-                    dprint(f"⚠ Regions {region_a} and {region_b} merged into MultiPolygon - using largest component with {len(merged_vertices)} vertices")
+                    
+                    # Report details on all components
+                    total_components = len(merged_polygon.geoms)
+                    component_details = [f"{i}: Area={p.area:.3f}, Vertices={len(p.exterior.coords)-1}" 
+                                         for i, p in enumerate(merged_polygon.geoms)]
+                    
+                    dprint(f"⚠ Regions {region_a} and {region_b} merged into MultiPolygon with {total_components} components")
+                    dprint(f"    - Components: {', '.join(component_details)}")
+                    dprint(f"    - Using largest component: {len(merged_vertices)} vertices, area={largest_poly.area:.3f}")
                     
                 else:
-                    # Unexpected geometry type - skip this merge
-                    dprint(f"⚠ Unexpected geometry type after merging: {merged_polygon.geom_type}, skipping merge")
-                    continue
+                    # Handle other geometry types (GeometryCollection, etc.)
+                    dprint(f"⚠ Unexpected geometry type after merging: {merged_polygon.geom_type}")
+                    
+                    # Try to extract usable geometry
+                    try:
+                        # Check if we can convert to a MultiPolygon or get useful geometry
+                        if hasattr(merged_polygon, 'geoms'):
+                            # Extract all polygon components
+                            polygon_parts = []
+                            for geom in merged_polygon.geoms:
+                                if geom.geom_type == 'Polygon':
+                                    polygon_parts.append(geom)
+                            
+                            if polygon_parts:
+                                largest_poly = max(polygon_parts, key=lambda p: p.area)
+                                merged_vertices = list(largest_poly.exterior.coords[:-1])
+                                merged_centroid = [largest_poly.centroid.x, largest_poly.centroid.y]
+                                dprint(f"  ✓ Recovered a polygon from {merged_polygon.geom_type} with {len(merged_vertices)} vertices")
+                            else:
+                                dprint(f"  ✗ Could not recover any polygons from {merged_polygon.geom_type}")
+                                continue
+                        else:
+                            # Couldn't find anything useful
+                            dprint(f"  ✗ No useful geometry in {merged_polygon.geom_type}")
+                            continue
+                    except Exception as recovery_error:
+                        dprint(f"  ✗ Failed to recover geometry: {str(recovery_error)}")
+                        continue
                 
                 # Create new merged cell
                 new_region_id = len(merged_cells)  # Use index as new ID
@@ -1317,180 +1394,256 @@ def find_voronoi_adjacency_pairs(voronoi_data, dprint, pairing_strategy='compact
                 'error': 'Need at least 2 valid polygons for adjacency analysis'
             }
         
-        # Step 2: Build adjacency matrix using poly_i.touches(poly_j)
-        dprint(f"Building adjacency matrix for {len(polygons)} valid regions...")
+        # Step 2: Build adjacency matrix using a spatial index for efficiency
+        dprint(f"Building adjacency matrix for {len(polygons)} valid regions using spatial indexing...")
         adjacency_matrix = [[0 for _ in range(k)] for _ in range(k)]
         boundary_lengths = {}  # (region_i, region_j) -> length
         shared_boundaries = []
         
+        # Create a list of polygon objects for the spatial index
         region_ids = list(polygons.keys())
+        polygon_objects = list(polygons.values())
+        
+        # Define a small buffer for improved adjacency detection
+        BUFFER_DISTANCE = 0.01
+        
+        # Create a spatial index for the polygons
+        dprint(f"Creating spatial index for {len(polygon_objects)} polygons...")
+        spatial_index = STRtree(polygon_objects)
+        
+        # Define a tolerance for "near adjacency" to account for floating point precision
+        ADJACENCY_TOLERANCE = 0.01  # Small tolerance
+        
+        # For each polygon, query the spatial index for potential neighbors
         for i, region_i in enumerate(region_ids):
-            for j, region_j in enumerate(region_ids):
-                if i < j:  # Avoid duplicate checks
-                    poly_i = polygons[region_i]
-                    poly_j = polygons[region_j]
+            poly_i = polygons[region_i]
+            
+            # Create a slightly expanded buffer for the polygon to find neighbors
+            # This helps catch polygons that might be very close but not exactly touching
+            buffered_poly = poly_i.buffer(BUFFER_DISTANCE)
+            
+            # Query the spatial index for polygons that intersect the buffer
+            potential_neighbors_idx = spatial_index.query(buffered_poly)
+            potential_neighbors = [polygon_objects[idx] for idx in potential_neighbors_idx]
+            
+            dprint(f"Region {region_i}: Found {len(potential_neighbors)} potential neighbors from spatial index")
+            
+            # Check each potential neighbor for actual adjacency
+            for poly_j in potential_neighbors:
+                # Skip self-intersection
+                if poly_i == poly_j:
+                    continue
                     
-                    # Check if polygons touch (share a boundary)
-                    touches = poly_i.touches(poly_j)
-                    intersects = poly_i.intersects(poly_j)
-                    min_dist = poly_i.distance(poly_j)
-                    
-                    # Define a tolerance for "near adjacency"
-                    ADJACENCY_TOLERANCE = 0.3
-                    
-                    # Define a tolerance for "near adjacency" to account for floating point precision
-                    ADJACENCY_TOLERANCE = 0.01  # Small tolerance
-                    
-                    # Check for shared vertices (segments sharing endpoints)
-                    vertices_i = set(tuple(np.round(v, 6)) for v in poly_i.exterior.coords)
-                    vertices_j = set(tuple(np.round(v, 6)) for v in poly_j.exterior.coords)
-                    shared_vertices = vertices_i.intersection(vertices_j)
-                    
-                    # Check if there's an actual boundary intersection (most accurate check)
-                    has_shared_boundary = False
-                    if touches:
-                        # Get the intersection to check if it's a boundary
-                        # This works even for complex shared boundaries (series of line segments)
-                        try:
-                            intersection = poly_i.intersection(poly_j)
-                            has_shared_boundary = intersection.geom_type in ['LineString', 'MultiLineString', 'GeometryCollection']
-                            
-                            if has_shared_boundary and hasattr(intersection, 'length'):
-                                boundary_length = intersection.length
-                                dprint(f"    - Regions share boundary with length: {boundary_length:.6f}")
-                        except Exception:
-                            pass
-                    
-                    # Regions are adjacent if:
-                    # 1. They touch according to Shapely AND share a boundary (not just a point)
-                    # 2. They share at least 2 vertices (a line segment)
-                    # 3. They're extremely close (just for floating point precision issues)
-                    is_adjacent = has_shared_boundary or len(shared_vertices) >= 2 or min_dist < ADJACENCY_TOLERANCE
-                    
-                    # Add detailed debug info
-                    if len(shared_vertices) > 0:
-                        dprint(f"    - Regions {region_i} and {region_j} share {len(shared_vertices)} vertices")
-                    
-                    if touches:
-                        dprint(f"    - Regions {region_i} and {region_j} touch according to Shapely")
-                    
-                    if has_shared_boundary:
-                        dprint(f"    - Regions {region_i} and {region_j} have a shared boundary")
-                    
-                    # For debugging: print vertices if not adjacent
-                    if is_adjacent:
-                        adjacency_matrix[region_i][region_j] = 1
-                        adjacency_matrix[region_j][region_i] = 1
+                # Find the region_j ID for this polygon
+                j = polygon_objects.index(poly_j)
+                region_j = region_ids[j]
+                
+                # Skip if we've already checked this pair
+                if region_i >= region_j:
+                    continue
+                
+                # Check if polygons touch (share a boundary)
+                touches = poly_i.touches(poly_j)
+                intersects = poly_i.intersects(poly_j)
+                min_dist = poly_i.distance(poly_j)
+                
+                # Check for shared vertices (segments sharing endpoints)
+                vertices_i = set(tuple(np.round(v, 6)) for v in poly_i.exterior.coords)
+                vertices_j = set(tuple(np.round(v, 6)) for v in poly_j.exterior.coords)
+                shared_vertices = vertices_i.intersection(vertices_j)
+                
+                # Check if there's an actual boundary intersection (most accurate check)
+                has_shared_boundary = False
+                if touches:
+                    # Get the intersection to check if it's a boundary
+                    # This works even for complex shared boundaries (series of line segments)
+                    try:
+                        intersection = poly_i.intersection(poly_j)
+                        has_shared_boundary = intersection.geom_type in ['LineString', 'MultiLineString', 'GeometryCollection']
                         
-                        # Step 3: Calculate boundary lengths via intersection.length
-                        boundary_length = 0
+                        if has_shared_boundary and hasattr(intersection, 'length'):
+                            boundary_length = intersection.length
+                            dprint(f"    - Regions share boundary with length: {boundary_length:.6f}")
+                    except Exception:
+                        pass
+                
+                # Regions are adjacent if:
+                # 1. They touch according to Shapely AND share a boundary (not just a point)
+                # 2. They share at least 2 vertices (a line segment)
+                # 3. They're extremely close (just for floating point precision issues)
+                is_adjacent = has_shared_boundary or len(shared_vertices) >= 2 or min_dist < ADJACENCY_TOLERANCE
+                    
+                # Add detailed debug info
+                if len(shared_vertices) > 0:
+                    dprint(f"    - Regions {region_i} and {region_j} share {len(shared_vertices)} vertices")
+                
+                if touches:
+                    dprint(f"    - Regions {region_i} and {region_j} touch according to Shapely")
+                
+                if has_shared_boundary:
+                    dprint(f"    - Regions {region_i} and {region_j} have a shared boundary")
+                
+                # For debugging: print vertices if not adjacent
+                if is_adjacent:
+                    adjacency_matrix[region_i][region_j] = 1
+                    adjacency_matrix[region_j][region_i] = 1
+
+                    # Step 3: Calculate boundary lengths via intersection.length
+                    boundary_length = 0
+                    try:
+                        # Extract the shared boundary between polygons
+                        intersection = poly_i.intersection(poly_j)
+                        boundary_segments = []
+                        
                         try:
-                            # Extract the shared boundary between polygons
-                            intersection = poly_i.intersection(poly_j)
-                            boundary_segments = []
-                            boundary_length = 0
+                            # Extract boundary information based on the geometry type
+                            # Case 1: Simple line segment boundary (most common)
+                            if intersection.geom_type == 'LineString' or intersection.geom_type == 'LinearRing':
+                                # Simple case: single line segment boundary
+                                boundary_segments.append(list(intersection.coords))
+                                boundary_length = intersection.length
+                                dprint(f"    - Simple boundary: LineString (length: {boundary_length:.3f})")
                             
-                            try:
-                                # Extract boundary information based on the geometry type
-                                if intersection.geom_type == 'LineString' or intersection.geom_type == 'LinearRing':
-                                    # Simple case: single line segment boundary
-                                    boundary_segments.append(list(intersection.coords))
-                                    boundary_length = intersection.length
-                                    dprint(f"    - Simple boundary: LineString (length: {boundary_length:.3f})")
-                                
-                                elif intersection.geom_type == 'MultiLineString':
-                                    # Complex case: multiple line segments forming the boundary
-                                    segment_count = 0
-                                    for line in intersection.geoms:
-                                        if line.length > 0:
+                            # Case 2: Multiple line segments forming boundary
+                            elif intersection.geom_type == 'MultiLineString':
+                                # Complex case: multiple line segments forming the boundary
+                                segment_count = 0
+                                for line in intersection.geoms:
+                                    if line.length > 0:
+                                        boundary_segments.append(list(line.coords))
+                                        boundary_length += line.length
+                                        segment_count += 1
+                                dprint(f"    - Complex boundary: MultiLineString with {segment_count} segments (length: {boundary_length:.3f})")
+                            
+                            # Case 3: Mixed geometry collection - extract all line segments
+                            elif intersection.geom_type == 'GeometryCollection':
+                                # Mixed geometry collection - extract all line segments
+                                dprint(f"    - Mixed boundary: GeometryCollection with {len(intersection.geoms)} parts")
+                                line_found = False
+                                for geom in intersection.geoms:
+                                    if geom.geom_type == 'LineString' or geom.geom_type == 'LinearRing':
+                                        boundary_segments.append(list(geom.coords))
+                                        boundary_length += geom.length
+                                        line_found = True
+                                    elif geom.geom_type == 'MultiLineString':
+                                        for line in geom.geoms:
                                             boundary_segments.append(list(line.coords))
                                             boundary_length += line.length
-                                            segment_count += 1
-                                    dprint(f"    - Complex boundary: MultiLineString with {segment_count} segments (length: {boundary_length:.3f})")
+                                            line_found = True
+                                    # Point contacts don't contribute to boundary length
                                 
-                                elif intersection.geom_type == 'GeometryCollection':
-                                    # Mixed geometry collection - extract all line segments
-                                    dprint(f"    - Mixed boundary: GeometryCollection with {len(intersection.geoms)} parts")
-                                    for geom in intersection.geoms:
-                                        if geom.geom_type == 'LineString' or geom.geom_type == 'LinearRing':
-                                            boundary_segments.append(list(geom.coords))
-                                            boundary_length += geom.length
-                                        elif geom.geom_type == 'MultiLineString':
-                                            for line in geom.geoms:
-                                                boundary_segments.append(list(line.coords))
-                                                boundary_length += line.length
-                                        # Point contacts don't contribute to boundary length
+                                # If no line segments found, use a minimum length
+                                if not line_found:
+                                    boundary_length = 0.01
+                                    dprint(f"    - No line segments in GeometryCollection, using minimum length")
+                            
+                            # Case 4: Point contact - not a true boundary, but record the points
+                            elif intersection.geom_type in ['Point', 'MultiPoint']:
+                                point_count = 1 if intersection.geom_type == 'Point' else len(intersection.geoms)
+                                dprint(f"    - Point contact with {point_count} points")
                                 
-                                elif intersection.geom_type in ['Point', 'MultiPoint']:
-                                    # Point contact - not a true boundary, but record the points
-                                    point_count = 1 if intersection.geom_type == 'Point' else len(intersection.geoms)
-                                    dprint(f"    - Point contact with {point_count} points")
-                                    
-                                    # Create small segments for visualization
-                                    if intersection.geom_type == 'Point':
-                                        pt = list(intersection.coords)[0]
+                                # Create small segments for visualization
+                                if intersection.geom_type == 'Point':
+                                    pt = list(intersection.coords)[0]
+                                    boundary_segments.append([[pt[0], pt[1]], [pt[0], pt[1]]])
+                                else:  # MultiPoint
+                                    for point in intersection.geoms:
+                                        pt = list(point.coords)[0]
                                         boundary_segments.append([[pt[0], pt[1]], [pt[0], pt[1]]])
-                                    else:  # MultiPoint
-                                        for point in intersection.geoms:
-                                            pt = list(point.coords)[0]
-                                            boundary_segments.append([[pt[0], pt[1]], [pt[0], pt[1]]])
-                                    
-                                    # Use a small length for point contacts
-                                    boundary_length = 0.01 * point_count
                                 
-                                # For true boundaries, ensure they have a reasonable minimum length
-                                MIN_BOUNDARY_LENGTH = 0.01
-                                if boundary_length < MIN_BOUNDARY_LENGTH:
-                                    boundary_length = MIN_BOUNDARY_LENGTH
-                                
-                                # If we extracted any boundary information, include it
-                                if boundary_segments:
-                                    dprint(f"    - Successfully extracted boundary (total length: {boundary_length:.3f})")
-                                else:
-                                    dprint(f"    - No boundary segments found, using minimum length")
-                                    boundary_length = MIN_BOUNDARY_LENGTH
-                                    # Create a dummy segment for visualization
-                                    midpoint_i = np.array(poly_i.centroid.coords[0])
-                                    midpoint_j = np.array(poly_j.centroid.coords[0])
-                                    dummy_point = (midpoint_i + midpoint_j) / 2
-                                    boundary_segments.append([[dummy_point[0], dummy_point[1]], [dummy_point[0], dummy_point[1]]])
-                                
-                            except Exception as boundary_error:
-                                # Log the error but continue with a minimum length
-                                dprint(f"    ⚠ Error extracting boundary: {str(boundary_error)}")
+                                # Use a small length for point contacts
+                                boundary_length = 0.01 * point_count
+                            
+                            # Case 5: Polygon or MultiPolygon (rare - overlapping regions)
+                            elif intersection.geom_type in ['Polygon', 'MultiPolygon']:
+                                # Extract the boundary of the overlap
+                                boundary = intersection.boundary
+                                if hasattr(boundary, 'coords'):  # LineString
+                                    boundary_segments.append(list(boundary.coords))
+                                    boundary_length = boundary.length
+                                elif hasattr(boundary, 'geoms'):  # MultiLineString
+                                    for line in boundary.geoms:
+                                        boundary_segments.append(list(line.coords))
+                                        boundary_length += line.length
+                            
+                            # For true boundaries, ensure they have a reasonable minimum length
+                            MIN_BOUNDARY_LENGTH = 0.01
+                            if boundary_length < MIN_BOUNDARY_LENGTH:
                                 boundary_length = MIN_BOUNDARY_LENGTH
                             
-                            # Always create a boundary record, even if extraction had issues
-                            # This ensures adjacency is preserved for merging
-                            shared_boundaries.append({
-                                'regionIds': [region_i, region_j],
-                                'boundarySegments': boundary_segments if boundary_segments else [[[0, 0], [0, 0]]],
-                                'length': boundary_length
-                            })
-                            boundary_lengths[(region_i, region_j)] = boundary_length
-                                
-                        except Exception as e:
-                            dprint(f"⚠ Failed to extract boundary for regions {region_i}-{region_j}: {str(e)}")
-                            # Even if extraction fails, we'll still consider them adjacent with a minimum length
-                            boundary_lengths[(region_i, region_j)] = 0.01
-                            dprint(f"    - Using fallback boundary length despite error")
+                            # If we extracted any boundary information, include it
+                            if boundary_segments:
+                                dprint(f"    - Successfully extracted boundary (total length: {boundary_length:.3f})")
+                            else:
+                                dprint(f"    - No boundary segments found, using minimum length")
+                                boundary_length = MIN_BOUNDARY_LENGTH
+                                # Create a dummy segment for visualization
+                                midpoint_i = np.array(poly_i.centroid.coords[0])
+                                midpoint_j = np.array(poly_j.centroid.coords[0])
+                                dummy_point = (midpoint_i + midpoint_j) / 2
+                                boundary_segments.append([[dummy_point[0], dummy_point[1]], [dummy_point[0], dummy_point[1]]])
+                            
+                        except Exception as boundary_error:
+                            # Log the error but continue with a minimum length
+                            dprint(f"    ⚠ Error extracting boundary: {str(boundary_error)}")
+                            boundary_length = MIN_BOUNDARY_LENGTH
                         
-                        dprint(f"✓ Regions {region_i} and {region_j} are adjacent (boundary length: {boundary_length:.3f})")
-                    else:
-                        # Print debug info for non-adjacent pairs
-                        dprint(f"✗ Regions {region_i} and {region_j} are NOT adjacent.")
-                        dprint(f"    - poly_i.touches(poly_j): {touches}")
-                        dprint(f"    - poly_i.intersects(poly_j): {intersects}")
-                        dprint(f"    - poly_i.distance(poly_j): {min_dist:.10f}")
-                        dprint(f"    - Vertices region {region_i}: {list(poly_i.exterior.coords)}")
-                        dprint(f"    - Vertices region {region_j}: {list(poly_j.exterior.coords)}")
-                        # Optionally, print shared points
-                        shared_points = set(tuple(np.round(v, 8)) for v in poly_i.exterior.coords) & set(tuple(np.round(v, 8)) for v in poly_j.exterior.coords)
-                        dprint(f"    - Shared vertices (rounded): {shared_points}")
-        
+                                # Always create a boundary record, even if extraction had issues
+                        # This ensures adjacency is preserved for merging
+                        boundary_info = {
+                            'regionIds': [region_i, region_j],
+                            'boundarySegments': boundary_segments if boundary_segments else [[[0, 0], [0, 0]]],
+                            'length': boundary_length,
+                            'intersectionType': intersection.geom_type
+                        }
+                        shared_boundaries.append(boundary_info)
+                        boundary_lengths[(region_i, region_j)] = boundary_length
+                        dprint(f"    - Added boundary: {intersection.geom_type}, length: {boundary_length:.3f}")
+
+                    except Exception as e:
+                        dprint(f"⚠ Failed to extract boundary for regions {region_i}-{region_j}: {str(e)}")
+                        # Even if extraction fails, we'll still consider them adjacent with a minimum length
+                        MIN_BOUNDARY_LENGTH = 0.01
+                        boundary_length = MIN_BOUNDARY_LENGTH
+                        
+                        # Create a fallback boundary visualization
+                        try:
+                            # Get centroids for both polygons for fallback visualization
+                            midpoint_i = np.array(poly_i.centroid.coords[0])
+                            midpoint_j = np.array(poly_j.centroid.coords[0])
+                            dummy_point = (midpoint_i + midpoint_j) / 2
+                            boundary_segments = [[[midpoint_i[0], midpoint_i[1]], [midpoint_j[0], midpoint_j[1]]]]
+                        except:
+                            # Complete fallback if even that fails
+                            boundary_segments = [[[0, 0], [0, 0]]]
+                        
+                        # Add fallback boundary record
+                        boundary_info = {
+                            'regionIds': [region_i, region_j],
+                            'boundarySegments': boundary_segments,
+                            'length': boundary_length,
+                            'intersectionType': 'error-fallback'
+                        }
+                        shared_boundaries.append(boundary_info)
+                        boundary_lengths[(region_i, region_j)] = boundary_length
+                        dprint(f"    - Using fallback boundary length {boundary_length} despite error")
+
+                    dprint(f"✓ Regions {region_i} and {region_j} are adjacent (boundary length: {boundary_length:.3f})")
+                else:
+                    # Print debug info for non-adjacent pairs
+                    dprint(f"✗ Regions {region_i} and {region_j} are NOT adjacent.")
+                    dprint(f"    - poly_i.touches(poly_j): {touches}")
+                    dprint(f"    - poly_i.intersects(poly_j): {intersects}")
+                    dprint(f"    - poly_i.distance(poly_j): {min_dist:.10f}")
+                    dprint(f"    - Vertices region {region_i}: {list(poly_i.exterior.coords)}")
+                    dprint(f"    - Vertices region {region_j}: {list(poly_j.exterior.coords)}")
+                    # Optionally, print shared points
+                    shared_points = set(tuple(np.round(v, 8)) for v in poly_i.exterior.coords) & set(tuple(np.round(v, 8)) for v in poly_j.exterior.coords)
+                    dprint(f"    - Shared vertices (rounded): {shared_points}")
+
         # Step 4: Create optimal pairs using selected pairing strategy
         dprint(f"Creating optimal pairs using '{pairing_strategy}' strategy...")
-        
+
         # Select pairing strategy function
         
         optimal_pairs = create_optimal_pairs_compactness(
