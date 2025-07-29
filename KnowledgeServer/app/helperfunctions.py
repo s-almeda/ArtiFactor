@@ -497,59 +497,87 @@ def get_images_from_image_ids(image_ids, conn, max=3):
 #-- get precomputed embeddings from the vector tables --#
 
 def get_clip_embeddings(db, image_ids):
-    """Get CLIP embeddings for given image IDs."""
+    """
+    Get precomputed CLIP embeddings for given image IDs.
+    Returns dict mapping image_id -> embedding array.
+    This function replaces both get_clip_embeddings and query_clip_embeddings for backward compatibility.
+    """
     if not image_ids:
         return {}
-    
+
     placeholders = ','.join(['?' for _ in image_ids])
     query = f"""
         SELECT image_id, embedding 
         FROM vec_clip_features 
         WHERE image_id IN ({placeholders})
     """
-    
+
     cursor = db.execute(query, image_ids)
     results = cursor.fetchall()
-    
+
     embeddings = {}
     for row in results:
         embedding_data = row['embedding']
         if isinstance(embedding_data, bytes):
             embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        elif isinstance(embedding_data, str):
+            try:
+                embedding = np.array(json.loads(embedding_data), dtype=np.float32)
+            except Exception:
+                continue
         else:
             try:
                 embedding = np.array(embedding_data, dtype=np.float32)
-            except (ValueError, TypeError):
+            except Exception:
                 continue
         embeddings[row['image_id']] = embedding
-    
+
     return embeddings
 
+# For backward compatibility
+query_clip_embeddings = get_clip_embeddings
 
-# Get ResNet50 embeddings
+
 def get_resnet_embeddings(db, image_ids):
+    """
+    Get precomputed ResNet50 embeddings for given image IDs.
+    Returns dict mapping image_id -> embedding array.
+    This function replaces both get_resnet_embeddings and query_resnet_embeddings for backward compatibility.
+    """
     if not image_ids:
         return {}
+
     placeholders = ','.join(['?' for _ in image_ids])
     query = f"""
         SELECT image_id, embedding 
         FROM vec_image_features 
         WHERE image_id IN ({placeholders})
     """
+
     cursor = db.execute(query, image_ids)
     results = cursor.fetchall()
+
     embeddings = {}
     for row in results:
         embedding_data = row['embedding']
         if isinstance(embedding_data, bytes):
             embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        elif isinstance(embedding_data, str):
+            try:
+                embedding = np.array(json.loads(embedding_data), dtype=np.float32)
+            except Exception:
+                continue
         else:
             try:
                 embedding = np.array(embedding_data, dtype=np.float32)
-            except (ValueError, TypeError):
+            except Exception:
                 continue
         embeddings[row['image_id']] = embedding
+
     return embeddings
+
+# For backward compatibility
+query_resnet_embeddings = get_resnet_embeddings
 
 
 def get_value_embeddings(db, entry_ids):

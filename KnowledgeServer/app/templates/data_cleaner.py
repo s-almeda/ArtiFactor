@@ -1708,3 +1708,844 @@ def process_duplicate_images():
             'success': False,
             'error': str(e)
         })
+
+# Global variable to store duplicate artist pairs
+duplicate_artists_pairs = []
+processed_artist_pairs = set()
+not_duplicate_artist_pairs = set()
+
+# Global variable to store duplicate image pairs
+duplicate_images_pairs = []
+processed_image_pairs = set()
+not_duplicate_image_pairs = set()
+
+@data_cleaner_bp.route('/check_duplicate_artists', methods=['POST'])
+def check_duplicate_artists():
+    """Find artists with duplicate names (text_entries with isArtist=1 and identical values)"""
+    try:
+        print("=== DEBUG: Starting duplicate artists check ===")
+        from index import get_db
+        db = get_db()
+        
+        # Reset the global variables
+        global duplicate_artists_pairs, processed_artist_pairs, not_duplicate_artist_pairs
+        duplicate_artists_pairs = []
+        processed_artist_pairs = set()
+        
+        # Query to find artists with the same name
+        query = """
+            SELECT t1.entry_id as id1, t1.value as name1, t1.images as images1,
+                   t2.entry_id as id2, t2.value as name2, t2.images as images2
+            FROM text_entries t1
+            JOIN text_entries t2 ON LOWER(t1.value) = LOWER(t2.value) AND t1.entry_id < t2.entry_id
+            WHERE t1.isArtist = 1 AND t2.isArtist = 1
+            ORDER BY LOWER(t1.value)
+        """
+        
+        cursor = db.execute(query)
+        rows = cursor.fetchall()
+        
+        # Process the results
+        duplicate_pairs = []
+        for row in rows:
+            id1 = row['id1']
+            id2 = row['id2']
+            
+            # Skip if this pair is already in our "not duplicates" list
+            pair_key = f"{min(id1, id2)}-{max(id1, id2)}"
+            if pair_key in not_duplicate_artist_pairs:
+                print(f"DEBUG: Skipping previously marked non-duplicate pair: {pair_key}")
+                continue
+            
+            # Get more details about each artist
+            artist1 = get_artist_details(db, id1)
+            artist2 = get_artist_details(db, id2)
+            
+            # Add to our list of duplicates
+            duplicate_pairs.append({
+                'id1': id1,
+                'id2': id2,
+                'artist1': artist1,
+                'artist2': artist2,
+                'name': artist1['value']
+            })
+        
+        # Store globally for the session
+        duplicate_artists_pairs = duplicate_pairs
+        
+        print(f"DEBUG: Found {len(duplicate_pairs)} potential duplicate artist pairs")
+        
+        return jsonify({
+            'success': True,
+            'duplicate_pairs': duplicate_pairs,
+            'total_pairs': len(duplicate_pairs)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_duplicate_artists: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+def get_artist_details(db, artist_id):
+    """Helper function to get detailed information about an artist"""
+    try:
+        # Get the artist entry
+        cursor = db.execute("SELECT * FROM text_entries WHERE entry_id = ?", (artist_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {'error': f'Artist {artist_id} not found'}
+        
+        artist = dict(row)
+        
+        # Parse JSON fields
+        for field in ['images', 'artist_aliases', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']:
+            if field in artist and isinstance(artist[field], str) and artist[field]:
+                try:
+                    artist[field] = json.loads(artist[field])
+                except json.JSONDecodeError:
+                    try:
+                        artist[field] = ast.literal_eval(artist[field])
+                    except:
+                        artist[field] = artist[field]  # Keep as string if parsing fails
+        
+        # Count associated images
+        image_count = 0
+        if 'images' in artist and artist['images']:
+            if isinstance(artist['images'], list):
+                image_count = len(artist['images'])
+            else:
+                image_count = 0  # Malformed data
+        
+        # Count artwork references (artworks that have this artist as a keyword)
+        cursor = db.execute("""
+            SELECT COUNT(*) as count FROM image_entries 
+            WHERE relatedKeywordIds LIKE ?
+        """, (f'%"{artist_id}"%',))
+        artwork_references = cursor.fetchone()['count']
+        
+        # Add computed fields
+        artist['image_count'] = image_count
+        artist['artwork_references'] = artwork_references
+        
+        return artist
+        
+    except Exception as e:
+        print(f"ERROR in get_artist_details for {artist_id}: {str(e)}")
+        return {'error': str(e), 'entry_id': artist_id}
+
+@data_cleaner_bp.route('/get_next_duplicate_artist_pair', methods=['GET'])
+def get_next_duplicate_artist_pair():
+    """Return the next unprocessed duplicate artist pair"""
+    try:
+        global duplicate_artists_pairs, processed_artist_pairs
+        
+        # Find the next unprocessed pair
+        next_pair = None
+        for pair in duplicate_artists_pairs:
+            pair_key = f"{min(pair['id1'], pair['id2'])}-{max(pair['id1'], pair['id2'])}"
+            if pair_key not in processed_artist_pairs:
+                next_pair = pair
+                break
+        
+        if next_pair:
+            return jsonify({
+                'success': True,
+                'pair': next_pair,
+                'remaining': sum(1 for p in duplicate_artists_pairs if f"{min(p['id1'], p['id2'])}-{max(p['id1'], p['id2'])}" not in processed_artist_pairs),
+                'total': len(duplicate_artists_pairs),
+                'processed': len(processed_artist_pairs),
+                'not_duplicates': len(not_duplicate_artist_pairs)
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'finished': True,
+                'total': len(duplicate_artists_pairs),
+                'processed': len(processed_artist_pairs),
+                'not_duplicates': len(not_duplicate_artist_pairs)
+            })
+            
+    except Exception as e:
+        print(f"ERROR in get_next_duplicate_artist_pair: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/process_duplicate_artist', methods=['POST'])
+def process_duplicate_artist():
+    """Process a duplicate artist pair - either merge or mark as not duplicate"""
+    try:
+        print("=== DEBUG: Processing duplicate artist pair ===")
+        from index import get_db
+        db = get_db()
+        
+        global processed_artist_pairs, not_duplicate_artist_pairs
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        id1 = data.get('id1')
+        id2 = data.get('id2')
+        action = data.get('action')  # 'merge' or 'not_duplicate'
+        keep_id = data.get('keep_id')  # Which ID to keep when merging
+        
+        if not id1 or not id2 or not action:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters'
+            }), 400
+        
+        # Create a consistent pair key
+        pair_key = f"{min(id1, id2)}-{max(id1, id2)}"
+        
+        if action == 'not_duplicate':
+            # Mark as not a duplicate
+            not_duplicate_artist_pairs.add(pair_key)
+            processed_artist_pairs.add(pair_key)
+            
+            print(f"DEBUG: Marked pair {pair_key} as not duplicates")
+            
+            return jsonify({
+                'success': True,
+                'action': 'not_duplicate',
+                'message': f'Artists {id1} and {id2} marked as not duplicates'
+            })
+            
+        elif action == 'merge':
+            if not keep_id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Missing keep_id parameter for merge action'
+                }), 400
+            
+            # Determine which ID to keep and which to remove
+            primary_id = keep_id
+            secondary_id = id2 if keep_id == id1 else id1
+            
+            # Get details of both artists
+            primary = get_artist_details(db, primary_id)
+            secondary = get_artist_details(db, secondary_id)
+            
+            if 'error' in primary or 'error' in secondary:
+                return jsonify({
+                    'success': False,
+                    'error': f"Could not fetch details for artists: {primary.get('error', '')}, {secondary.get('error', '')}"
+                }), 400
+            
+            # 1. Merge images lists
+            primary_images = primary.get('images', []) or []
+            secondary_images = secondary.get('images', []) or []
+            
+            if not isinstance(primary_images, list):
+                primary_images = []
+            if not isinstance(secondary_images, list):
+                secondary_images = []
+                
+            merged_images = list(set(primary_images + secondary_images))
+            
+            # 2. Merge keyword lists
+            primary_keywords = primary.get('relatedKeywordIds', []) or []
+            secondary_keywords = secondary.get('relatedKeywordStrings', []) or []
+            
+            if not isinstance(primary_keywords, list):
+                primary_keywords = []
+            if not isinstance(secondary_keywords, list):
+                secondary_keywords = []
+                
+            merged_keywords = list(set(primary_keywords + secondary_keywords))
+            
+            # 3. Merge related keyword strings
+            primary_keyword_strings = primary.get('relatedKeywordStrings', []) or []
+            secondary_keyword_strings = secondary.get('relatedKeywordStrings', []) or []
+            
+            if not isinstance(primary_keyword_strings, list):
+                primary_keyword_strings = []
+            if not isinstance(secondary_keyword_strings, list):
+                secondary_keyword_strings = []
+                
+            merged_keyword_strings = list(set(primary_keyword_strings + secondary_keyword_strings))
+            
+            # 4. Update the primary artist with merged data
+            db.execute("""
+                UPDATE text_entries 
+                SET images = ?, relatedKeywordIds = ?, relatedKeywordStrings = ?
+                WHERE entry_id = ?
+            """, (
+                json.dumps(merged_images),
+                json.dumps(merged_keywords),
+                json.dumps(merged_keyword_strings),
+                primary_id
+            ))
+            
+            # 5. Update all references in text_entries to point to primary_id
+            db.execute("""
+                UPDATE text_entries
+                SET relatedKeywordIds = REPLACE(relatedKeywordIds, ?, ?)
+                WHERE relatedKeywordIds LIKE ?
+            """, (f'"{secondary_id}"', f'"{primary_id}"', f'%"{secondary_id}"%'))
+            
+            # 6. Update all references in image_entries to point to primary_id
+            db.execute("""
+                UPDATE image_entries
+                SET relatedKeywordIds = REPLACE(relatedKeywordIds, ?, ?)
+                WHERE relatedKeywordIds LIKE ?
+            """, (f'"{secondary_id}"', f'"{primary_id}"', f'%"{secondary_id}"%'))
+            
+            # 7. Update artist_names in image_entries if it contains the artist
+            # First get all image entries that might reference the artist
+            cursor = db.execute("SELECT image_id, artist_names FROM image_entries WHERE artist_names LIKE ?", 
+                              (f'%{secondary["value"]}%',))
+            
+            for row in cursor.fetchall():
+                image_id = row['image_id']
+                artist_names_text = row['artist_names']
+                
+                # Parse artist_names
+                try:
+                    if artist_names_text:
+                        artist_names = json.loads(artist_names_text)
+                        if isinstance(artist_names, list) and secondary["value"] in artist_names:
+                            # Update only if needed
+                            db.execute("UPDATE image_entries SET artist_names = ? WHERE image_id = ?",
+                                      (artist_names_text, image_id))
+                except:
+                    # Skip if there's a parsing error
+                    pass
+            
+            # 8. Delete the secondary artist
+            db.execute("DELETE FROM text_entries WHERE entry_id = ?", (secondary_id,))
+            
+            # Commit the changes
+            db.commit()
+            
+            # Mark as processed
+            processed_artist_pairs.add(pair_key)
+            
+            print(f"DEBUG: Successfully merged artist {secondary_id} into {primary_id}")
+            
+            return jsonify({
+                'success': True,
+                'action': 'merge',
+                'message': f'Successfully merged artist {secondary_id} into {primary_id}',
+                'primary_id': primary_id,
+                'secondary_id': secondary_id
+            })
+            
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown action: {action}'
+            }), 400
+            
+    except Exception as e:
+        print(f"ERROR in process_duplicate_artist: {str(e)}")
+        traceback.print_exc()
+        try:
+            db.rollback()
+        except:
+            pass
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/reset_duplicate_artists', methods=['POST'])
+def reset_duplicate_artists():
+    """Reset the state of duplicate artist processing"""
+    try:
+        global duplicate_artists_pairs, processed_artist_pairs, not_duplicate_artist_pairs
+        
+        # Only reset the not_duplicate_pairs if specifically requested
+        data = request.get_json() or {}
+        if data.get('reset_not_duplicates', False):
+            not_duplicate_artist_pairs = set()
+        
+        # Always reset the current session state
+        duplicate_artists_pairs = []
+        processed_artist_pairs = set()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Duplicate artist processing state has been reset'
+        })
+        
+    except Exception as e:
+        print(f"ERROR in reset_duplicate_artists: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/check_duplicate_images_by_vector', methods=['POST'])
+def check_duplicate_images_by_vector():
+    """Find images with very similar vector embeddings (potential duplicates) within the same artist's collection"""
+    try:
+        print("=== DEBUG: Starting duplicate images check by vector similarity within artist collections ===")
+        from index import get_db
+        import numpy as np
+        db = get_db()
+        
+        # Reset the global variables
+        global duplicate_images_pairs, processed_image_pairs, not_duplicate_image_pairs
+        duplicate_images_pairs = []
+        processed_image_pairs = set()
+        
+        # Get all artists with images
+        print("DEBUG: Finding artists with multiple images...")
+        query = """
+            SELECT entry_id, value, images 
+            FROM text_entries 
+            WHERE isArtist = 1 
+            AND images IS NOT NULL AND images != '' AND images != '[]'
+        """
+        cursor = db.execute(query)
+        
+        artists = []
+        for row in cursor.fetchall():
+            try:
+                artist_id = row['entry_id']
+                artist_name = row['value']
+                image_ids = json.loads(row['images']) if row['images'] else []
+                
+                # Only include artists with multiple images (at least 2)
+                if isinstance(image_ids, list) and len(image_ids) >= 2:
+                    artists.append({
+                        'id': artist_id,
+                        'name': artist_name,
+                        'image_ids': image_ids,
+                        'image_count': len(image_ids)
+                    })
+            except json.JSONDecodeError:
+                print(f"DEBUG: JSON parse error for artist {row['entry_id']}")
+                continue
+        
+        print(f"DEBUG: Found {len(artists)} artists with multiple images")
+        
+        # Sort artists by number of images (descending) to prioritize artists with more images
+        artists.sort(key=lambda x: x['image_count'], reverse=True)
+        
+        # Get embeddings for all images across all artists
+        all_image_ids = []
+        for artist in artists:
+            all_image_ids.extend(artist['image_ids'])
+        
+        # Remove duplicates while preserving order
+        all_image_ids = list(dict.fromkeys(all_image_ids))
+        print(f"DEBUG: Retrieving embeddings for {len(all_image_ids)} unique images...")
+        
+        # Get embeddings in batches to avoid potential memory issues
+        embeddings = {}
+        batch_size = 1000
+        
+        for i in range(0, len(all_image_ids), batch_size):
+            batch_ids = all_image_ids[i:i+batch_size]
+            placeholders = ','.join(['?' for _ in batch_ids])
+            query = f"""
+                SELECT image_id, embedding 
+                FROM vec_image_features 
+                WHERE image_id IN ({placeholders})
+            """
+            cursor = db.execute(query, batch_ids)
+            
+            for row in cursor.fetchall():
+                image_id = row['image_id']
+                embedding_data = row['embedding']
+                
+                # Parse embedding data
+                if isinstance(embedding_data, bytes):
+                    embedding = np.frombuffer(embedding_data, dtype=np.float32)
+                    embeddings[image_id] = embedding
+        
+        print(f"DEBUG: Retrieved {len(embeddings)} image embeddings")
+        
+        # Compare embeddings within each artist's collection
+        similarity_threshold = 0.97  # Very high similarity threshold
+        potential_duplicates = []
+        
+        print("DEBUG: Finding potential duplicates within each artist's collection...")
+        
+        # Process artists with most images first, but limit total pairs to prevent timeout
+        max_pairs = 500
+        processed_pairs = 0
+        
+        for artist in artists:
+            artist_name = artist['name']
+            image_ids = artist['image_ids']
+            print(f"DEBUG: Checking {len(image_ids)} images for artist '{artist_name}'")
+            
+            # Filter image IDs to only include those with embeddings
+            valid_image_ids = [id for id in image_ids if id in embeddings]
+            
+            # Compare each image with others from the same artist
+            for i, id1 in enumerate(valid_image_ids):
+                embedding1 = embeddings[id1]
+                
+                # Only compare with subsequent images to avoid redundant comparisons
+                for id2 in valid_image_ids[i+1:]:
+                    # Skip if this pair is already in our "not duplicates" list
+                    pair_key = f"{min(id1, id2)}-{max(id1, id2)}"
+                    if pair_key in not_duplicate_image_pairs:
+                        continue
+                    
+                    embedding2 = embeddings[id2]
+                    
+                    # Calculate cosine similarity
+                    similarity = np.dot(embedding1, embedding2) / (np.linalg.norm(embedding1) * np.linalg.norm(embedding2))
+                    
+                    if similarity > similarity_threshold:
+                        # Get details for both images
+                        image1 = get_image_details(db, id1)
+                        image2 = get_image_details(db, id2)
+                        
+                        if 'error' not in image1 and 'error' not in image2:
+                            potential_duplicates.append({
+                                'id1': id1,
+                                'id2': id2,
+                                'image1': image1,
+                                'image2': image2,
+                                'similarity': float(similarity),  # Convert to Python float for JSON serialization
+                                'distance': float(1.0 - similarity),
+                                'artist_name': artist_name,
+                                'artist_id': artist['id']
+                            })
+                            
+                            processed_pairs += 1
+                            
+                            # Stop if we've reached the max pairs limit
+                            if processed_pairs >= max_pairs:
+                                print(f"DEBUG: Reached maximum of {max_pairs} pairs, stopping comparison")
+                                break
+                
+                # Break outer loop too if we've reached the limit
+                if processed_pairs >= max_pairs:
+                    break
+            
+            # Break artists loop if we've reached the limit
+            if processed_pairs >= max_pairs:
+                break
+        
+        # Sort by similarity (descending)
+        potential_duplicates.sort(key=lambda x: x['similarity'], reverse=True)
+        
+        # Store globally for the session
+        duplicate_images_pairs = potential_duplicates
+        
+        print(f"DEBUG: Found {len(potential_duplicates)} potential duplicate image pairs across {len(artists)} artists")
+        
+        return jsonify({
+            'success': True,
+            'duplicate_pairs': potential_duplicates,
+            'total_pairs': len(potential_duplicates)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in check_duplicate_images_by_vector: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+def get_image_details(db, image_id):
+    """Helper function to get detailed information about an image"""
+    try:
+        # Get the image entry
+        cursor = db.execute("SELECT * FROM image_entries WHERE image_id = ?", (image_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {'error': f'Image {image_id} not found'}
+        
+        image = dict(row)
+        
+        # Parse JSON fields
+        for field in ['artist_names', 'image_urls', 'descriptions', 'relatedKeywordIds', 'relatedKeywordStrings']:
+            if field in image and isinstance(image[field], str) and image[field]:
+                try:
+                    image[field] = json.loads(image[field])
+                except json.JSONDecodeError:
+                    try:
+                        image[field] = ast.literal_eval(image[field])
+                    except:
+                        image[field] = image[field]  # Keep as string if parsing fails
+        
+        # Get best image URL for display
+        image_url = None
+        if isinstance(image.get('image_urls'), dict):
+            urls = image['image_urls']
+            for preferred_key in ['medium', 'small', 'normalized', 'large', 'larger']:
+                if preferred_key in urls:
+                    image_url = urls[preferred_key]
+                    break
+            # If no preferred key found, use the first available
+            if not image_url and urls:
+                image_url = list(urls.values())[0]
+        
+        # Get artist name(s) as string
+        artist_name = ""
+        if isinstance(image.get('artist_names'), list) and image['artist_names']:
+            artist_name = ', '.join(image['artist_names'])
+        
+        # Add computed fields
+        image['best_image_url'] = image_url
+        image['artist_name'] = artist_name
+        
+        return image
+        
+    except Exception as e:
+        print(f"ERROR in get_image_details for {image_id}: {str(e)}")
+        return {'error': str(e), 'image_id': image_id}
+
+@data_cleaner_bp.route('/get_next_duplicate_image_pair', methods=['GET'])
+def get_next_duplicate_image_pair():
+    """Return the next unprocessed duplicate image pair"""
+    try:
+        global duplicate_images_pairs, processed_image_pairs
+        
+        # Find the next unprocessed pair
+        next_pair = None
+        for pair in duplicate_images_pairs:
+            pair_key = f"{min(pair['id1'], pair['id2'])}-{max(pair['id1'], pair['id2'])}"
+            if pair_key not in processed_image_pairs:
+                next_pair = pair
+                break
+        
+        if next_pair:
+            return jsonify({
+                'success': True,
+                'pair': next_pair,
+                'remaining': sum(1 for p in duplicate_images_pairs if f"{min(p['id1'], p['id2'])}-{max(p['id1'], p['id2'])}" not in processed_image_pairs),
+                'total': len(duplicate_images_pairs),
+                'processed': len(processed_image_pairs),
+                'not_duplicates': len(not_duplicate_image_pairs)
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'finished': True,
+                'total': len(duplicate_images_pairs),
+                'processed': len(processed_image_pairs),
+                'not_duplicates': len(not_duplicate_image_pairs)
+            })
+            
+    except Exception as e:
+        print(f"ERROR in get_next_duplicate_image_pair: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/process_duplicate_image', methods=['POST'])
+def process_duplicate_image():
+    """Process a duplicate image pair - either merge or mark as not duplicate"""
+    try:
+        print("=== DEBUG: Processing duplicate image pair ===")
+        from index import get_db
+        db = get_db()
+        
+        global processed_image_pairs, not_duplicate_image_pairs
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        id1 = data.get('id1')
+        id2 = data.get('id2')
+        action = data.get('action')  # 'merge' or 'not_duplicate'
+        keep_id = data.get('keep_id')  # Which ID to keep when merging
+        
+        if not id1 or not id2 or not action:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required parameters'
+            }), 400
+        
+        # Create a consistent pair key
+        pair_key = f"{min(id1, id2)}-{max(id1, id2)}"
+        
+        if action == 'not_duplicate':
+            # Mark as not a duplicate
+            not_duplicate_image_pairs.add(pair_key)
+            processed_image_pairs.add(pair_key)
+            
+            print(f"DEBUG: Marked pair {pair_key} as not duplicates")
+            
+            return jsonify({
+                'success': True,
+                'action': 'not_duplicate',
+                'message': f'Images {id1} and {id2} marked as not duplicates'
+            })
+            
+        elif action == 'merge':
+            if not keep_id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Missing keep_id parameter for merge action'
+                }), 400
+            
+            # Determine which ID to keep and which to remove
+            primary_id = keep_id
+            secondary_id = id2 if keep_id == id1 else id1
+            
+            # Get details of both images
+            primary = get_image_details(db, primary_id)
+            secondary = get_image_details(db, secondary_id)
+            
+            if 'error' in primary or 'error' in secondary:
+                return jsonify({
+                    'success': False,
+                    'error': f"Could not fetch details for images: {primary.get('error', '')}, {secondary.get('error', '')}"
+                }), 400
+            
+            # 1. Merge descriptions
+            primary_desc = primary.get('descriptions', {}) or {}
+            secondary_desc = secondary.get('descriptions', {}) or {}
+            
+            if not isinstance(primary_desc, dict):
+                primary_desc = {}
+            if not isinstance(secondary_desc, dict):
+                secondary_desc = {}
+                
+            # Combine descriptions, prioritizing primary if there's overlap
+            merged_desc = {**secondary_desc, **primary_desc}
+            
+            # 2. Merge keyword lists
+            primary_keywords = primary.get('relatedKeywordIds', []) or []
+            secondary_keywords = secondary.get('relatedKeywordIds', []) or []
+            
+            if not isinstance(primary_keywords, list):
+                primary_keywords = []
+            if not isinstance(secondary_keywords, list):
+                secondary_keywords = []
+                
+            merged_keywords = list(set(primary_keywords + secondary_keywords))
+            
+            # 3. Merge related keyword strings
+            primary_keyword_strings = primary.get('relatedKeywordStrings', []) or []
+            secondary_keyword_strings = secondary.get('relatedKeywordStrings', []) or []
+            
+            if not isinstance(primary_keyword_strings, list):
+                primary_keyword_strings = []
+            if not isinstance(secondary_keyword_strings, list):
+                secondary_keyword_strings = []
+                
+            merged_keyword_strings = list(set(primary_keyword_strings + secondary_keyword_strings))
+            
+            # 4. Update the primary image with merged data
+            db.execute("""
+                UPDATE image_entries 
+                SET descriptions = ?, relatedKeywordIds = ?, relatedKeywordStrings = ?
+                WHERE image_id = ?
+            """, (
+                json.dumps(merged_desc),
+                json.dumps(merged_keywords),
+                json.dumps(merged_keyword_strings),
+                primary_id
+            ))
+            
+            # 5. Update all references in text_entries that point to the secondary image
+            # First find all text entries with images field containing the secondary_id
+            cursor = db.execute("""
+                SELECT entry_id, images 
+                FROM text_entries 
+                WHERE images LIKE ?
+            """, (f'%{secondary_id}%',))
+            
+            for row in cursor.fetchall():
+                entry_id = row['entry_id']
+                images_json = row['images']
+                
+                try:
+                    if images_json:
+                        images = json.loads(images_json)
+                        if isinstance(images, list) and secondary_id in images:
+                            # Replace secondary_id with primary_id if not already present
+                            if primary_id not in images:
+                                images = [img_id if img_id != secondary_id else primary_id for img_id in images]
+                                db.execute("UPDATE text_entries SET images = ? WHERE entry_id = ?",
+                                         (json.dumps(images), entry_id))
+                            else:
+                                # Remove the secondary_id since primary_id is already there
+                                images = [img_id for img_id in images if img_id != secondary_id]
+                                db.execute("UPDATE text_entries SET images = ? WHERE entry_id = ?",
+                                         (json.dumps(images), entry_id))
+                except:
+                    # Skip if there's a parsing error
+                    pass
+            
+            # 6. Delete the secondary image
+            db.execute("DELETE FROM image_entries WHERE image_id = ?", (secondary_id,))
+            
+            # 7. Remove the embedding from vec_image_features
+            db.execute("DELETE FROM vec_image_features WHERE image_id = ?", (secondary_id,))
+            
+            # Commit the changes
+            db.commit()
+            
+            # Mark as processed
+            processed_image_pairs.add(pair_key)
+            
+            print(f"DEBUG: Successfully merged image {secondary_id} into {primary_id}")
+            
+            return jsonify({
+                'success': True,
+                'action': 'merge',
+                'message': f'Successfully merged image {secondary_id} into {primary_id}',
+                'primary_id': primary_id,
+                'secondary_id': secondary_id
+            })
+            
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown action: {action}'
+            }), 400
+            
+    except Exception as e:
+        print(f"ERROR in process_duplicate_image: {str(e)}")
+        traceback.print_exc()
+        try:
+            db.rollback()
+        except:
+            pass
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/reset_duplicate_images', methods=['POST'])
+def reset_duplicate_images():
+    """Reset the state of duplicate image processing"""
+    try:
+        global duplicate_images_pairs, processed_image_pairs, not_duplicate_image_pairs
+        
+        # Only reset the not_duplicate_pairs if specifically requested
+        data = request.get_json() or {}
+        if data.get('reset_not_duplicates', False):
+            not_duplicate_image_pairs = set()
+        
+        # Always reset the current session state
+        duplicate_images_pairs = []
+        processed_image_pairs = set()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Duplicate image processing state has been reset'
+        })
+        
+    except Exception as e:
+        print(f"ERROR in reset_duplicate_images: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
