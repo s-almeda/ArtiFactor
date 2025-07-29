@@ -226,10 +226,10 @@ def generate_base_map_data(db, n, method, random, dprint, n_neighbors=500, min_d
     image_ids = [row['image_id'] for row in images]
     if method == 'resnet':
         dprint(f"Querying pre-computed ResNet50 embeddings for {len(image_ids)} images...")
-        precomputed_embeddings = query_resnet_embeddings(db, image_ids)
+        precomputed_embeddings = hf.query_resnet_embeddings(db, image_ids)
     else:
         dprint(f"Querying pre-computed CLIP embeddings for {len(image_ids)} images...")
-        precomputed_embeddings = query_clip_embeddings(db, image_ids)
+        precomputed_embeddings = hf.query_clip_embeddings(db, image_ids)
     dprint(f"Found {len(precomputed_embeddings)} pre-computed embeddings")
     
     # 3. Process all entries (get artist info for all)
@@ -501,72 +501,6 @@ def generate_hierarchical_voronoi_diagram(image_points, k, dprint, kmeans_iter=5
             'algorithm': 'hierarchical k-means + Voronoi (failed)'
         }
 
-def query_resnet_embeddings(db, image_ids):
-    """
-    Query pre-computed ResNet50 embeddings for given image IDs.
-    Returns dict mapping image_id -> embedding array.
-    """
-    if not image_ids:
-        return {}
-
-    placeholders = ','.join(['?' for _ in image_ids])
-    query = f"""
-        SELECT image_id, embedding 
-        FROM vec_image_features 
-        WHERE image_id IN ({placeholders})
-    """
-
-    cursor = db.execute(query, image_ids)
-    results = cursor.fetchall()
-
-    embeddings = {}
-    for row in results:
-        embedding_data = row['embedding']
-        if isinstance(embedding_data, bytes):
-            embedding = np.frombuffer(embedding_data, dtype=np.float32)
-        elif isinstance(embedding_data, str):
-            embedding = np.array(json.loads(embedding_data))
-        else:
-            embedding = np.array(embedding_data)
-        embeddings[row['image_id']] = embedding
-
-    return embeddings
-
-def query_clip_embeddings(db, image_ids):
-    """
-    Query pre-computed CLIP embeddings for given image IDs.
-    Returns dict mapping image_id -> embedding array.
-    """
-    if not image_ids:
-        return {}
-    
-    placeholders = ','.join(['?' for _ in image_ids])
-    query = f"""
-        SELECT image_id, embedding 
-        FROM vec_clip_features 
-        WHERE image_id IN ({placeholders})
-    """
-    
-    cursor = db.execute(query, image_ids)
-    results = cursor.fetchall()
-    
-    embeddings = {}
-    for row in results:
-        # Handle binary embedding data from SQLite vector extension
-        embedding_data = row['embedding']
-        if isinstance(embedding_data, bytes):
-            # Convert binary data to numpy array
-            embedding = np.frombuffer(embedding_data, dtype=np.float32)
-        elif isinstance(embedding_data, str):
-            # Fallback for JSON string format
-            embedding = np.array(json.loads(embedding_data))
-        else:
-            # Direct array/list
-            embedding = np.array(embedding_data)
-        
-        embeddings[row['image_id']] = embedding
-    
-    return embeddings
 
 def fetch_images(db, n, random=False):
     """Get n, optionally random, images that have descriptions."""

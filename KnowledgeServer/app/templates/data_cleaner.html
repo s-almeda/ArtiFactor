@@ -245,38 +245,163 @@
 
         <!-- Duplicate Images Section -->
         <div class="cleaner-section">
-            <h3>🔍 Look for Duplicate Images</h3>
-            <p>Find artworks by the same artist with very similar names that might be duplicates</p>
+            <h3>🔍 Duplicate Image Detection</h3>
+            <p>Find images with nearly identical visual features using vector similarity</p>
             
             <div class="action-buttons">
-                <button type="button" class="btn" onclick="checkDuplicateImages()" id="duplicates-check-btn">
-                    🔍 Check for Duplicate Images
+                <button type="button" class="btn" onclick="checkDuplicateImagesByVector()" id="dup-images-check-btn">
+                    🔍 Find Near-Duplicate Images
                 </button>
-                <div class="loading" id="duplicates-check-loading">Searching for duplicate artworks...</div>
+                <div class="loading" id="dup-images-check-loading" style="display: none;">Finding similar images by vector comparison...</div>
             </div>
 
-            <!-- Duplicates Results Section -->
-            <div id="duplicates-results" style="display: none;">
+            <!-- Duplicate Images Processing Interface -->
+            <div id="dup-images-processing" style="display: none;">
                 <div class="results-header">
-                    <h4 id="duplicates-results-title"></h4>
-                    <div id="duplicates-results-summary"></div>
+                    <h4 id="dup-images-results-title"></h4>
+                    <div id="dup-images-results-summary"></div>
+                    <div id="dup-images-progress" class="progress-indicator"></div>
                 </div>
 
-                <!-- Duplicates Fix Button -->
-                <div id="duplicates-fix-section" style="display: none;">
-                    <button type="button" class="btn btn-warning" onclick="processDuplicates()" id="duplicates-fix-btn">
-                        🔧 Process Selected Duplicates
+                <!-- Current Pair Display -->
+                <div id="current-image-pair-container" class="duplicate-items two-items">
+                    <!-- Left Image -->
+                    <div id="left-image" class="duplicate-item">
+                        <div class="item-checkbox">
+                            <input type="radio" name="keep-image" id="keep-left-image" value="left" checked>
+                            <label for="keep-left-image">Keep this image</label>
+                        </div>
+                        <div class="item-image">
+                            <img id="left-image-preview" src="" alt="Image preview" onerror="this.classList.add('image-error'); this.src=''; this.alt='Image not available'">
+                        </div>
+                        <div class="item-details">
+                            <p><strong>ID:</strong> <span id="left-image-id"></span></p>
+                            <p><strong>Title:</strong> <span id="left-image-title"></span></p>
+                            <p><strong>Artist:</strong> <span id="left-image-artist"></span></p>
+                            <p><strong>Similarity:</strong> <span id="similarity-score"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Right Image -->
+                    <div id="right-image" class="duplicate-item">
+                        <div class="item-checkbox">
+                            <input type="radio" name="keep-image" id="keep-right-image" value="right">
+                            <label for="keep-right-image">Keep this image</label>
+                        </div>
+                        <div class="item-image">
+                            <img id="right-image-preview" src="" alt="Image preview" onerror="this.classList.add('image-error'); this.src=''; this.alt='Image not available'">
+                        </div>
+                        <div class="item-details">
+                            <p><strong>ID:</strong> <span id="right-image-id"></span></p>
+                            <p><strong>Title:</strong> <span id="right-image-title"></span></p>
+                            <p><strong>Artist:</strong> <span id="right-image-artist"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision Buttons -->
+                <div class="decision-buttons" style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="btn btn-success" onclick="processDuplicateImage('merge')" id="dup-images-merge-btn">
+                        ✓ Merge Images
                     </button>
-                    <div class="loading" id="duplicates-fix-loading">Processing duplicate artworks...</div>
-                    <p class="warning-text">⚠️ This will merge selected duplicate artworks, combining their data and removing redundant entries.</p>
+                    <button type="button" class="btn btn-secondary" onclick="processDuplicateImage('not_duplicate')" id="dup-images-skip-btn">
+                        ✗ Not Duplicates
+                    </button>
+                    <div class="loading" id="dup-images-process-loading" style="display: none;">Processing...</div>
                 </div>
-
-                <!-- Duplicates List -->
-                <div id="duplicates-list"></div>
             </div>
 
-            <!-- Duplicates Success Message -->
-            <div id="duplicates-success" class="success-message" style="display: none;"></div>
+            <!-- Finished Message -->
+            <div id="dup-images-finished" class="success-message" style="display: none;"></div>
+            
+            <!-- Reset Button (only shown after completion) -->
+            <div id="dup-images-reset-section" style="display: none; margin-top: 20px; text-align: center;">
+                <button type="button" class="btn" onclick="resetDuplicateImages(false)" id="dup-images-reset-btn">
+                    🔄 Reset & Check Again
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetDuplicateImages(true)" id="dup-images-reset-all-btn">
+                    🔄 Reset Including "Not Duplicates"
+                </button>
+            </div>
+        </div>
+
+        <!-- Duplicate Artists Section -->
+        <div class="cleaner-section">
+            <h3>👯 Duplicate Artist Detection</h3>
+            <p>Find artists with identical names and merge them intelligently</p>
+            
+            <div class="action-buttons">
+                <button type="button" class="btn" onclick="checkDuplicateArtists()" id="dup-artists-check-btn">
+                    🔍 Check for Duplicate Artists
+                </button>
+                <div class="loading" id="dup-artists-check-loading" style="display: none;">Searching for duplicate artists...</div>
+            </div>
+
+            <!-- Duplicate Artists Processing Interface -->
+            <div id="dup-artists-processing" style="display: none;">
+                <div class="results-header">
+                    <h4 id="dup-artists-results-title"></h4>
+                    <div id="dup-artists-results-summary"></div>
+                    <div id="dup-artists-progress" class="progress-indicator"></div>
+                </div>
+
+                <!-- Current Pair Display -->
+                <div id="current-pair-container" class="duplicate-items two-items">
+                    <!-- Left Artist -->
+                    <div id="left-artist" class="duplicate-item">
+                        <div class="item-checkbox">
+                            <input type="radio" name="keep-artist" id="keep-left" value="left" checked>
+                            <label for="keep-left">Keep this artist</label>
+                        </div>
+                        <div class="item-details">
+                            <p><strong>ID:</strong> <span id="left-id"></span></p>
+                            <p><strong>Name:</strong> <span id="left-name"></span></p>
+                            <p><strong>Images:</strong> <span id="left-images-count"></span></p>
+                            <p><strong>Referenced by:</strong> <span id="left-references"></span> artworks</p>
+                            <p><strong>Related Keywords:</strong> <span id="left-keywords"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Right Artist -->
+                    <div id="right-artist" class="duplicate-item">
+                        <div class="item-checkbox">
+                            <input type="radio" name="keep-artist" id="keep-right" value="right">
+                            <label for="keep-right">Keep this artist</label>
+                        </div>
+                        <div class="item-details">
+                            <p><strong>ID:</strong> <span id="right-id"></span></p>
+                            <p><strong>Name:</strong> <span id="right-name"></span></p>
+                            <p><strong>Images:</strong> <span id="right-images-count"></span></p>
+                            <p><strong>Referenced by:</strong> <span id="right-references"></span> artworks</p>
+                            <p><strong>Related Keywords:</strong> <span id="right-keywords"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision Buttons -->
+                <div class="decision-buttons" style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="btn btn-success" onclick="processDuplicateArtist('merge')" id="dup-artists-merge-btn">
+                        ✓ Merge Artists
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="processDuplicateArtist('not_duplicate')" id="dup-artists-skip-btn">
+                        ✗ Not Duplicates
+                    </button>
+                    <div class="loading" id="dup-artists-process-loading" style="display: none;">Processing...</div>
+                </div>
+            </div>
+
+            <!-- Finished Message -->
+            <div id="dup-artists-finished" class="success-message" style="display: none;"></div>
+            
+            <!-- Reset Button (only shown after completion) -->
+            <div id="dup-artists-reset-section" style="display: none; margin-top: 20px; text-align: center;">
+                <button type="button" class="btn btn-secondary" onclick="resetDuplicateArtists(false)" id="dup-artists-reset-btn">
+                    🔄 Check Again
+                </button>
+                <button type="button" class="btn btn-warning" onclick="resetDuplicateArtists(true)" id="dup-artists-reset-all-btn">
+                    🔄 Reset All (Including Not-Duplicates)
+                </button>
+            </div>
         </div>
 
         <!-- Future Cleaning Options -->
@@ -1750,19 +1875,164 @@
             });
         }
 
-        let currentDuplicates = [];
-
-        function checkDuplicateImages() {
-            console.log("DEBUG: Starting duplicate images check...");
-            const checkBtn = document.getElementById('duplicates-check-btn');
-            const loading = document.getElementById('duplicates-check-loading');
-            const resultsDiv = document.getElementById('duplicates-results');
+        // Duplicate Images Management by Vector Similarity
+        let currentImagePair = null;
+        
+        function checkDuplicateImagesByVector() {
+            console.log("DEBUG: Starting duplicate images check by vector similarity...");
+            const checkBtn = document.getElementById('dup-images-check-btn');
+            const loading = document.getElementById('dup-images-check-loading');
+            const processingDiv = document.getElementById('dup-images-processing');
+            const finishedDiv = document.getElementById('dup-images-finished');
+            const resetSection = document.getElementById('dup-images-reset-section');
             
             checkBtn.disabled = true;
             loading.style.display = 'block';
-            resultsDiv.style.display = 'none';
+            processingDiv.style.display = 'none';
+            finishedDiv.style.display = 'none';
+            resetSection.style.display = 'none';
             
-            fetch('/check_duplicate_images', {
+            fetch('/check_duplicate_images_by_vector', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("DEBUG: Received duplicate images data:", data);
+                if (data.success) {
+                    if (data.total_pairs > 0) {
+                        // We have pairs to process
+                        const resultsTitle = document.getElementById('dup-images-results-title');
+                        const resultsSummary = document.getElementById('dup-images-results-summary');
+                        
+                        resultsTitle.textContent = `🔍 Found ${data.total_pairs} Potential Duplicate Images`;
+                        resultsSummary.innerHTML = `
+                            <p>Review each pair of images and decide whether to merge them or mark them as not duplicates.</p>
+                        `;
+                        
+                        // Start processing pairs
+                        getNextImagePair();
+                    } else {
+                        // No duplicates found
+                        finishedDiv.innerHTML = `<p>✓ No duplicate images found with the current similarity threshold!</p>`;
+                        finishedDiv.style.display = 'block';
+                        resetSection.style.display = 'block';
+                    }
+                } else {
+                    alert('Error checking for duplicate images: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to check for duplicate images');
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+                checkBtn.disabled = false;
+            });
+        }
+        
+        function getNextImagePair() {
+            const processingDiv = document.getElementById('dup-images-processing');
+            const finishedDiv = document.getElementById('dup-images-finished');
+            const resetSection = document.getElementById('dup-images-reset-section');
+            
+            fetch('/get_next_duplicate_image_pair')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.finished) {
+                        // We've processed all pairs
+                        processingDiv.style.display = 'none';
+                        finishedDiv.innerHTML = `
+                            <p>✓ Finished processing all duplicate image pairs!</p>
+                            <p>Total pairs: ${data.total}<br>
+                               Processed: ${data.processed}<br>
+                               Marked as not duplicates: ${data.not_duplicates}</p>
+                        `;
+                        finishedDiv.style.display = 'block';
+                        resetSection.style.display = 'block';
+                    } else {
+                        // Show the next pair
+                        currentImagePair = data.pair;
+                        displayImagePair(data.pair, data);
+                        processingDiv.style.display = 'block';
+                    }
+                } else {
+                    alert('Error getting next image pair: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to get next image pair');
+            });
+        }
+        
+        function displayImagePair(pair, stats) {
+            console.log("DEBUG: Displaying image pair:", pair);
+            
+            // Set IDs
+            document.getElementById('left-image-id').textContent = pair.id1;
+            document.getElementById('right-image-id').textContent = pair.id2;
+            
+            // Set titles
+            document.getElementById('left-image-title').textContent = pair.image1.value || 'Untitled';
+            document.getElementById('right-image-title').textContent = pair.image2.value || 'Untitled';
+            
+            // Set artists - use the pair's artist_name if available
+            const artistName = pair.artist_name || pair.image1.artist_name || 'Unknown';
+            document.getElementById('left-image-artist').textContent = artistName;
+            document.getElementById('right-image-artist').textContent = artistName;
+            
+            // Set similarity score
+            document.getElementById('similarity-score').textContent = `${(pair.similarity * 100).toFixed(2)}%`;
+            
+            // Set image previews
+            const leftPreview = document.getElementById('left-image-preview');
+            const rightPreview = document.getElementById('right-image-preview');
+            
+            leftPreview.src = pair.image1.best_image_url || '';
+            rightPreview.src = pair.image2.best_image_url || '';
+            
+            // Reset radio buttons - prefer the one with more data
+            const preferLeft = !!(pair.image1.value || pair.image1.descriptions);
+            const preferRight = !!(pair.image2.value || pair.image2.descriptions);
+            
+            if (preferLeft && !preferRight) {
+                document.getElementById('keep-left-image').checked = true;
+            } else if (preferRight && !preferLeft) {
+                document.getElementById('keep-right-image').checked = true;
+            } else {
+                // If both have data or neither has data, default to left
+                document.getElementById('keep-left-image').checked = true;
+            }
+            
+            // Update progress indicator
+            const progress = document.getElementById('dup-images-progress');
+            progress.textContent = `Pair ${stats.processed + 1} of ${stats.total} (${stats.remaining} remaining)`;
+        }
+
+                // Duplicate Artists Management
+        let currentArtistPair = null;
+        
+        function checkDuplicateArtists() {
+            console.log("DEBUG: Starting duplicate artists check...");
+            const checkBtn = document.getElementById('dup-artists-check-btn');
+            const loading = document.getElementById('dup-artists-check-loading');
+            const processingDiv = document.getElementById('dup-artists-processing');
+            const finishedDiv = document.getElementById('dup-artists-finished');
+            const resetSection = document.getElementById('dup-artists-reset-section');
+            
+            checkBtn.disabled = true;
+            loading.style.display = 'block';
+            processingDiv.style.display = 'none';
+            finishedDiv.style.display = 'none';
+            resetSection.style.display = 'none';
+            
+            fetch('/check_duplicate_artists', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1773,853 +2043,279 @@
                 return response.json();
             })
             .then(data => {
-                console.log("DEBUG: Received duplicate images data:", data);
+                console.log("DEBUG: Received duplicate artists data:", data);
                 if (data.success) {
-                    currentDuplicates = data.duplicate_groups || [];
-                    displayDuplicatesResults(data);
+                    if (data.total_pairs > 0) {
+                        // We have pairs to process
+                        const resultsTitle = document.getElementById('dup-artists-results-title');
+                        const resultsSummary = document.getElementById('dup-artists-results-summary');
+                        
+                        resultsTitle.textContent = `🔍 Found ${data.total_pairs} Potential Duplicate Artists`;
+                        resultsSummary.innerHTML = `
+                            <p>Review each pair of artists and decide whether to merge them or mark them as not duplicates.</p>
+                        `;
+                        
+                        // Start processing pairs
+                        getNextArtistPair();
+                    } else {
+                        // No duplicates found
+                        finishedDiv.innerHTML = `<p>✓ No duplicate artists found in the database!</p>`;
+                        finishedDiv.style.display = 'block';
+                        resetSection.style.display = 'block';
+                    }
                 } else {
-                    alert('Error checking for duplicates: ' + data.error);
+                    alert('Error checking for duplicate artists: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('DEBUG: Error in checkDuplicateImages:', error);
-                alert('Failed to check for duplicate images');
+                console.error('Error:', error);
+                alert('Failed to check for duplicate artists');
             })
             .finally(() => {
-                checkBtn.disabled = false;
                 loading.style.display = 'none';
+                checkBtn.disabled = false;
             });
         }
-
-        function displayDuplicatesResults(data) {
-            console.log("DEBUG: Displaying duplicates results:", data);
-            const resultsDiv = document.getElementById('duplicates-results');
-            const titleEl = document.getElementById('duplicates-results-title');
-            const summaryEl = document.getElementById('duplicates-results-summary');
-            const fixSection = document.getElementById('duplicates-fix-section');
-            const duplicatesList = document.getElementById('duplicates-list');
+        
+        function getNextArtistPair() {
+            const processingDiv = document.getElementById('dup-artists-processing');
+            const finishedDiv = document.getElementById('dup-artists-finished');
+            const resetSection = document.getElementById('dup-artists-reset-section');
             
-            if (data.total_duplicate_groups === 0) {
-                titleEl.textContent = '✅ No Duplicate Images Found';
-                summaryEl.innerHTML = '<div class="success">No potential duplicate artworks found!</div>';
-                fixSection.style.display = 'none';
-                duplicatesList.innerHTML = '';
-            } else {
-                titleEl.textContent = `⚠️ Found ${data.total_duplicate_groups} Groups of Potential Duplicates`;
-                
-                let totalItems = 0;
-                data.duplicate_groups.forEach(group => {
-                    totalItems += group.items.length;
-                });                    summaryEl.innerHTML = `
-                        <div class="warning">
-                            <strong>${data.total_duplicate_groups}</strong> groups of similar artworks found<br>
-                            <strong>${totalItems}</strong> total artworks involved<br>
-                            <small>Select items you want to merge. Unselected groups will be marked as "not duplicates" to avoid future review.</small>
-                        </div>
-                    `;
-                fixSection.style.display = 'block';
-                
-                // Display duplicate groups
-                let duplicatesHtml = '<div class="duplicates-groups-list">';
-                data.duplicate_groups.forEach((group, groupIndex) => {
-                    const itemCount = group.items.length;
-                    const itemsClass = itemCount === 2 ? 'duplicate-items two-items' : 'duplicate-items';
-                    
-                    duplicatesHtml += `
-                        <div class="duplicate-group">
-                            <div class="group-header">
-                                <h4>Group ${groupIndex + 1}: "${group.normalized_title}" by ${group.artist_name}</h4>
-                                <div class="group-actions">
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllInGroup(${groupIndex})">Select All</button>
-                                    <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllInGroup(${groupIndex})">Deselect All</button>
-                                </div>
-                            </div>
-                            <div class="${itemsClass}">
-                    `;
-                    
-                    group.items.forEach((item, itemIndex) => {
-                        const itemId = `group-${groupIndex}-item-${itemIndex}`;
-                        
-                        duplicatesHtml += `
-                            <div class="duplicate-item" id="${itemId}">
-                                <div class="item-checkbox">
-                                    <input type="checkbox" id="checkbox-${itemId}" onchange="toggleDuplicateItem('${itemId}')">
-                                    <label for="checkbox-${itemId}"></label>
-                                </div>
-                                <div class="item-image">
-                                    ${item.best_image_url ? 
-                                        `<img src="${item.best_image_url}" alt="${item.value}" onclick="showLargeImage('${item.best_image_url}', '${item.value.replace(/'/g, '\\\'')}')" onerror="this.parentElement.innerHTML='<div class=\\'image-error\\'>Image failed to load</div>'" />` : 
-                                        '<div class="image-placeholder">No image available</div>'
-                                    }
-                                </div>
-                                <div class="item-details">
-                                    <strong>Title:</strong> ${item.value}<br>
-                                    <strong>ID:</strong> ${item.image_id}<br>
-                                    <strong>Artist Names:</strong> ${item.artist_names || 'N/A'}<br>
-                                    <strong>Image URL Keys:</strong> ${item.image_url_keys || 'N/A'}<br>
-                                    <strong>Rights:</strong> ${item.rights || 'N/A'}<br>
-                                    <strong>Descriptions:</strong> <div class="field-content">${item.descriptions || 'N/A'}</div>
-                                    <strong>Related Keyword Strings:</strong> ${item.relatedKeywordStrings || 'N/A'}
-                                </div>
-                            </div>
+            fetch('/get_next_duplicate_artist_pair')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.finished) {
+                        // We've processed all pairs
+                        processingDiv.style.display = 'none';
+                        finishedDiv.innerHTML = `
+                            <p>✓ Finished processing all duplicate artist pairs!</p>
+                            <p>Total pairs: ${data.total}<br>
+                               Processed: ${data.processed}<br>
+                               Marked as not duplicates: ${data.not_duplicates}</p>
                         `;
-                    });
-                    
-                    duplicatesHtml += `
-                            </div>
-                        </div>
-                    `;
-                });
-                duplicatesHtml += '</div>';
-                duplicatesList.innerHTML = duplicatesHtml;
-            }
-            
-            resultsDiv.style.display = 'block';
-        }
-
-        function toggleDuplicateItem(itemId) {
-            const itemDiv = document.getElementById(itemId);
-            const checkbox = document.getElementById(`checkbox-${itemId}`);
-            
-            if (checkbox.checked) {
-                itemDiv.classList.add('selected');
-            } else {
-                itemDiv.classList.remove('selected');
-            }
-        }
-
-        function selectAllInGroup(groupIndex) {
-            const groupItems = document.querySelectorAll(`[id^="group-${groupIndex}-item-"]`);
-            groupItems.forEach(item => {
-                const checkbox = item.querySelector('input[type="checkbox"]');
-                checkbox.checked = true;
-                item.classList.add('selected');
-            });
-        }
-
-        function deselectAllInGroup(groupIndex) {
-            const groupItems = document.querySelectorAll(`[id^="group-${groupIndex}-item-"]`);
-            groupItems.forEach(item => {
-                const checkbox = item.querySelector('input[type="checkbox"]');
-                checkbox.checked = false;
-                item.classList.remove('selected');
-            });
-        }
-
-        function processDuplicates() {
-            console.log("DEBUG: Starting process duplicates...");
-            
-            // Collect selected items
-            const selectedItems = [];
-            currentDuplicates.forEach((group, groupIndex) => {
-                const groupSelections = [];
-                group.items.forEach((item, itemIndex) => {
-                    const itemId = `group-${groupIndex}-item-${itemIndex}`;
-                    const checkbox = document.getElementById(`checkbox-${itemId}`);
-                    if (checkbox && checkbox.checked) {
-                        groupSelections.push(item);
+                        finishedDiv.style.display = 'block';
+                        resetSection.style.display = 'block';
+                    } else {
+                        // Show the next pair
+                        currentArtistPair = data.pair;
+                        displayArtistPair(data.pair, data);
+                        processingDiv.style.display = 'block';
                     }
-                });
-                
-                if (groupSelections.length > 1) {
-                    selectedItems.push({
-                        group_index: groupIndex,
-                        normalized_title: group.normalized_title,
-                        artist_name: group.artist_name,
-                        items: groupSelections
-                    });
+                } else {
+                    alert('Error getting next artist pair: ' + data.error);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to get next artist pair');
             });
+        }
+        
+        function displayArtistPair(pair, stats) {
+            console.log("DEBUG: Displaying artist pair:", pair);
             
-            if (selectedItems.length === 0) {
-                alert('No duplicate groups selected for processing');
-                return;
+            // Set IDs
+            document.getElementById('left-id').textContent = pair.id1;
+            document.getElementById('right-id').textContent = pair.id2;
+            
+            // Set names
+            document.getElementById('left-name').textContent = pair.artist1.value;
+            document.getElementById('right-name').textContent = pair.artist2.value;
+            
+            // Set image counts
+            document.getElementById('left-images-count').textContent = pair.artist1.image_count || 0;
+            document.getElementById('right-images-count').textContent = pair.artist2.image_count || 0;
+            
+            // Set references
+            document.getElementById('left-references').textContent = pair.artist1.artwork_references || 0;
+            document.getElementById('right-references').textContent = pair.artist2.artwork_references || 0;
+            
+            // Set keywords
+            const leftKeywords = pair.artist1.relatedKeywordStrings || [];
+            const rightKeywords = pair.artist2.relatedKeywordStrings || [];
+            
+            document.getElementById('left-keywords').textContent = 
+                Array.isArray(leftKeywords) ? leftKeywords.join(', ') : 'None';
+            document.getElementById('right-keywords').textContent = 
+                Array.isArray(rightKeywords) ? rightKeywords.join(', ') : 'None';
+            
+            // Reset radio buttons - prefer the one with more data
+            const leftValue = (pair.artist1.image_count || 0) + (pair.artist1.artwork_references || 0);
+            const rightValue = (pair.artist2.image_count || 0) + (pair.artist2.artwork_references || 0);
+            
+            if (leftValue >= rightValue) {
+                document.getElementById('keep-left').checked = true;
+            } else {
+                document.getElementById('keep-right').checked = true;
             }
             
-            let totalArtworks = 0;
-            selectedItems.forEach(group => {
-                totalArtworks += group.items.length;
-            });
+            // Update progress indicator
+            const progress = document.getElementById('dup-artists-progress');
+            progress.textContent = `Pair ${stats.processed + 1} of ${stats.total} (${stats.remaining} remaining)`;
+        }
+        
+        function processDuplicateArtist(action) {
+            if (!currentArtistPair) return;
             
-            if (!confirm(`Are you sure you want to process ${selectedItems.length} groups containing ${totalArtworks} artworks? This will merge duplicates and cannot be undone.`)) {
-                return;
-            }
+            const mergeBtn = document.getElementById('dup-artists-merge-btn');
+            const skipBtn = document.getElementById('dup-artists-skip-btn');
+            const loading = document.getElementById('dup-artists-process-loading');
             
-            const fixBtn = document.getElementById('duplicates-fix-btn');
-            const loading = document.getElementById('duplicates-fix-loading');
-            const successDiv = document.getElementById('duplicates-success');
-            
-            fixBtn.disabled = true;
+            mergeBtn.disabled = true;
+            skipBtn.disabled = true;
             loading.style.display = 'block';
-            successDiv.style.display = 'none';
             
-            fetch('/process_duplicate_images', {
+            // Determine which ID to keep if merging
+            let keepId = null;
+            if (action === 'merge') {
+                if (document.getElementById('keep-left').checked) {
+                    keepId = currentArtistPair.id1;
+                } else {
+                    keepId = currentArtistPair.id2;
+                }
+            }
+            
+            fetch('/process_duplicate_artist', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    selected_groups: selectedItems,
-                    all_groups: currentDuplicates  // Pass all groups so backend can record unselected pairs as "not duplicates"
+                    id1: currentArtistPair.id1,
+                    id2: currentArtistPair.id2,
+                    action: action,
+                    keep_id: keepId
                 })
             })
-            .then(response => {
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log("DEBUG: Process duplicates response:", data);
                 if (data.success) {
-                    let message = `✅ Successfully processed ${data.processed_groups || 0} groups!<br>
-                        Merged ${data.total_artworks_processed || 0} artworks into ${data.final_artworks_count || 0} unique entries.`;
-                    
-                    if (data.not_duplicate_pairs_recorded && data.not_duplicate_pairs_recorded > 0) {
-                        message += `<br>📝 Recorded ${data.not_duplicate_pairs_recorded} pairs as "not duplicates" to avoid future review.`;
-                    }
-                    
-                    successDiv.innerHTML = `<div class="success">${message}</div>`;
-                    successDiv.style.display = 'block';
-                    
-                    // Hide the fix section and clear current data
-                    document.getElementById('duplicates-fix-section').style.display = 'none';
-                    currentDuplicates = [];
-                    
-                    setTimeout(() => {
-                        document.getElementById('duplicates-results').style.display = 'none';
-                        loadDatabaseStats(); // Refresh stats
-                    }, 3000);
+                    console.log(`DEBUG: Successfully ${action === 'merge' ? 'merged' : 'marked as not duplicate'} artists`);
+                    // Get next pair
+                    getNextArtistPair();
                 } else {
-                    console.error("DEBUG: Error in process duplicates response:", data.error);
-                    alert('Error processing duplicates: ' + data.error);
+                    alert('Error processing artist pair: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('DEBUG: Fetch error in process duplicates:', error);
-                alert('Failed to process duplicates');
+                console.error('Error:', error);
+                alert('Failed to process artist pair');
             })
             .finally(() => {
-                fixBtn.disabled = false;
                 loading.style.display = 'none';
+                mergeBtn.disabled = false;
+                skipBtn.disabled = false;
             });
         }
-
-        function showLargeImage(imageUrl, title) {
-            // Create modal overlay if it doesn't exist
-            let modal = document.getElementById('image-modal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'image-modal';
-                modal.className = 'image-modal';
-                modal.innerHTML = `
-                    <div class="image-modal-content">
-                        <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
-                        <img id="modal-image" src="" alt="">
-                        <div class="image-modal-title"></div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-            }
-            
-            // Set image and title
-            document.getElementById('modal-image').src = imageUrl;
-            document.getElementById('modal-image').alt = title;
-            document.querySelector('.image-modal-title').textContent = title;
-            
-            // Show modal
-            modal.style.display = 'flex';
+        
+        function resetDuplicateArtists(includeNotDuplicates) {
+            fetch('/reset_duplicate_artists', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reset_not_duplicates: includeNotDuplicates
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Start a new check
+                    checkDuplicateArtists();
+                } else {
+                    alert('Error resetting: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to reset duplicate artists');
+            });
         }
-
-        function closeImageModal() {
-            const modal = document.getElementById('image-modal');
-            if (modal) {
-                modal.style.display = 'none';
+            
+        
+        function processDuplicateImage(action) {
+            if (!currentImagePair) return;
+            
+            const mergeBtn = document.getElementById('dup-images-merge-btn');
+            const skipBtn = document.getElementById('dup-images-skip-btn');
+            const loading = document.getElementById('dup-images-process-loading');
+            
+            mergeBtn.disabled = true;
+            skipBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            // Determine which ID to keep if merging
+            let keepId = null;
+            if (action === 'merge') {
+                if (document.getElementById('keep-left-image').checked) {
+                    keepId = currentImagePair.id1;
+                } else {
+                    keepId = currentImagePair.id2;
+                }
             }
+            
+            fetch('/process_duplicate_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id1: currentImagePair.id1,
+                    id2: currentImagePair.id2,
+                    action: action,
+                    keep_id: keepId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`DEBUG: Successfully ${action === 'merge' ? 'merged' : 'marked as not duplicate'} images`);
+                    // Get next pair
+                    getNextImagePair();
+                } else {
+                    alert('Error processing image pair: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to process image pair');
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+                mergeBtn.disabled = false;
+                skipBtn.disabled = false;
+            });
         }
-
-        // Close modal when clicking outside the image
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('image-modal');
-            if (modal && event.target === modal) {
-                closeImageModal();
-            }
-        });
-            
-            
+        
+        function resetDuplicateImages(includeNotDuplicates) {
+            fetch('/reset_duplicate_images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reset_not_duplicates: includeNotDuplicates
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Start a new check
+                    checkDuplicateImagesByVector();
+                } else {
+                    alert('Error resetting: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to reset duplicate images');
+            });
+        }
     </script>
 
-    <style>
-        .modal {
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        
-        .data-cleaner-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .cleaner-section {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .cleaner-section h3 {
-            margin-top: 0;
-            color: #343a40;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }
-        
-        .stats-grid {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-            text-align: center;
-            flex: 1;
-        }
-        
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
-        
-        .action-buttons {
-            margin: 15px 0;
-        }
-        
-        .btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
-        }
-        
-        .btn:hover:not(:disabled) {
-            background: #0056b3;
-        }
-        
-        .btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 10px;
-        }
-        
-        .btn-secondary:hover:not(:disabled) {
-            background: #545b62;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-        }
-        
-        .btn-danger:hover:not(:disabled) {
-            background: #c82333;
-        }
-        
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        .btn-warning:hover:not(:disabled) {
-            background: #e0a800;
-        }
-        
-        .loading {
-            display: none;
-            color: #6c757d;
-            font-style: italic;
-            margin: 10px 0;
-        }
-        
-        .results-header {
-            margin-bottom: 20px;
-        }
-        
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .faulty-entries {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-        
-        .faulty-entry {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            background: white;
-        }
-        
-        .faulty-entry:last-child {
-            border-bottom: none;
-        }
-        
-        .entry-header {
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .entry-details {
-            font-size: 14px;
-            color: #495057;
-        }
-        
-        .invalid-id {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            margin: 0 2px;
-        }
-        
-        .json-error {
-            background: #fff3cd;
-            color: #856404;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        
-        .warning-text {
-            font-size: 12px;
-            color: #856404;
-            margin-top: 5px;
-        }
-        
-        .success-message {
-            margin-top: 15px;
-        }
-        
-        .placeholder-buttons .btn {
-            opacity: 0.6;
-        }
-        
-        .malformed-entries {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-        
-        .malformed-entry {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            background: white;
-        }
-        
-        .malformed-entry:last-child {
-            border-bottom: none;
-        }
-        
-        .malformed-entry.fixable {
-            border-left: 4px solid #28a745;
-        }
-        
-        .malformed-entry.unfixable {
-            border-left: 4px solid #dc3545;
-        }
-        
-        .status-fixable {
-            color: #28a745;
-            font-weight: 600;
-        }
-        
-        .status-unfixable {
-            color: #dc3545;
-            font-weight: 600;
-        }
-        
-        .current-text {
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 12px;
-            word-break: break-all;
-        }
-        
-        .conversion-preview {
-            margin-top: 8px;
-            padding: 8px;
-            background: #e8f5e8;
-            border-radius: 4px;
-            border-left: 3px solid #28a745;
-        }
-        
-        .conversion-preview code {
-            background: #fff;
-            padding: 2px 4px;
-            border-radius: 2px;
-            font-size: 11px;
-        }
 
-
-        .keyword-issues-list {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-
-        .keyword-issue-entry {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            background: white;
-        }
-
-        .keyword-issue-entry:last-child {
-            border-bottom: none;
-        }
-
-        .issue-types {
-            color: #dc3545;
-            font-weight: 600;
-        }
-
-        .strings-comparison {
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .current-strings, .correct-strings {
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        .current-strings {
-            border-left: 3px solid #dc3545;
-        }
-
-        .correct-strings {
-            border-left: 3px solid #28a745;
-        }
-
-        .keyword-issue-entry .invalid-id {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-            margin: 0 2px;
-        }
-        
-        /* New styles for artist search results */
-        .artists-with-matches, .artists-without-matches {
-            margin: 15px 0;
-        }
-        
-        .artist-match-entry, .artist-no-match-entry {
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .artist-match-entry {
-            background: #d4edda;
-            border-left: 4px solid #28a745;
-        }
-        
-        .artist-no-match-entry {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-        }
-        
-        .artist-match-entry ul {
-            margin: 5px 0 0 20px;
-        }
-        
-        .artist-match-entry li {
-            margin: 3px 0;
-        }
-        
-        .btn-info {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .btn-info:hover:not(:disabled) {
-            background: #138496;
-        }
-        
-        .info-text {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        /* Duplicate Images Styles */
-        .duplicates-groups-list {
-            margin: 20px 0;
-        }
-
-        .duplicate-group {
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            margin: 15px 0;
-            background: #fff;
-        }
-
-        .group-header {
-            background: #f8f9fa;
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .group-header h4 {
-            margin: 0;
-            flex-grow: 1;
-            color: #495057;
-        }
-
-        .group-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .duplicate-items {
-            padding: 10px;
-            display: grid;
-            gap: 15px;
-            grid-template-columns: 1fr;
-        }
-
-        /* Layout for 2 items side by side for easy comparison */
-        .duplicate-items.two-items {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        /* For browsers that support :has(), use automatic detection */
-        @supports selector(:has(*)) {
-            .duplicate-items:has(.duplicate-item:nth-child(2):last-child) {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .duplicate-items:has(.duplicate-item:nth-child(3)) {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .duplicate-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 12px;
-            margin: 8px 0;
-            border: 2px solid #dee2e6;
-            border-radius: 4px;
-            background: #f8f9fa;
-            transition: all 0.2s ease;
-        }
-
-        .duplicate-item.selected {
-            border-color: #dc3545;
-            background: #f8d7da;
-        }
-
-        .item-checkbox {
-            margin-right: 15px;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        .item-checkbox input[type="checkbox"] {
-            transform: scale(1.2);
-        }
-
-        .item-image {
-            width: 150px;
-            height: 150px;
-            margin-right: 15px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #e9ecef;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .item-image:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .item-image img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: transform 0.2s ease;
-        }
-
-        .item-image:hover img {
-            transform: scale(1.1);
-        }
-
-        .image-placeholder, .image-error {
-            color: #6c757d;
-            font-size: 12px;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .image-error {
-            color: #dc3545;
-        }
-
-        .item-details {
-            flex-grow: 1;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-
-        .item-details strong {
-            color: #495057;
-        }
-
-        .field-content {
-            max-height: 100px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            padding: 5px;
-            border: 1px solid #dee2e6;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 11px;
-            margin: 3px 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        /* Image Modal Styles */
-        .image-modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .image-modal-content {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .image-modal-close {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #aaa;
-            z-index: 2001;
-        }
-
-        .image-modal-close:hover {
-            color: #000;
-        }
-
-        .image-modal img {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-        }
-
-        .image-modal-title {
-            margin-top: 15px;
-            font-weight: bold;
-            color: #333;
-        }
-        
-            </style>
-    </body>
+</body>
 </html>
