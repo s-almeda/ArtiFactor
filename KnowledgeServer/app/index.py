@@ -5,6 +5,9 @@ from flask import Flask, jsonify, request, g, render_template
 # 
 import requests
 
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning, module='sklearn')
+
 
 # -- image conversion -- #
 import base64
@@ -104,7 +107,8 @@ app.register_blueprint(data_cleaner_bp)
 from templates.database_requests import database_requests_bp
 app.register_blueprint(database_requests_bp)
 
-
+from templates.map_api_v3 import map_api_v3_bp
+app.register_blueprint(map_api_v3_bp)
 
 @app.route("/")
 def browse_database():

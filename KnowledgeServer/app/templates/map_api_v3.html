@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map API v3 Check</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/map_api_v3.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Map API Check v3</h1>
+        
+        <div class="parameters-section">
+            <div class="section-title">Salient Keywords</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="numKeywords">Number of Keywords</label>
+                    <input type="number" id="numKeywords" value="50" min="1" max="200">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Embedding Weights</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="clipWeight">clip <span class="api-key-label">(CLIP visual)</span></label>
+                    <input type="number" id="clipWeight" value="0.3" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="resnetWeight">resnet <span class="api-key-label">(ResNet visual)</span></label>
+                    <input type="number" id="resnetWeight" value="0.5" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="keywordSemanticWeight">keyword_semantic <span class="api-key-label">(Text semantic)</span></label>
+                    <input type="number" id="keywordSemanticWeight" value="0.2" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="keywordBiasWeight">keyword_bias <span class="api-key-label">(Main keyword bias)</span></label>
+                    <input type="number" id="keywordBiasWeight" value="0.6" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="debugWeight">debug <span class="api-key-label">(Debug logging)</span></label>
+                    <input type="checkbox" id="debugWeight" checked>
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">UMAP Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="minDist">min_dist</label>
+                    <input type="number" id="minDist" value="0.9" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="useParallel">parallel <span class="api-key-label">(Fast but non-deterministic)</span></label>
+                    <input type="checkbox" id="useParallel" checked>
+                </div>
+                <div class="param-item">
+                    <label for="randomState">random_state <span class="api-key-label">(Only used if parallel unchecked)</span></label>
+                    <input type="number" id="randomState" value="42" placeholder="42">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Clustering Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="nClusters">Number of Clusters <span class="api-key-label">(leave empty for auto)</span></label>
+                    <input type="number" id="nClusters" placeholder="Auto" min="2" max="50">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Compression Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="thresholdPercentile">Threshold Percentile</label>
+                    <input type="number" id="thresholdPercentile" value="90" min="50" max="99">
+                </div>
+                <div class="param-item">
+                    <label for="compressionFactor">Compression Factor</label>
+                    <input type="number" id="compressionFactor" value="0.3" step="0.1" min="0.1" max="1">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="callHandleMapRequest()">Generate Map 🗺️</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <!-- Visualization container -->
+        <div id="visualizationContainer" class="visualization-container" style="display: none;">
+            <h2>Hierarchical Artwork Map</h2>
+            <canvas id="mapCanvas" width="1000" height="800"></canvas>
+            
+            <div class="tooltip" id="tooltip"></div>
+            <div class="legend" id="legend"></div>
+            
+            <h2>Cluster Details</h2>
+            <div id="clusterInfo" class="cluster-info"></div>
+            
+            <span class="toggle-details" onclick="toggleResponseDetails()">Show/Hide Raw Response</span>
+            <div id="responseDetails" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = null;
+        let selectedCluster = null;
+        let timerInterval = null;
+        let startTime = null;
+        
+        // Color palette for clusters
+        const colorPalette = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+            '#48C9B0', '#9B59B6', '#E74C3C', '#3498DB', '#1ABC9C',
+            '#F39C12', '#D35400', '#7F8C8D', '#2C3E50', '#16A085',
+            '#E67E22', '#8E44AD', '#27AE60', '#C0392B', '#2980B9'
+        ];
+        
+        function getColorForCluster(index) {
+            return colorPalette[index % colorPalette.length];
+        }
+        
+        async function callHandleMapRequest() {
+            const status = document.getElementById('status');
+            const visualizationContainer = document.getElementById('visualizationContainer');
+
+            // Build parameters
+            const params = {
+                debug: document.getElementById('debugWeight').checked,
+                numKeywords: parseInt(document.getElementById('numKeywords').value),
+                weights: {
+                    clip: parseFloat(document.getElementById('clipWeight').value),
+                    resnet: parseFloat(document.getElementById('resnetWeight').value),
+                    keyword_semantic: parseFloat(document.getElementById('keywordSemanticWeight').value),
+                    keyword_bias: parseFloat(document.getElementById('keywordBiasWeight').value),
+                    debug: document.getElementById('debugWeight').checked
+                },
+                umap: {
+                    min_dist: parseFloat(document.getElementById('minDist').value),
+                    parallel: document.getElementById('useParallel').checked
+                },
+                compression: {
+                    threshold_percentile: parseInt(document.getElementById('thresholdPercentile').value),
+                    compression_factor: parseFloat(document.getElementById('compressionFactor').value)
+                }
+            };
+
+            // Only add random_state if parallel is false
+            if (!params.umap.parallel) {
+                params.umap.random_state = parseInt(document.getElementById('randomState').value) || 42;
+            }
+
+            // Add n_clusters if specified
+            const nClustersInput = document.getElementById('nClusters').value;
+            if (nClustersInput && nClustersInput.trim() !== '') {
+                params.n_clusters = parseInt(nClustersInput);
+            }
+
+            // Start timer
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                status.textContent = `Processing request... (${elapsed}s elapsed)`;
+            }, 100);
+
+            status.textContent = 'Processing request...';
+            status.className = 'status loading';
+            status.style.display = 'block';
+            visualizationContainer.style.display = 'none';
+
+            try {
+                const res = await fetch('/handle_map_request_v3', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+
+                const data = await res.json();
+                
+                if (res.ok && data.clusters) {
+                    clearInterval(timerInterval);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    status.textContent = `Success! Generated map with ${data.clusters.length} clusters in ${elapsed}s`;
+                    status.className = 'status success';
+                    globalData = data;
+                    
+                    // Show visualization
+                    visualizationContainer.style.display = 'block';
+                    document.getElementById('responseDetails').textContent = JSON.stringify(data, null, 2);
+                    
+                    // Draw map and create UI
+                    drawHierarchicalMap(data);
+                    createLegend(data);
+                    showClusterInfo(data.clusters[0]); // Show first cluster by default
+                } else {
+                    clearInterval(timerInterval);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    status.textContent = `Error: ${data.error || 'Unknown error'} (${elapsed}s)`;
+                    status.className = 'status error';
+                    if (data.traceback) {
+                        console.error('Traceback:', data.traceback);
+                    }
+                }
+            } catch (error) {
+                clearInterval(timerInterval);
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                status.textContent = `Network error: ${error.message} (${elapsed}s)`;
+                status.className = 'status error';
+            }
+        }
+        
+        function drawHierarchicalMap(data) {
+            const canvas = document.getElementById('mapCanvas');
+            const ctx = canvas.getContext('2d');
+            const tooltip = document.getElementById('tooltip');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Voronoi cells first (background)
+            data.clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
+                
+                // Draw Voronoi cell
+                if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
+                    ctx.beginPath();
+                    const firstVertex = cluster.voronoi_vertices[0];
+                    ctx.moveTo(firstVertex[0] * canvas.width, firstVertex[1] * canvas.height);
+                    
+                    cluster.voronoi_vertices.forEach(vertex => {
+                        ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
+                    });
+                    ctx.closePath();
+                    
+                    // Fill with very transparent color
+                    ctx.fillStyle = color + '15';
+                    ctx.fill();
+                    
+                    // Stroke with semi-transparent color
+                    ctx.strokeStyle = color + '60';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw artworks within each cluster
+            data.clusters.forEach((cluster, clusterIndex) => {
+                const color = getColorForCluster(clusterIndex);
+                
+                cluster.artworks_map.forEach(artwork => {
+                    const x = artwork.coords.x * canvas.width;
+                    const y = artwork.coords.y * canvas.height;
+                    
+                    // Draw artwork point
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                });
+                
+                // Draw cluster centroid
+                const cx = cluster.centroid.x * canvas.width;
+                const cy = cluster.centroid.y * canvas.height;
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw cluster label
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(cluster.cluster_label, cx, cy - 12);
+            });
+            
+            // Mouse hover handler
+            canvas.onmousemove = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                let foundArtwork = null;
+                let foundCluster = null;
+                const threshold = 10;
+                
+                // Find nearest artwork
+                data.clusters.forEach(cluster => {
+                    cluster.artworks_map.forEach(artworkMap => {
+                        const x = artworkMap.coords.x * canvas.width;
+                        const y = artworkMap.coords.y * canvas.height;
+                        const distance = Math.sqrt(Math.pow(x - mouseX, 2) + Math.pow(y - mouseY, 2));
+                        
+                        if (distance < threshold) {
+                            foundArtwork = data.artworks[artworkMap.id];
+                            foundCluster = cluster;
+                        }
+                    });
+                });
+                
+                if (foundArtwork) {
+                    tooltip.innerHTML = `
+                        <div class="title">${foundArtwork.title}</div>
+                        <div class="artist">${foundArtwork.artist}</div>
+                        <div class="keyword">${foundCluster.cluster_label}</div>
+                        ${foundArtwork.year ? `<div class="year">${foundArtwork.year}</div>` : ''}
+                    `;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY - 10) + 'px';
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    tooltip.style.display = 'none';
+                    canvas.style.cursor = 'crosshair';
+                }
+            };
+            
+            canvas.onmouseleave = function() {
+                tooltip.style.display = 'none';
+            };
+            
+            // Click handler for cluster selection
+            canvas.onclick = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Find which cluster was clicked
+                data.clusters.forEach((cluster, index) => {
+                    const cx = cluster.centroid.x * canvas.width;
+                    const cy = cluster.centroid.y * canvas.height;
+                    const distance = Math.sqrt(Math.pow(cx - mouseX, 2) + Math.pow(cy - mouseY, 2));
+                    
+                    if (distance < 20) {
+                        selectedCluster = index;
+                        showClusterInfo(cluster);
+                        highlightCluster(data, index);
+                    }
+                });
+            };
+        }
+
+        function createLegend(data) {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '<h3>Clusters</h3>';
+            
+            data.clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background-color: ${color}"></div>
+                    <div class="legend-text">${cluster.cluster_label}</div>
+                    <div class="legend-count">${cluster.artworks_map.length} artworks</div>
+                `;
+                
+                // Click handler for highlighting
+                item.onclick = function() {
+                    selectedCluster = index;
+                    showClusterInfo(cluster);
+                    highlightCluster(data, index);
+                };
+                
+                legend.appendChild(item);
+            });
+        }
+        
+        function highlightCluster(data, clusterIndex) {
+            const canvas = document.getElementById('mapCanvas');
+            drawHierarchicalMap(data); // Redraw
+            
+            // Add highlight effect
+            const ctx = canvas.getContext('2d');
+            const cluster = data.clusters[clusterIndex];
+            const color = getColorForCluster(clusterIndex);
+            
+            // Highlight Voronoi cell
+            if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
+                ctx.beginPath();
+                const firstVertex = cluster.voronoi_vertices[0];
+                ctx.moveTo(firstVertex[0] * canvas.width, firstVertex[1] * canvas.height);
+                
+                cluster.voronoi_vertices.forEach(vertex => {
+                    ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
+                });
+                ctx.closePath();
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
+        }
+        
+        function showClusterInfo(cluster) {
+            const info = document.getElementById('clusterInfo');
+            const repArtwork = globalData.artworks[cluster.representative_artwork_id];
+            
+            info.innerHTML = `
+                <h3>${cluster.cluster_label}</h3>
+                <p><strong>Artworks:</strong> ${cluster.artworks_map.length}</p>
+                <p><strong>Representative:</strong> ${repArtwork.title} by ${repArtwork.artist}</p>
+                <div class="artwork-list">
+                    <h4>Sample Artworks:</h4>
+                    ${cluster.artworks_map.slice(0, 5).map(artworkMap => {
+                        const artwork = globalData.artworks[artworkMap.id];
+                        return `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>`;
+                    }).join('')}
+                    ${cluster.artworks_map.length > 5 ? `<div class="artwork-item">... and ${cluster.artworks_map.length - 5} more</div>` : ''}
+                </div>
+            `;
+        }
+        
+        function toggleResponseDetails() {
+            const details = document.getElementById('responseDetails');
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+    
+    <style>
+        .cluster-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .artwork-list {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .artwork-item {
+            padding: 2px 0;
+            color: #666;
+        }
+        
+        .legend-item {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .legend-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        #mapCanvas {
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</body>
+</html>

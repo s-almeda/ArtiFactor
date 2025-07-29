@@ -19,6 +19,7 @@ COPY app/bootstrap.sh .
 COPY app/gunicorn_config.py .
 COPY app/helperfunctions.py .
 COPY app/index.py .
+COPY app/voronoi_helper_functions.py .
 COPY app/templates/ templates/
 COPY app/static/ static/
 COPY app/config.py .
