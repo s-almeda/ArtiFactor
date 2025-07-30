@@ -84,7 +84,15 @@ def get_db():
         
     return g.db
 
+
+
+# Initialize jobs database on startup
+from jobs import init_jobs_db
+init_jobs_db()
+print("Initialized jobs database.")
+
 print("Done! Time to run the app...")
+
 
 app = Flask(__name__, static_folder='static')
 
@@ -927,6 +935,61 @@ def validate_admin_password():
         return jsonify({"success": True})
     else:
         return jsonify({"success": False})
+    
+
+# --- ADMIN CLEANUP ROUTE --- #
+import glob
+from jobs import cleanup_old_jobs
+
+@app.route('/cleanup', methods=['POST'])
+def cleanup_jobs_and_cache():
+    """
+    Admin endpoint to clean up old jobs and cache files.
+    Deletes jobs with status completed/failed older than N days (default 7), or all if days_old=0.
+    Removes all files in the generated_maps cache.
+    Returns a summary of what was deleted.
+    """
+    # Only allow if admin password is provided (optional, for safety)
+    data = request.get_json(silent=True) or {}
+    admin_password = os.environ.get('FINAL_SQL_ADMIN_PASSWORD')
+    if admin_password and data.get('password') != admin_password:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    # Get days_old parameter (default 7, 0 means all)
+    days_old = data.get('days_old', 7)
+    try:
+        days_old = int(days_old)
+    except Exception:
+        days_old = 7
+
+    # Clean up jobs
+    try:
+        cleanup_old_jobs(days_old=days_old)
+        jobs_cleaned = True
+        jobs_error = None
+    except Exception as e:
+        jobs_cleaned = False
+        jobs_error = str(e)
+
+    # Clean up cache files
+    cache_dir = os.path.join(BASE_DIR, 'generated_maps')
+    cache_files = glob.glob(os.path.join(cache_dir, '*.json'))
+    deleted_files = []
+    cache_error = None
+    for f in cache_files:
+        try:
+            os.remove(f)
+            deleted_files.append(os.path.basename(f))
+        except Exception as e:
+            cache_error = str(e)
+
+    return jsonify({
+        'success': jobs_cleaned and cache_error is None,
+        'jobs_cleaned': jobs_cleaned,
+        'jobs_error': jobs_error,
+        'cache_files_deleted': deleted_files,
+        'cache_error': cache_error
+    })
 
 @app.teardown_appcontext
 def close_db(error):

@@ -258,9 +258,8 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
    # Use get() instead of pop() to avoid modifying the weights dict
    debug = weights.get('debug', False)
    def dprint(*args, **kwargs):
-       if debug:
-           print(f"[get_keyword_biased_embedding {artwork_id}]", *args, **kwargs)
-
+         if debug:
+              print(*args, **kwargs)
    # Extract keyword bias parameter
    keyword_bias = weights.get('keyword_bias', 0.7)
    
@@ -272,8 +271,8 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
 
    total_weight = sum(active_weights.values())
    normalized_weights = {k: v/total_weight for k, v in active_weights.items()}
-   dprint(f"Normalized weights: {normalized_weights}")
-   dprint(f"Keyword bias: {keyword_bias} (main) / {1-keyword_bias} (others)")
+   # dprint(f"Normalized weights: {normalized_weights}")
+   # dprint(f"Keyword bias: {keyword_bias} (main) / {1-keyword_bias} (others)")
 
    # Store components
    embedding_components = []
@@ -287,7 +286,7 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
            if np.linalg.norm(clip_emb) > 0:
                clip_norm = clip_emb / np.linalg.norm(clip_emb)
                embedding_components.append(normalized_weights['clip'] * clip_norm)
-               dprint(f"CLIP shape: {clip_norm.shape}")
+               # dprint(f"CLIP shape: {clip_norm.shape}")
            else:
                dprint("CLIP embedding is zero vector")
                missing_required.append('clip')
@@ -303,7 +302,7 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
            if np.linalg.norm(resnet_emb) > 0:
                resnet_norm = resnet_emb / np.linalg.norm(resnet_emb)
                embedding_components.append(normalized_weights['resnet'] * resnet_norm)
-               dprint(f"ResNet shape: {resnet_norm.shape}")
+               # dprint(f"ResNet shape: {resnet_norm.shape}")
            else:
                dprint("ResNet embedding is zero vector")
                missing_required.append('resnet')
@@ -356,7 +355,7 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
                                                      (1 - keyword_bias) * other_norm)
                                keyword_semantic_emb = keyword_semantic_emb / np.linalg.norm(keyword_semantic_emb)
                                
-                               dprint(f"Blended {len(valid_other_embs)} other keywords with main keyword")
+                               # dprint(f"Blended {len(valid_other_embs)} other keywords with main keyword")
                            else:
                                dprint("No valid other keyword embeddings, using only main keyword")
                        else:
@@ -368,31 +367,31 @@ def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
                
                # Add the unified keyword semantic embedding
                embedding_components.append(normalized_weights['keyword_semantic'] * keyword_semantic_emb)
-               dprint(f"Keyword semantic shape: {keyword_semantic_emb.shape}")
+               # dprint(f"Keyword semantic shape: {keyword_semantic_emb.shape}")
 
    # Check if any required components are missing
    if missing_required:
-       dprint(f"Missing required components: {missing_required}, returning None")
+       # dprint(f"Missing required components: {missing_required}, returning None")
        return None
 
    # Concatenate all components
    if not embedding_components:
-       dprint("No embedding components found, returning None")
+       # dprint("No embedding components found, returning None")
        return None
 
    try:
        combined_embedding = np.concatenate(embedding_components)
    except Exception as e:
-       dprint(f"Error concatenating components: {e}")
+       # dprint(f"Error concatenating components: {e}")
        return None
 
    # Final normalization
    if np.linalg.norm(combined_embedding) == 0:
-       dprint("Combined embedding is zero vector, returning None")
+       # dprint("Combined embedding is zero vector, returning None")
        return None
    
    final_emb = combined_embedding / np.linalg.norm(combined_embedding)
-   dprint(f"Final embedding shape: {final_emb.shape}")
+   # dprint(f"Final embedding shape: {final_emb.shape}")
    return final_emb
 
 
@@ -429,11 +428,17 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
     
     debug = weights.get('debug', False)
 
+    # Summary counters
+    total_artworks = 0
+    total_keywords = len(salient_keywords)
+    multi_keyword_count = 0
+    single_keyword_count = 0
+
     # Process each salient keyword
     for keyword_idx, keyword in enumerate(salient_keywords):
         entry_id = keyword['entry_id']
         keyword_name = keyword['keyword']
-        
+
         # Use image_ids from keyword if available
         if 'image_ids' in keyword:
             artwork_ids_for_keyword = keyword['image_ids']
@@ -447,9 +452,10 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
             if not row or not row[0]:
                 continue
             artwork_ids_for_keyword = json.loads(row[0])
-        
-        if debug:
-            print(f"Processing keyword {keyword_idx+1}/{len(salient_keywords)}: {keyword_name} ({len(artwork_ids_for_keyword)} artworks)")
+
+        n_multi = 0
+        n_single = 0
+        processed = 0
 
         # Process each artwork
         for artwork_id in artwork_ids_for_keyword:
@@ -464,12 +470,36 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
                 artwork_ids.append(artwork_id)
                 embeddings_list.append(embedding)
                 keyword_map[artwork_id] = entry_id
+                processed += 1
+                # Count if artwork has multiple keywords (other than main)
+                cursor = db.execute("SELECT relatedKeywordIds FROM image_entries WHERE image_id = ?", (artwork_id,))
+                row = cursor.fetchone()
+                if row and row['relatedKeywordIds']:
+                    try:
+                        related_keyword_ids = json.loads(row['relatedKeywordIds'])
+                        if isinstance(related_keyword_ids, list) and len(related_keyword_ids) > 1:
+                            n_multi += 1
+                        else:
+                            n_single += 1
+                    except Exception:
+                        n_single += 1
+                else:
+                    n_single += 1
+
+        total_artworks += processed
+        multi_keyword_count += n_multi
+        single_keyword_count += n_single
+
+        if debug:
+            print(f"Keyword {keyword_idx+1}/{total_keywords} '{keyword_name}': {processed} artworks processed, {n_multi} with multiple keywords, {n_single} with only one keyword.")
 
     # Convert to numpy array
     embeddings_np = np.array(embeddings_list) if embeddings_list else np.array([])
-    
+
     if debug:
-        print(f"\nProcessed {len(artwork_ids)} artworks total")
+        print(f"\nProcessed {total_artworks} artworks total across {total_keywords} keywords.")
+        print(f"Artworks with multiple keywords: {multi_keyword_count}")
+        print(f"Artworks with only one keyword: {single_keyword_count}")
         if embeddings_np.size > 0:
             print(f"Final embeddings shape: {embeddings_np.shape}")
 
@@ -757,65 +787,89 @@ def generate_per_cluster_umap(clusters_raw, base_umap_params, voronoi_data, padd
     
     for cluster_id, cluster in clusters_raw.items():
         n_artworks = cluster['size']
-        
+        # 0-point cluster: skip
+        if n_artworks == 0:
+            continue
         # Single artwork case - place at Voronoi cell centroid
-        if n_artworks <= 1:
+        if n_artworks == 1:
             vertices = voronoi_data[cluster_id]['vertices']
             poly = Polygon(vertices)
             centroid = poly.centroid
             per_cluster_coords[cluster_id] = np.array([[centroid.x, centroid.y]])
             continue
-        
+        # For 2 or 3 artworks, distribute randomly around the centroid
+        if n_artworks <= 3:
+            vertices = voronoi_data[cluster_id]['vertices']
+            poly = Polygon(vertices)
+            centroid = poly.centroid
+            # Small random offsets within the polygon bounds
+            coords = []
+            for _ in range(n_artworks):
+                for __ in range(20):
+                    angle = np.random.uniform(0, 2 * np.pi)
+                    radius = np.random.uniform(0.01, 0.08) * poly.length  # scale by perimeter
+                    x = centroid.x + radius * np.cos(angle)
+                    y = centroid.y + radius * np.sin(angle)
+                    point = Point(x, y)
+                    if poly.contains(point):
+                        coords.append([x, y])
+                        break
+            else:
+                # fallback: use centroid
+                coords.append([centroid.x, centroid.y])
+            per_cluster_coords[cluster_id] = np.array(coords)
+            continue
         # Get polygon for this cluster
         vertices = voronoi_data[cluster_id]['vertices']
         poly = Polygon(vertices)
-        
         # Calculate dynamic n_neighbors for this cluster
         cluster_n_neighbors = hf.calculate_n_neighbors(
             n_artworks, 
             min_neighbors=3, 
             max_neighbors=15
         )
-        
         # Sample initial positions within the polygon
         init_positions = sample_points_in_polygon(poly, n_artworks)
-        
         # Apply global alignment to initialization
         global_coords_normalized = normalize_coords_to_polygon(
             cluster['coordinates'], vertices
         )
-        
         # Blend polygon sampling with global awareness
         alignment_strength = 0.4
         blended_init = (1 - alignment_strength) * init_positions + alignment_strength * global_coords_normalized
-        
-        # Create UMAP with polygon-aware initialization
-        cluster_umap = umap.UMAP(
-            n_neighbors=cluster_n_neighbors,
-            init=blended_init,
-            n_jobs=-1,
-            **{k: v for k, v in base_umap_params.items() if k != 'parallel'}
-        )
-        
-        # Run UMAP - it will optimize from the polygon-aware starting positions
-        raw_umap_coords = cluster_umap.fit_transform(cluster['embeddings'])
-        
-        # Apply global alignment to the UMAP output
-        aligned_coords = apply_global_alignment(
-            raw_umap_coords, 
-            cluster['coordinates'],  # global coords for this cluster
-            alignment_strength=0.3
-        )
-        
-        # Fit the aligned coordinates to the Voronoi polygon
-        fitted_coords = fit_coords_to_voronoi_cell(
-            aligned_coords, 
-            vertices, 
-            padding_factor=padding_factor
-        )
-        
-        per_cluster_coords[cluster_id] = fitted_coords
-    
+        # Only call fit_transform if n_artworks >= 2
+        if n_artworks > 3:
+            cluster_umap = umap.UMAP(
+                n_neighbors=cluster_n_neighbors,
+                init=blended_init,
+                n_jobs=-1,
+                **{k: v for k, v in base_umap_params.items() if k != 'parallel'}
+            )
+            try:
+                raw_umap_coords = cluster_umap.fit_transform(cluster['embeddings'])
+            except Exception as e:
+                import traceback
+                print(f"[generate_per_cluster_umap] UMAP fit_transform failed for cluster {cluster_id} (size={n_artworks}): {e}")
+                traceback.print_exc()
+                # Fallback: use blended_init if possible, else centroid
+                if 'blended_init' in locals() and blended_init.shape[0] == n_artworks:
+                    raw_umap_coords = blended_init
+                else:
+                    centroid = poly.centroid
+                    raw_umap_coords = np.array([[centroid.x, centroid.y] for _ in range(n_artworks)])
+            # Apply global alignment to the UMAP output
+            aligned_coords = apply_global_alignment(
+                raw_umap_coords, 
+                cluster['coordinates'],  # global coords for this cluster
+                alignment_strength=0.3
+            )
+            # Fit the aligned coordinates to the Voronoi polygon
+            fitted_coords = fit_coords_to_voronoi_cell(
+                aligned_coords, 
+                vertices, 
+                padding_factor=padding_factor
+            )
+            per_cluster_coords[cluster_id] = fitted_coords
     return per_cluster_coords
 
 

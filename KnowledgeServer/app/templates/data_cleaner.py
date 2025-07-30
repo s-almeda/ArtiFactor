@@ -16,7 +16,7 @@ def validate_admin_password():
         
         # Get the expected password from environment variable
         expected_password = os.environ.get('STAGING_ADMIN_PASSWORD', 'default_admin_pass')
-        
+        print(expected_password + " =?" + password)  # for debugging
         if password == expected_password:
             return jsonify({'success': True})
         else:

@@ -12,6 +12,37 @@ import json
 # Define the blueprint
 database_requests_bp = Blueprint('database_requests', __name__)
 
+@database_requests_bp.route('/artist_by_name/<artist_name>', methods=['GET'])
+def get_artist_by_name(artist_name):
+    """
+    Retrieve artist entries by name (exact match, sluggified).
+    
+    Args:
+        artist_name: Name of the artist (string)
+        
+    Returns:
+        JSON response with matching artist entries or an error message
+    """
+    try:
+        db = get_db()
+        slug = hf.slugify(artist_name,' ')
+        matches = hf.find_exact_matches(slug, db, artists_only=True, search_aliases=True)
+        if matches:
+            return jsonify({
+                'success': True,
+                'data': matches
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'No artist found with name {slug}'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @database_requests_bp.route('/text/<entry_id>', methods=['GET'])
 def get_text_entry(entry_id):
     """

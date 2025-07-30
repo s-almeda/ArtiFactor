@@ -11,6 +11,15 @@
         <h1>🎨 Map API Check v3</h1>
         
         <div class="parameters-section">
+        <div class="parameters-section">
+            <div class="section-title">Padding</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="paddingFactor">padding_factor <span class="api-key-label">(Cluster UMAP padding, 0.0-0.5 typical)</span></label>
+                    <input type="number" id="paddingFactor" value="0.1" step="0.01" min="0" max="0.5">
+                </div>
+            </div>
+        </div>
             <div class="section-title">Salient Keywords</div>
             <div class="param-group">
                 <div class="param-item">
@@ -88,9 +97,10 @@
             </div>
         </div>
 
-        <button onclick="callHandleMapRequest()">Generate Map 🗺️</button>
+        <button onclick="generateMap()" id="generateButton">Generate Map 🗺️</button>
         
         <div id="status" class="status" style="display: none;"></div>
+        <div id="timer" class="timer" style="display: none;"></div>
         
         <!-- Visualization container -->
         <div id="visualizationContainer" class="visualization-container" style="display: none;">
@@ -113,6 +123,7 @@
         let selectedCluster = null;
         let timerInterval = null;
         let startTime = null;
+        let currentJobId = null;
         
         // Color palette for clusters
         const colorPalette = [
@@ -125,10 +136,13 @@
         function getColorForCluster(index) {
             return colorPalette[index % colorPalette.length];
         }
-        
-        async function callHandleMapRequest() {
+
+        async function generateMap() {
+            console.log('generateMap() called');
             const status = document.getElementById('status');
+            const timer = document.getElementById('timer');
             const visualizationContainer = document.getElementById('visualizationContainer');
+            const generateButton = document.getElementById('generateButton');
 
             // Build parameters
             const params = {
@@ -148,7 +162,8 @@
                 compression: {
                     threshold_percentile: parseInt(document.getElementById('thresholdPercentile').value),
                     compression_factor: parseFloat(document.getElementById('compressionFactor').value)
-                }
+                },
+                padding_factor: parseFloat(document.getElementById('paddingFactor').value)
             };
 
             // Only add random_state if parallel is false
@@ -162,20 +177,20 @@
                 params.n_clusters = parseInt(nClustersInput);
             }
 
-            // Start timer
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                status.textContent = `Processing request... (${elapsed}s elapsed)`;
-            }, 100);
-
-            status.textContent = 'Processing request...';
-            status.className = 'status loading';
+            // Disable button and show status
+            generateButton.disabled = true;
+            generateButton.textContent = 'Processing...';
             status.style.display = 'block';
+            timer.style.display = 'block';
+            timer.textContent = '';
             visualizationContainer.style.display = 'none';
 
             try {
-                const res = await fetch('/handle_map_request_v3', {
+                // Submit job
+                status.textContent = 'Submitting job...';
+                status.className = 'status loading';
+                
+                const jobResponse = await fetch('/submit_map_job', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -183,40 +198,136 @@
                     body: JSON.stringify(params)
                 });
 
-                const data = await res.json();
+                const jobData = await jobResponse.json();
+                console.log('Job submission response:', jobData);
                 
-                if (res.ok && data.clusters) {
-                    clearInterval(timerInterval);
-                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                    status.textContent = `Success! Generated map with ${data.clusters.length} clusters in ${elapsed}s`;
-                    status.className = 'status success';
-                    globalData = data;
-                    
-                    // Show visualization
-                    visualizationContainer.style.display = 'block';
-                    document.getElementById('responseDetails').textContent = JSON.stringify(data, null, 2);
-                    
-                    // Draw map and create UI
-                    drawHierarchicalMap(data);
-                    createLegend(data);
-                    showClusterInfo(data.clusters[0]); // Show first cluster by default
-                } else {
-                    clearInterval(timerInterval);
-                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                    status.textContent = `Error: ${data.error || 'Unknown error'} (${elapsed}s)`;
-                    status.className = 'status error';
-                    if (data.traceback) {
-                        console.error('Traceback:', data.traceback);
-                    }
+
+                if (!jobResponse.ok) {
+                    console.error('Job submission failed:', jobData);
+                    throw new Error(jobData.error || 'Failed to submit job');
                 }
+
+                // Check if result was cached
+
+                if (jobData.result) {
+                    console.log('Loaded from cache:', jobData.result);
+                    status.textContent = 'Loaded from cache!';
+                    status.className = 'status success';
+                    showResults(jobData.result);
+                    return;
+                }
+
+                // Start polling for job status
+                currentJobId = jobData.job_id;
+                startTime = Date.now();
+                
+                // Start timer
+                timerInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    // Show ms with 1 decimal (e.g. 5.3s)
+                    const seconds = (elapsed / 1000).toFixed(3);
+                    timer.textContent = `${seconds}s elapsed`;
+                }, 50);
+
+                console.log('Polling job status for jobId:', currentJobId);
+                pollJobStatus(currentJobId);
+                
             } catch (error) {
-                clearInterval(timerInterval);
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                status.textContent = `Network error: ${error.message} (${elapsed}s)`;
+                resetUI();
+                status.textContent = `Error: ${error.message}`;
                 status.className = 'status error';
             }
         }
+
+        async function pollJobStatus(jobId) {
+            const status = document.getElementById('status');
+            const timer = document.getElementById('timer');
+            try {
+                console.log('Polling job status for jobId:', jobId);
+                const response = await fetch(`/job_status/${jobId}`);
+                const statusData = await response.json();
+                console.log('Job status response:', statusData);
+                
+                if (!response.ok) {
+                    console.error('Job status fetch failed:', statusData);
+                    throw new Error(statusData.error || 'Failed to get job status');
+                }
+
+                // Update status message (timer will add elapsed time)
+                status.textContent = statusData.message || 'Processing...';
+                
+                if (statusData.status === 'completed') {
+                    clearInterval(timerInterval);
+                    timer.textContent = '';
+                    timer.style.display = 'none';
+                    console.log('Job completed, fetching result for cache_key:', statusData.cache_key);
+                    // Get the result
+                    const resultResponse = await fetch(`/get_result/${statusData.cache_key}`);
+                    const result = await resultResponse.json();
+                    console.log('Result response:', result);
+                    if (resultResponse.ok) {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        status.textContent = `Completed in ${elapsed.toFixed(3)}s!`;
+                        status.className = 'status success';
+                        showResults(result);
+                    } else {
+                        console.error('Failed to get result:', result);
+                        throw new Error(result.error || 'Failed to get result');
+                    }
+                } else if (statusData.status === 'failed') {
+                    clearInterval(timerInterval);
+                    timer.textContent = '';
+                    timer.style.display = 'none';
+                    resetUI();
+                    status.textContent = `Job failed: ${statusData.error || 'Unknown error'}`;
+                    status.className = 'status error';
+                } else {
+                    // Still processing, poll again
+                    setTimeout(() => pollJobStatus(jobId), 2000);
+                }
+                
+            } catch (error) {
+                clearInterval(timerInterval);
+                resetUI();
+                console.error('Error in pollJobStatus:', error);
+                status.textContent = `Error checking status: ${error.message}`;
+                status.className = 'status error';
+            }
+        }
+
+        function showResults(data) {
+            resetUI();
+            globalData = data;
+            
+            // Show visualization
+            document.getElementById('visualizationContainer').style.display = 'block';
+            document.getElementById('responseDetails').textContent = JSON.stringify(data, null, 2);
+            
+            // Draw map and create UI
+            drawHierarchicalMap(data);
+            createLegend(data);
+            if (data.clusters && data.clusters.length > 0) {
+                showClusterInfo(data.clusters[0]); // Show first cluster by default
+            }
+        }
+
+        function resetUI() {
+            const generateButton = document.getElementById('generateButton');
+            const timer = document.getElementById('timer');
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Map 🗺️';
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timer.textContent = '';
+            timer.style.display = 'none';
+            currentJobId = null;
+        }
+
+
         
+
         function drawHierarchicalMap(data) {
             const canvas = document.getElementById('mapCanvas');
             const ctx = canvas.getContext('2d');
@@ -430,38 +541,5 @@
         }
     </script>
     
-    <style>
-        .cluster-info {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-        
-        .artwork-list {
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        
-        .artwork-item {
-            padding: 2px 0;
-            color: #666;
-        }
-        
-        .legend-item {
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 3px;
-        }
-        
-        .legend-item:hover {
-            background-color: #f0f0f0;
-        }
-        
-        #mapCanvas {
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-    </style>
 </body>
 </html>

@@ -677,24 +677,69 @@ def get_description_embeddings(db, entry_ids):
     return embeddings
 
 
+def slugify(name, separator='-'):
+    import re
+    """
+    Convert name to slug format (firstname-lastname or firstname lastname).
+    By default uses hyphens, but user can specify a different separator (e.g., space).
+    """
+    # Convert to lowercase
+    name = name.lower().strip()
+    
+    # Replace accented characters
+    accents = {
+        'à': 'a', 'á': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a', 'ā': 'a',
+        'è': 'e', 'é': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e',
+        'ì': 'i', 'í': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i',
+        'ò': 'o', 'ó': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o', 'ō': 'o',
+        'ù': 'u', 'ú': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u',
+        'ñ': 'n', 'ç': 'c', 'ś': 's', 'ź': 'z', 'ż': 'z',
+        'ą': 'a', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'š': 's', 'č': 'c', 'ř': 'r',
+        'ð': 'd', 'þ': 'th', 'ß': 'ss'
+    }
+    for accent, replacement in accents.items():
+        name = name.replace(accent, replacement)
+    
+    # Replace "%20" with space (will be replaced by separator below)
+    name = name.replace('%20', ' ')
+    # Replace all whitespace with single space
+    name = re.sub(r'\s+', ' ', name)
+    
+    # Remove any remaining non-alphanumeric characters except spaces
+    name = re.sub(r'[^a-z0-9 ]', '', name)
+    
+    # Replace spaces with the chosen separator
+    if separator != ' ':
+        name = name.replace(' ', separator)
+        # Remove multiple consecutive separators
+        name = re.sub(f'{re.escape(separator)}+', separator, name)
+        # Remove leading/trailing separators
+        name = name.strip(separator)
+    else:
+        # Remove leading/trailing spaces
+        name = name.strip()
+    
+    return name
 
-def find_exact_matches(query, conn, artists_only=False):
+def find_exact_matches(query, conn, artists_only=False, search_aliases=False):
     """
     Find exact matches for a query in the text database.
     Looks for matches in the 'value' column, ignoring case sensitivity.
-    
+    Optionally, also searches for matches in the 'artist_aliases' column.
+
     Args:
         query: search string
         conn: database connection
         artists_only: if True, only return results where isArtist = 1
-    
+        search_aliases: if True, also search for matches in artist_aliases
+
     Returns:
         list of matching rows as dictionaries
     """
-    #print(f"Finding matches for '{query}'...")
-    
     query_lower = query.lower()
-    
+    matches = []
+
+    # Search in 'value' column
     if artists_only:
         sql_query = """
             SELECT * FROM text_entries
@@ -705,17 +750,38 @@ def find_exact_matches(query, conn, artists_only=False):
             SELECT * FROM text_entries
             WHERE LOWER(value) = ?
         """
-    
     cursor = conn.execute(sql_query, (query_lower,))
     rows = cursor.fetchall()
-    
-    # Convert the results to a list of dictionaries
-    matches = [{key: row[key] for key in row.keys()} for row in rows]
-    
-    match_values = [match['value'] for match in matches]
-    #print(f"Found {match_values} for the query '{query}'")
-    
+    matches.extend([{key: row[key] for key in row.keys()} for row in rows])
+
+    # Optionally search in 'artist_aliases' column
+    if search_aliases:
+        alias_query = """
+            SELECT * FROM text_entries
+            WHERE artist_aliases IS NOT NULL AND artist_aliases != ''
+        """
+        if artists_only:
+            alias_query += " AND isArtist = 1"
+        cursor = conn.execute(alias_query)
+        for row in cursor.fetchall():
+            try:
+                aliases = json.loads(row["artist_aliases"])
+                for alias in aliases:
+                    # Check all possible alias fields for exact match
+                    for field in ["name", "sortable_name", "last", "first", "slug"]:
+                        if alias.get(field, "").lower() == query_lower:
+                            matches.append({key: row[key] for key in row.keys()})
+                            break
+                    else:
+                        continue
+                    break  # Stop after first match in this row
+            except Exception:
+                continue
+
     return matches
+
+
+
 # === Formatting / Preprocessing / data processing functions ===
 
 def preprocess_text(text, max_length=3):
@@ -873,3 +939,35 @@ def calculate_n_neighbors(n_samples, min_neighbors=5, max_neighbors=50):
     # sqrt(n) heuristic, but bounded
     n_neighbors = int(np.sqrt(n_samples))
     return max(min_neighbors, min(n_neighbors, max_neighbors))
+
+
+def generate_cache_key(data):
+    """
+    Generate a deterministic cache key from all parameters that affect the result
+    """
+    import hashlib
+    # Extract all parameters that affect the output
+    cache_params = {
+        'numKeywords': data.get('numKeywords', 100),
+        'weights': data.get('weights', {
+            'clip': 0.6,
+            'resnet': 0.0,
+            'keyword_semantic': 0.4,
+            'keyword_bias': 0.7
+        }),
+        'umap': {k: v for k, v in data.get('umap', {}).items() if k != 'debug'},  # Exclude debug
+        'compression': data.get('compression', {
+            'threshold_percentile': 90,
+            'compression_factor': 0.3
+        }),
+        'padding_factor': data.get('padding_factor', 0.1),
+        'n_clusters': data.get('n_clusters')  # Include even if None
+    }
+    
+    # Create deterministic string representation
+    cache_string = json.dumps(cache_params, sort_keys=True, separators=(',', ':'))
+    
+    # Generate hash
+    cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]  # First 12 chars
+    
+    return f"map_v3_{cache_hash}"
