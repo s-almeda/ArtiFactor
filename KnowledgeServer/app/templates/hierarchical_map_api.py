@@ -49,7 +49,7 @@ def hierarchical_check_page():
     return render_template('hierarchical_check.html')
 
 @hierarchical_map_api_bp.route('/generate_hierarchical_voronoi_map', methods=['GET'])
-@timeout(300)  # 5 minutes timeout for long-running map generation
+# @timeout(300)  # 5 minutes timeout for long-running map generation
 def handle_hierarchical_voronoi_map_request():
     """
     Handles a request for a hierarchical Voronoi diagram map.
@@ -226,10 +226,10 @@ def generate_base_map_data(db, n, method, random, dprint, n_neighbors=500, min_d
     image_ids = [row['image_id'] for row in images]
     if method == 'resnet':
         dprint(f"Querying pre-computed ResNet50 embeddings for {len(image_ids)} images...")
-        precomputed_embeddings = hf.query_resnet_embeddings(db, image_ids)
+        precomputed_embeddings = hf.get_resnet_embeddings(db, image_ids)
     else:
         dprint(f"Querying pre-computed CLIP embeddings for {len(image_ids)} images...")
-        precomputed_embeddings = hf.query_clip_embeddings(db, image_ids)
+        precomputed_embeddings = hf.get_clip_embeddings(db, image_ids)
     dprint(f"Found {len(precomputed_embeddings)} pre-computed embeddings")
     
     # 3. Process all entries (get artist info for all)
@@ -591,7 +591,7 @@ def format_voronoi_regions(voronoi_data):
 
 
 @hierarchical_map_api_bp.route('/merge_voronoi_regions', methods=['POST'])
-@timeout(180)  # 3 minutes timeout for merging operations
+# @timeout(180)  # 3 minutes timeout for merging operations
 def handle_voronoi_region_merge():
     """
     Merges optimal pairs of adjacent Voronoi regions into single regions.

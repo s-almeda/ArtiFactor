@@ -12,21 +12,29 @@ import json
 # Define the blueprint
 database_requests_bp = Blueprint('database_requests', __name__)
 
-@database_requests_bp.route('/artist_by_name/<artist_name>', methods=['GET'])
-def get_artist_by_name(artist_name):
+@database_requests_bp.route('/text_entry_by_name/<query>', methods=['GET'])
+def get_text_entry_by_name(query):
     """
-    Retrieve artist entries by name (exact match, sluggified).
-    
+    Retrieve text entries by keyword (exact match, sluggified).
+    Optionally restrict to artists and search aliases if artist_only=true is passed as a URL parameter.
+
     Args:
-        artist_name: Name of the artist (string)
-        
+        query: Keyword to search for (string)
+
+    URL Params:
+        artist_only: (optional, bool) If true, restrict search to artists and search aliases.
+
     Returns:
-        JSON response with matching artist entries or an error message
+        JSON response with matching entries or an error message
     """
     try:
         db = get_db()
-        slug = hf.slugify(artist_name,' ')
-        matches = hf.find_exact_matches(slug, db, artists_only=True, search_aliases=True)
+        artist_only = request.args.get('artist_only', 'false').lower() == 'true'
+        slug = hf.slugify(query, ' ')
+        if artist_only:
+            matches = hf.find_exact_matches(slug, db, artists_only=True, search_aliases=True)
+        else:
+            matches = hf.find_exact_matches(slug, db, artists_only=False, search_aliases=False)
         if matches:
             return jsonify({
                 'success': True,
@@ -35,7 +43,7 @@ def get_artist_by_name(artist_name):
         else:
             return jsonify({
                 'success': False,
-                'error': f'No artist found with name {slug}'
+                'error': f'No entry found with name {slug}'
             }), 404
     except Exception as e:
         return jsonify({
