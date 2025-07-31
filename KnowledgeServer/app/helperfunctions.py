@@ -26,6 +26,7 @@ from transformers import CLIPProcessor, CLIPModel
 
 # -- for using KMeans clustering -- #
 from sklearn.cluster import KMeans
+from scipy.spatial import procrustes
 
 
 # The database paths inside the container will always be:
@@ -152,46 +153,76 @@ def extract_text_features(text):
     return features_array
 
 # ==== Functions that act on embeddings ====
-
-def reduce_to_2d_umap(embeddings, n_neighbors=5, min_dist=0.5, random_state=42):
+def reduce_to_2d_umap(embeddings, n_neighbors=None, min_dist=0.5, random_state=None, n_jobs=-1, parallel=True, init=None):
     """
     Reduce high-dimensional embeddings to 2D coordinates using UMAP.
     
     Args:
         embeddings: numpy array of shape (n_samples, n_features)
-                   Can be CLIP (512D) or ResNet50 (2048D) embeddings
-        n_neighbors: int, number of neighbors for UMAP (default 8)
-        min_dist: float, minimum distance between points (default 0.1)
-        random_state: int, for reproducibility (default 42)
+        n_neighbors: int, number of neighbors (default: auto-calculated)
+        min_dist: float, minimum distance between points (default 0.5)
+        random_state: int, for reproducibility (default None for parallelism)
+        n_jobs: int, number of parallel jobs (-1 for all cores, default -1)
+        parallel: bool, whether to run in parallel (default True)
+        init: numpy array of shape (n_samples, 2) or str, initialization for embedding 
+              (default None uses UMAP's default 'spectral')
     
     Returns:
-        numpy array of shape (n_samples, 2) with x,y coordinates
+        numpy array of shape (n_samples, 2) with x,y coordinates normalized to [0, 1]
     """
-    # Adjust n_neighbors if we have too few samples
     n_samples = embeddings.shape[0]
-    n_neighbors = min(n_neighbors, n_samples - 1)
+    
+    # Auto-calculate n_neighbors if not provided
+    if n_neighbors is None:
+        n_neighbors = int(np.sqrt(n_samples))
+        n_neighbors = max(5, min(n_neighbors, 50))
+    else:
+        n_neighbors = min(n_neighbors, n_samples - 1)
+    
+    # Handle edge cases
+    if n_samples <= 2:
+        if n_samples == 1:
+            return np.array([[0.5, 0.5]])
+        else:
+            return np.array([[0.0, 0.5], [1.0, 0.5]])
+    
+    # If parallel is True, force random_state to None for parallelism (non-deterministic)
+    if parallel:
+        random_state = None
 
-    reducer = umap.UMAP(
-        n_components=2,
-        n_neighbors=n_neighbors,
-        min_dist=min_dist,
-        random_state=random_state
-    )
+    # If random_state is provided (and parallel is False), use it for reproducibility
+    if random_state is not None:
+        # Reproducible but single-threaded
+        reducer = umap.UMAP(
+            n_components=2,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            random_state=random_state,
+            init=init if init is not None else 'spectral'
+        )
+    else:
+        # Parallel but non-deterministic
+        reducer = umap.UMAP(
+            n_components=2,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            n_jobs=n_jobs,
+            init=init if init is not None else 'spectral'
+        )
     
     coordinates_2d = reducer.fit_transform(embeddings)
     
-    # Normalize to [0, 1] range for easier visualization
+    # Normalize to [0, 1] range
     min_coords = coordinates_2d.min(axis=0)
     max_coords = coordinates_2d.max(axis=0)
-    coordinates_2d_normalized = (coordinates_2d - min_coords) / (max_coords - min_coords)
+    coord_range = max_coords - min_coords
+    
+    if np.any(coord_range == 0):
+        coord_range[coord_range == 0] = 1.0
+    
+    coordinates_2d_normalized = (coordinates_2d - min_coords) / coord_range
     
     return coordinates_2d_normalized
-
-
-def compute_cosine_similarity(vec1, vec2):
-    """Compute cosine similarity between two vectors."""
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
 
 def apply_kmeans_clustering(coordinates_2d, k):
     """
@@ -212,6 +243,14 @@ def apply_kmeans_clustering(coordinates_2d, k):
     cluster_labels = kmeans.fit_predict(coordinates_2d)
     
     return cluster_labels
+
+
+
+def compute_cosine_similarity(vec1, vec2):
+    """Compute cosine similarity between two vectors."""
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+
 
 
 # ====== Functions for retrieving stuff from the database ======
@@ -638,24 +677,69 @@ def get_description_embeddings(db, entry_ids):
     return embeddings
 
 
+def slugify(name, separator='-'):
+    import re
+    """
+    Convert name to slug format (firstname-lastname or firstname lastname).
+    By default uses hyphens, but user can specify a different separator (e.g., space).
+    """
+    # Convert to lowercase
+    name = name.lower().strip()
+    
+    # Replace accented characters
+    accents = {
+        'à': 'a', 'á': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a', 'ā': 'a',
+        'è': 'e', 'é': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e',
+        'ì': 'i', 'í': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i',
+        'ò': 'o', 'ó': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o', 'ō': 'o',
+        'ù': 'u', 'ú': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u',
+        'ñ': 'n', 'ç': 'c', 'ś': 's', 'ź': 'z', 'ż': 'z',
+        'ą': 'a', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'š': 's', 'č': 'c', 'ř': 'r',
+        'ð': 'd', 'þ': 'th', 'ß': 'ss'
+    }
+    for accent, replacement in accents.items():
+        name = name.replace(accent, replacement)
+    
+    # Replace "%20" with space (will be replaced by separator below)
+    name = name.replace('%20', ' ')
+    # Replace all whitespace with single space
+    name = re.sub(r'\s+', ' ', name)
+    
+    # Remove any remaining non-alphanumeric characters except spaces
+    name = re.sub(r'[^a-z0-9 ]', '', name)
+    
+    # Replace spaces with the chosen separator
+    if separator != ' ':
+        name = name.replace(' ', separator)
+        # Remove multiple consecutive separators
+        name = re.sub(f'{re.escape(separator)}+', separator, name)
+        # Remove leading/trailing separators
+        name = name.strip(separator)
+    else:
+        # Remove leading/trailing spaces
+        name = name.strip()
+    
+    return name
 
-def find_exact_matches(query, conn, artists_only=False):
+def find_exact_matches(query, conn, artists_only=False, search_aliases=False):
     """
     Find exact matches for a query in the text database.
     Looks for matches in the 'value' column, ignoring case sensitivity.
-    
+    Optionally, also searches for matches in the 'artist_aliases' column.
+
     Args:
         query: search string
         conn: database connection
         artists_only: if True, only return results where isArtist = 1
-    
+        search_aliases: if True, also search for matches in artist_aliases
+
     Returns:
         list of matching rows as dictionaries
     """
-    #print(f"Finding matches for '{query}'...")
-    
     query_lower = query.lower()
-    
+    matches = []
+
+    # Search in 'value' column
     if artists_only:
         sql_query = """
             SELECT * FROM text_entries
@@ -666,17 +750,38 @@ def find_exact_matches(query, conn, artists_only=False):
             SELECT * FROM text_entries
             WHERE LOWER(value) = ?
         """
-    
     cursor = conn.execute(sql_query, (query_lower,))
     rows = cursor.fetchall()
-    
-    # Convert the results to a list of dictionaries
-    matches = [{key: row[key] for key in row.keys()} for row in rows]
-    
-    match_values = [match['value'] for match in matches]
-    #print(f"Found {match_values} for the query '{query}'")
-    
+    matches.extend([{key: row[key] for key in row.keys()} for row in rows])
+
+    # Optionally search in 'artist_aliases' column
+    if search_aliases:
+        alias_query = """
+            SELECT * FROM text_entries
+            WHERE artist_aliases IS NOT NULL AND artist_aliases != ''
+        """
+        if artists_only:
+            alias_query += " AND isArtist = 1"
+        cursor = conn.execute(alias_query)
+        for row in cursor.fetchall():
+            try:
+                aliases = json.loads(row["artist_aliases"])
+                for alias in aliases:
+                    # Check all possible alias fields for exact match
+                    for field in ["name", "sortable_name", "last", "first", "slug"]:
+                        if alias.get(field, "").lower() == query_lower:
+                            matches.append({key: row[key] for key in row.keys()})
+                            break
+                    else:
+                        continue
+                    break  # Stop after first match in this row
+            except Exception:
+                continue
+
     return matches
+
+
+
 # === Formatting / Preprocessing / data processing functions ===
 
 def preprocess_text(text, max_length=3):
@@ -790,3 +895,79 @@ def match_input_text_to_keywords(original_words, candidate_keywords, all_matches
             i += 1
 
     return final_results
+
+
+def soft_radial_compression(points, threshold_percentile=90, compression_factor=0.3):
+    # Find center
+    center = np.mean(points, axis=0)
+    
+    # Get distances from center
+    distances = np.linalg.norm(points - center, axis=1)
+    
+    # Set threshold at some percentile (e.g., 90th)
+    threshold = np.percentile(distances, threshold_percentile)
+    
+    # For points beyond threshold, compress the "excess" distance
+    compressed_points = points.copy()
+    for i, (point, dist) in enumerate(zip(points, distances)):
+        if dist > threshold:
+            excess = dist - threshold
+            compressed_excess = excess * compression_factor
+            new_dist = threshold + compressed_excess
+            
+            # Scale the point to the new distance
+            direction = (point - center) / dist
+            compressed_points[i] = center + direction * new_dist
+    
+    return compressed_points
+
+
+
+def calculate_n_neighbors(n_samples, min_neighbors=5, max_neighbors=50):
+    """
+    Calculate appropriate n_neighbors based on sample size.
+    Uses sqrt(n) as a heuristic, bounded by min and max values.
+    
+    Args:
+        n_samples: int, number of samples
+        min_neighbors: int, minimum n_neighbors (default 5)
+        max_neighbors: int, maximum n_neighbors (default 50)
+    
+    Returns:
+        int: calculated n_neighbors value
+    """
+    # sqrt(n) heuristic, but bounded
+    n_neighbors = int(np.sqrt(n_samples))
+    return max(min_neighbors, min(n_neighbors, max_neighbors))
+
+
+def generate_cache_key(data):
+    """
+    Generate a deterministic cache key from all parameters that affect the result
+    """
+    import hashlib
+    # Extract all parameters that affect the output
+    cache_params = {
+        'numKeywords': data.get('numKeywords', 100),
+        'weights': data.get('weights', {
+            'clip': 0.6,
+            'resnet': 0.0,
+            'keyword_semantic': 0.4,
+            'keyword_bias': 0.7
+        }),
+        'umap': {k: v for k, v in data.get('umap', {}).items() if k != 'debug'},  # Exclude debug
+        'compression': data.get('compression', {
+            'threshold_percentile': 90,
+            'compression_factor': 0.3
+        }),
+        'padding_factor': data.get('padding_factor', 0.1),
+        'n_clusters': data.get('n_clusters')  # Include even if None
+    }
+    
+    # Create deterministic string representation
+    cache_string = json.dumps(cache_params, sort_keys=True, separators=(',', ':'))
+    
+    # Generate hash
+    cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]  # First 12 chars
+    
+    return f"map_v3_{cache_hash}"

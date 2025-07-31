@@ -19,12 +19,19 @@ COPY app/bootstrap.sh .
 COPY app/gunicorn_config.py .
 COPY app/helperfunctions.py .
 COPY app/index.py .
+COPY app/voronoi_helper_functions.py .
 COPY app/templates/ templates/
 COPY app/static/ static/
 COPY app/config.py .
 
+# ADD THESE LINES FOR JOBS SYSTEM:
+COPY app/jobs/ jobs/
+
 # Ensure bootstrap.sh is executable
 RUN chmod +x bootstrap.sh
+
+# CREATE JOBS CACHE DIRECTORY
+RUN mkdir -p /app/jobs/cache
 
 # Expose port 8080 for Flask
 EXPOSE 8080
