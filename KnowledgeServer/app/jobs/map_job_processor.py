@@ -84,15 +84,21 @@ def process_map_job(job_id, request_params, update_job_status):
         # 1. Get keywords
         keywords_raw = vhf.get_salient_keywords(db, 0, 500, num_keywords)
         dprint(f"Retrieved {len(keywords_raw)} keywords")
-        update_job_status(job_id, 'processing', f'Found {len(keywords_raw)} keywords, generating embeddings...')
+        update_job_status(job_id, 'processing', f'Retrieving artworks and their embeddings for {len(keywords_raw)} different artists and categories...')
         # 2. Get embeddings
+
         embeddings_data = vhf.get_keyword_biased_embeddings(db, keywords_raw, weights=weights)
         embeddings_np = embeddings_data['embeddings']
         artwork_ids = embeddings_data['artworks']
         n_artworks = embeddings_np.shape[0]
         dprint(f"Embeddings shape: {embeddings_np.shape}")
-        update_job_status(job_id, 'processing', f'Generated embeddings for {n_artworks} artworks')
+        update_job_status(
+            job_id,
+            'processing',
+            f'Processing {embeddings_np.shape[1]}-dimensional embeddings for {n_artworks} artworks...'
+        )
         # 3. Global dimensionality reduction
+
         global_n_neighbors = hf.calculate_n_neighbors(n_artworks)
         dprint(f"Using n_neighbors={global_n_neighbors} for {n_artworks} artworks")
         uncompressed_coords = hf.reduce_to_2d_umap(
@@ -102,12 +108,12 @@ def process_map_job(job_id, request_params, update_job_status):
         )
         coordinates_2d = hf.soft_radial_compression(uncompressed_coords, **compression_params)
         dprint("2D coordinates computed")
-        update_job_status(job_id, 'processing', 'Clustering artworks...')
+        update_job_status(job_id, 'processing', f'Flattened {n_artworks} artworks into 2 dimensions! Now grouping similar artworks together...')
         # 4. Clustering
         n_clusters = data.get('n_clusters', keyword_based_cluster_count(len(keywords_raw), n_artworks))
         cluster_labels = hf.apply_kmeans_clustering(coordinates_2d, n_clusters)
         dprint(f"Clustering complete with {n_clusters} clusters")
-        update_job_status(job_id, 'processing', 'Building raw clusters...')
+        update_job_status(job_id, 'processing', 'Clusering complete! Creating map shapes...')
         # 5. Build raw cluster structure
         clusters_raw = vhf.build_raw_clusters(
             cluster_labels, 
@@ -117,11 +123,11 @@ def process_map_job(job_id, request_params, update_job_status):
             n_clusters
         )
         dprint(f"Created {len(clusters_raw)} non-empty clusters")
-        update_job_status(job_id, 'processing', 'Generating Voronoi cells...')
+        #update_job_status(job_id, 'processing', 'Generating Voronoi cells...')
         # 6. Generate Voronoi cells
         voronoi_data = vhf.generate_voronoi_cells(clusters_raw, coordinates_2d)
         dprint("Generated Voronoi cells")
-        update_job_status(job_id, 'processing', 'Generating per-cluster UMAP coordinates...')
+        update_job_status(job_id, 'processing', 'Recomputing the local positions of artworks within each neighborhood...')
         # 7. Generate per-cluster UMAP coordinates
         per_cluster_coords = vhf.generate_per_cluster_umap(
             clusters_raw, 
@@ -131,14 +137,18 @@ def process_map_job(job_id, request_params, update_job_status):
         )
         dprint("Generated per-cluster UMAP coordinates")
         # === HIERARCHICAL LEVELS ===
-        update_job_status(job_id, 'processing', 'Generating hierarchical levels (merging level 1 cells)...')
+        update_job_status(job_id, 'processing', 'Creating regions from neighborhoods...')
 
         level2_data, level3_data = vhf.generate_level2_level3(clusters_raw, voronoi_data, dprint) 
 
         dprint(f"Generated hierarchical levels - level2: {len(level2_data['clusters'])} clusters, level3: {len(level3_data['clusters'])} clusters")
-        
+        update_job_status(
+            job_id,
+            'processing',
+            f"Gathered {len(level2_data['clusters'])} regions into {len(level3_data['clusters'])} countries..."
+        )
         # === JSON FORMATTING ===
-        update_job_status(job_id, 'processing', 'Finishing touches...')
+
         # 8. Fetch artwork metadata only now
         artworks_metadata = vhf.fetch_artwork_metadata_batch(artwork_ids, db)
         dprint(f"Fetched metadata for {len(artworks_metadata)} artworks")
@@ -153,6 +163,7 @@ def process_map_job(job_id, request_params, update_job_status):
             level2_data,
             level3_data
         )
+        update_job_status(job_id, 'processing', 'Finishing touches...')
         # Before saving to cache, add these fields:
         response_data['cache_key'] = cache_key
         response_data['cached'] = False
