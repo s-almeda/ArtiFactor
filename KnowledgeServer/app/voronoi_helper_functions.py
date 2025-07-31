@@ -509,6 +509,184 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
         'keyword_map': keyword_map
     }
 
+def generate_level2_level3(clusters_raw, voronoi_data, dprint):
+    """
+    Generate level 2 and 3 by iteratively merging adjacent regions.
+    Works with dict format where cluster_id is the key.
+    """
+    # Start with copies of level 1 data
+    current_clusters = clusters_raw.copy()
+    current_voronoi = voronoi_data.copy()
+    merge_history = []
+    
+    # Keep merging until we have ≤4 regions
+    while len(current_clusters) > 4:
+        # Find adjacent pairs
+        adjacency_result = find_voronoi_adjacency_pairs(current_voronoi, dprint)
+        
+        if not adjacency_result['success'] or len(adjacency_result['adjacencyData']['optimalPairs']) == 0:
+            dprint("No more pairs to merge")
+            break
+        
+        # Get the optimal pairs
+        optimal_pairs = adjacency_result['adjacencyData']['optimalPairs']
+        
+        # Merge the pairs
+        merged_clusters, merged_voronoi = merge_paired_voronoi_regions(
+            current_clusters,
+            current_voronoi,
+            optimal_pairs,
+            dprint
+        )
+        
+        if len(merged_clusters) >= len(current_clusters):
+            dprint("No successful merges, stopping")
+            break
+            
+        current_clusters = merged_clusters
+        current_voronoi = merged_voronoi
+        
+        # Save state after adding representatives
+        current_clusters_copy = current_clusters.copy()
+        add_representative_artworks(current_clusters_copy)
+        merge_history.append({
+            'clusters': current_clusters_copy,
+            'voronoi': current_voronoi.copy()
+        })
+        
+        dprint(f"Merge iteration complete: {len(current_clusters)} clusters remaining")
+    
+    # Select level 2 and 3 from merge history
+    if len(merge_history) >= 2:
+        level2_idx = len(merge_history) // 2  # Halfway point
+        level2_data = merge_history[level2_idx]
+        level3_data = merge_history[-1]  # Final merge
+    elif len(merge_history) == 1:
+        level2_data = merge_history[0]
+        level3_data = merge_history[0]
+    else:
+        # No successful merges - return copies with representatives added
+        level2_clusters = current_clusters.copy()
+        level3_clusters = current_clusters.copy()
+        add_representative_artworks(level2_clusters)
+        add_representative_artworks(level3_clusters)
+        level2_data = {
+            'clusters': level2_clusters,
+            'voronoi': current_voronoi
+        }
+        level3_data = {
+            'clusters': level3_clusters,
+            'voronoi': current_voronoi
+        }
+        dprint("No successful merges, using original data for all levels")
+    
+    return level2_data, level3_data
+
+
+def merge_paired_voronoi_regions(clusters_raw, voronoi_data, optimal_pairs, dprint):
+    """
+    Merge optimal pairs of adjacent regions into single regions.
+    Works with dict format where cluster_id is the key.
+    
+    Args:
+        clusters_raw: dict of cluster_id -> cluster data
+        voronoi_data: dict of cluster_id -> voronoi cell data
+        optimal_pairs: list of (cluster_id1, cluster_id2) tuples to merge
+        dprint: Debug print function
+    
+    Returns:
+        Merged clusters_raw and voronoi_data in the same dict format
+    """
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    import numpy as np
+    
+    merged_clusters = {}
+    merged_voronoi = {}
+    merged_ids = set()
+    
+    # Get next available ID
+    max_id = max(list(clusters_raw.keys()) + list(voronoi_data.keys()))
+    next_id = max_id + 1
+    
+    # Process optimal pairs
+    for region_a, region_b in optimal_pairs:
+        if region_a in merged_ids or region_b in merged_ids:
+            dprint(f"⚠ Skipping pair ({region_a}, {region_b}) - already merged")
+            continue
+        
+        if region_a not in clusters_raw or region_b not in clusters_raw:
+            dprint(f"⚠ Missing cluster data for pair ({region_a}, {region_b})")
+            continue
+            
+        if region_a not in voronoi_data or region_b not in voronoi_data:
+            dprint(f"⚠ Missing voronoi data for pair ({region_a}, {region_b})")
+            continue
+        
+        try:
+            # Create polygons from vertices
+            poly_a = Polygon(voronoi_data[region_a]['vertices'])
+            poly_b = Polygon(voronoi_data[region_b]['vertices'])
+            
+            # Check if they truly share a boundary
+            if not poly_a.touches(poly_b):
+                dprint(f"⚠ Regions {region_a} and {region_b} don't share a boundary, skipping")
+                continue
+            
+            # Merge the polygons
+            merged_polygon = unary_union([poly_a, poly_b])
+            
+            # Handle different geometry types
+            if merged_polygon.geom_type == 'Polygon':
+                merged_vertices = list(merged_polygon.exterior.coords[:-1])
+                merged_centroid = np.array([merged_polygon.centroid.x, merged_polygon.centroid.y])
+            elif merged_polygon.geom_type == 'MultiPolygon':
+                # Take the largest polygon
+                largest_poly = max(merged_polygon.geoms, key=lambda p: p.area)
+                merged_vertices = list(largest_poly.exterior.coords[:-1])
+                merged_centroid = np.array([largest_poly.centroid.x, largest_poly.centroid.y])
+                dprint(f"⚠ MultiPolygon result, using largest component")
+            else:
+                dprint(f"⚠ Unexpected geometry type: {merged_polygon.geom_type}, skipping")
+                continue
+            
+            # Merge cluster data
+            cluster_a = clusters_raw[region_a]
+            cluster_b = clusters_raw[region_b]
+            
+            merged_clusters[next_id] = {
+                'artwork_ids': cluster_a['artwork_ids'] + cluster_b['artwork_ids'],
+                'indices': np.concatenate([cluster_a['indices'], cluster_b['indices']]),
+                'centroid': merged_centroid,
+                'coordinates': np.vstack([cluster_a['coordinates'], cluster_b['coordinates']]),
+                'size': cluster_a['size'] + cluster_b['size'],
+                'child_clusters': [region_a, region_b]  # Track what was merged
+            }
+            
+            # Merge voronoi data
+            merged_voronoi[next_id] = {
+                'vertices': merged_vertices
+            }
+            
+            merged_ids.add(region_a)
+            merged_ids.add(region_b)
+            dprint(f"✓ Merged regions {region_a} and {region_b} into new region {next_id}")
+            next_id += 1
+            
+        except Exception as e:
+            dprint(f"⚠ Failed to merge regions {region_a} and {region_b}: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Add unmerged regions
+    for cluster_id in clusters_raw:
+        if cluster_id not in merged_ids:
+            merged_clusters[cluster_id] = clusters_raw[cluster_id].copy()
+            merged_voronoi[cluster_id] = voronoi_data[cluster_id].copy()
+    
+    dprint(f"Merge complete: {len(clusters_raw)} regions -> {len(merged_clusters)} regions")
+    
+    return merged_clusters, merged_voronoi
 
 def build_raw_clusters(cluster_labels, coordinates_2d, embeddings, artwork_ids, n_clusters):
     """
@@ -526,37 +704,171 @@ def build_raw_clusters(cluster_labels, coordinates_2d, embeddings, artwork_ids, 
     """
     clusters = {}
     
+
     for cluster_id in range(n_clusters):
         # Get mask for this cluster
         cluster_mask = cluster_labels == cluster_id
         cluster_indices = np.where(cluster_mask)[0]
-        
         if len(cluster_indices) == 0:  # Skip empty clusters
             continue
-        
         # Extract cluster-specific data
         cluster_coords_2d = coordinates_2d[cluster_mask]
         cluster_embeddings = embeddings[cluster_mask]
         cluster_artwork_ids = [artwork_ids[i] for i in cluster_indices]
-        
         # Find centroid in 2D space (for Voronoi)
         centroid_2d = np.mean(cluster_coords_2d, axis=0)
-        
-        # Find representative artwork index (closest to 2D centroid)
-        distances = np.linalg.norm(cluster_coords_2d - centroid_2d, axis=1)
-        rep_idx = np.argmin(distances)
-        representative_id = cluster_artwork_ids[rep_idx]
-        
         clusters[cluster_id] = {
             'artwork_ids': cluster_artwork_ids,
             'indices': cluster_indices,
             'centroid': centroid_2d,  # Keep as numpy array
-            'representative_id': representative_id,
+            # representative_ids will be added below
             'coordinates': cluster_coords_2d,
             'embeddings': cluster_embeddings,
             'size': len(cluster_indices)
         }
+    clusters = add_representative_artworks(clusters)
+    return clusters
+
+def find_voronoi_adjacency_pairs(voronoi_data, dprint):
+    """
+    Find and identify optimal pairs of adjacent Voronoi regions.
+    Works with dict format where cluster_id is the key.
     
+    Args:
+        voronoi_data: dict of cluster_id -> {'vertices': [...]}
+        dprint: Debug print function
+    
+    Returns:
+        Dict with adjacency analysis results
+    """
+    from shapely.geometry import Polygon
+    from shapely.strtree import STRtree
+    import numpy as np
+    
+    try:
+        cluster_ids = list(voronoi_data.keys())
+        k = len(cluster_ids)
+        
+        if k < 2:
+            return {
+                'success': False,
+                'error': 'Need at least 2 regions for adjacency analysis'
+            }
+        
+        dprint(f"Analyzing adjacency for {k} Voronoi regions...")
+        
+        # Step 1: Create Shapely polygons from Voronoi vertices
+        polygons = {}
+        for cluster_id in cluster_ids:
+            vertices = voronoi_data[cluster_id]['vertices']
+            if len(vertices) < 3:
+                dprint(f"⚠ Region {cluster_id} has insufficient vertices ({len(vertices)}), skipping")
+                continue
+            try:
+                polygon = Polygon(vertices)
+                if polygon.is_valid and not polygon.is_empty:
+                    polygons[cluster_id] = polygon
+                else:
+                    dprint(f"⚠ Polygon for region {cluster_id} is invalid or empty")
+            except Exception as e:
+                dprint(f"⚠ Failed to create polygon for region {cluster_id}: {e}")
+        
+        if len(polygons) < 2:
+            return {
+                'success': False,
+                'error': 'Need at least 2 valid polygons for adjacency analysis'
+            }
+        
+        # Step 2: Find adjacent pairs
+        boundary_lengths = {}
+        adjacent_pairs = []
+        
+        # Create spatial index for efficiency
+        polygon_list = list(polygons.values())
+        polygon_ids = list(polygons.keys())
+        spatial_index = STRtree(polygon_list)
+        
+        # Check each polygon for neighbors
+        for i, cluster_id in enumerate(polygon_ids):
+            poly = polygons[cluster_id]
+            
+            # Find potential neighbors
+            potential_neighbors_idx = spatial_index.query(poly.buffer(0.01))
+            
+            for idx in potential_neighbors_idx:
+                neighbor_id = polygon_ids[idx]
+                
+                # Skip self and already checked pairs
+                if neighbor_id <= cluster_id:
+                    continue
+                
+                neighbor_poly = polygons[neighbor_id]
+                
+                # Check if they touch
+                if poly.touches(neighbor_poly):
+                    # Calculate boundary length
+                    try:
+                        intersection = poly.intersection(neighbor_poly)
+                        if hasattr(intersection, 'length'):
+                            boundary_length = max(intersection.length, 0.01)
+                        else:
+                            boundary_length = 0.01
+                    except:
+                        boundary_length = 0.01
+                    
+                    adjacent_pairs.append((cluster_id, neighbor_id))
+                    boundary_lengths[(cluster_id, neighbor_id)] = boundary_length
+                    dprint(f"✓ Regions {cluster_id} and {neighbor_id} are adjacent (boundary: {boundary_length:.3f})")
+        
+        # Step 3: Create optimal pairs
+        optimal_pairs = create_optimal_pairs_compactness(
+            polygon_ids, boundary_lengths, polygons, dprint
+        )
+        
+        dprint(f"\nADJACENCY SUMMARY:")
+        dprint(f"- Total regions: {k}")
+        dprint(f"- Adjacent pairs: {len(adjacent_pairs)}")
+        dprint(f"- Optimal pairs for merging: {len(optimal_pairs)}")
+        
+        return {
+            'success': True,
+            'adjacencyData': {
+                'optimalPairs': optimal_pairs,
+                'boundaryLengths': boundary_lengths,
+                'adjacentPairs': adjacent_pairs
+            },
+            'basicStats': {
+                'totalRegions': k,
+                'totalAdjacencies': len(adjacent_pairs),
+                'optimalPairs': len(optimal_pairs)
+            }
+        }
+        
+    except Exception as e:
+        dprint(f"Error in adjacency analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def add_representative_artworks(clusters):
+    """
+    For each cluster in the clusters dict, find the top 3 representative artwork IDs (closest to centroid)
+    and add them as 'representative_ids' (list) in the cluster dict.
+    """
+    for _, cluster in clusters.items():
+        coords = cluster['coordinates']
+        centroid = cluster['centroid']
+        artwork_ids = cluster['artwork_ids']
+        if len(artwork_ids) == 0:
+            cluster['representative_ids'] = []
+            continue
+        distances = np.linalg.norm(coords - centroid, axis=1)
+        top_3_indices = np.argsort(distances)[:3]
+        representative_ids = [artwork_ids[i] for i in top_3_indices]
+        cluster['representative_ids'] = representative_ids
     return clusters
 
 def generate_voronoi_cells(clusters_raw, coordinates_2d, bounding_box=None):

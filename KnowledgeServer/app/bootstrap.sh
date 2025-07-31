@@ -12,6 +12,7 @@ if [ "$1" = "test" ]; then
 
     # Start the worker in the background
     echo "Starting job worker in background..."
+    rm -f ./jobs/jobs.db
     python3 ./jobs/worker.py &
     WORKER_PID=$!
 

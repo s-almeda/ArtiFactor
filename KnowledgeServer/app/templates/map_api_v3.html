@@ -105,14 +105,16 @@
         <!-- Visualization container -->
         <div id="visualizationContainer" class="visualization-container" style="display: none;">
             <h2>Hierarchical Artwork Map</h2>
+            <div class="map-switcher">
+                <button id="showLevel1Btn" onclick="switchMapLevel('level_1')">Level 1: Clusters + Artworks</button>
+                <button id="showLevel2Btn" onclick="switchMapLevel('level_2')">Level 2: Voronoi Merge</button>
+                <button id="showLevel3Btn" onclick="switchMapLevel('level_3')">Level 3: Voronoi Merge</button>
+            </div>
             <canvas id="mapCanvas" width="1000" height="800"></canvas>
-            
             <div class="tooltip" id="tooltip"></div>
             <div class="legend" id="legend"></div>
-            
             <h2>Cluster Details</h2>
             <div id="clusterInfo" class="cluster-info"></div>
-            
             <span class="toggle-details" onclick="toggleResponseDetails()">Show/Hide Raw Response</span>
             <div id="responseDetails" style="display: none;"></div>
         </div>
@@ -295,19 +297,30 @@
             }
         }
 
+        let currentMapLevel = 'level_1';
         function showResults(data) {
             resetUI();
             globalData = data;
-            
-            // Show visualization
+            currentMapLevel = 'level_1';
             document.getElementById('visualizationContainer').style.display = 'block';
             document.getElementById('responseDetails').textContent = JSON.stringify(data, null, 2);
-            
-            // Draw map and create UI
-            drawHierarchicalMap(data);
-            createLegend(data);
-            if (data.clusters && data.clusters.length > 0) {
-                showClusterInfo(data.clusters[0]); // Show first cluster by default
+            drawHierarchicalMap(data, 'level_1');
+            createLegend(data, 'level_1');
+            if (data.level_1 && data.level_1.length > 0) {
+                showClusterInfo(data.level_1[0]);
+            }
+        }
+
+        function switchMapLevel(level) {
+            currentMapLevel = level;
+            drawHierarchicalMap(globalData, level);
+            createLegend(globalData, level);
+            // Hide cluster info for level_2/3
+            if (level === 'level_1' && globalData.level_1 && globalData.level_1.length > 0) {
+                showClusterInfo(globalData.level_1[0]);
+                document.getElementById('clusterInfo').style.display = 'block';
+            } else {
+                document.getElementById('clusterInfo').style.display = 'none';
             }
         }
 
@@ -328,62 +341,35 @@
 
         
 
-        function drawHierarchicalMap(data) {
+        function drawHierarchicalMap(data, level) {
             const canvas = document.getElementById('mapCanvas');
             const ctx = canvas.getContext('2d');
             const tooltip = document.getElementById('tooltip');
-            
-            // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw Voronoi cells first (background)
-            data.clusters.forEach((cluster, index) => {
+            let clusters = data[level] || [];
+            // Draw Voronoi cells
+            clusters.forEach((cluster, index) => {
                 const color = getColorForCluster(index);
-                
-                // Draw Voronoi cell
                 if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
                     ctx.beginPath();
-                    const firstVertex = cluster.voronoi_vertices[0];
-                    ctx.moveTo(firstVertex[0] * canvas.width, firstVertex[1] * canvas.height);
-                    
+                    const first = cluster.voronoi_vertices[0];
+                    ctx.moveTo(first[0] * canvas.width, first[1] * canvas.height);
                     cluster.voronoi_vertices.forEach(vertex => {
                         ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
                     });
                     ctx.closePath();
-                    
-                    // Fill with very transparent color
-                    ctx.fillStyle = color + '15';
+                    ctx.fillStyle = color + '33'; // transparent fill
                     ctx.fill();
-                    
-                    // Stroke with semi-transparent color
-                    ctx.strokeStyle = color + '60';
+                    ctx.strokeStyle = color;
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
             });
-            
-            // Draw artworks within each cluster
-            data.clusters.forEach((cluster, clusterIndex) => {
-                const color = getColorForCluster(clusterIndex);
-                
-                cluster.artworks_map.forEach(artwork => {
-                    const x = artwork.coords.x * canvas.width;
-                    const y = artwork.coords.y * canvas.height;
-                    
-                    // Draw artwork point
-                    ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                });
-                
-                // Draw cluster centroid
+            // Draw centroids
+            clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
                 const cx = cluster.centroid.x * canvas.width;
                 const cy = cluster.centroid.y * canvas.height;
-                
                 ctx.beginPath();
                 ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
                 ctx.fillStyle = color;
@@ -391,150 +377,158 @@
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
                 ctx.stroke();
-                
-                // Draw cluster label
                 ctx.fillStyle = '#000';
                 ctx.font = 'bold 12px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(cluster.cluster_label, cx, cy - 12);
             });
-            
-            // Mouse hover handler
-            canvas.onmousemove = function(e) {
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                let foundArtwork = null;
-                let foundCluster = null;
-                const threshold = 10;
-                
-                // Find nearest artwork
-                data.clusters.forEach(cluster => {
-                    cluster.artworks_map.forEach(artworkMap => {
-                        const x = artworkMap.coords.x * canvas.width;
-                        const y = artworkMap.coords.y * canvas.height;
-                        const distance = Math.sqrt(Math.pow(x - mouseX, 2) + Math.pow(y - mouseY, 2));
-                        
-                        if (distance < threshold) {
-                            foundArtwork = data.artworks[artworkMap.id];
+            // Only draw artworks for level_1
+            if (level === 'level_1') {
+                clusters.forEach((cluster, clusterIndex) => {
+                    const color = getColorForCluster(clusterIndex);
+                    cluster.artworks_map.forEach(artwork => {
+                        const x = artwork.coords.x * canvas.width;
+                        const y = artwork.coords.y * canvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.globalAlpha = 0.7;
+                        ctx.fill();
+                        ctx.globalAlpha = 1.0;
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    });
+                });
+            }
+            // Mouse hover and click only for level_1
+            if (level === 'level_1') {
+                canvas.onmousemove = function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    let foundArtwork = null;
+                    let foundCluster = null;
+                    const threshold = 10;
+                    clusters.forEach(cluster => {
+                        cluster.artworks_map.forEach(artwork => {
+                            const x = artwork.coords.x * canvas.width;
+                            const y = artwork.coords.y * canvas.height;
+                            const dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
+                            if (dist < threshold) {
+                                foundArtwork = artwork;
+                                foundCluster = cluster;
+                            }
+                        });
+                    });
+                    if (foundArtwork) {
+                        canvas.style.cursor = 'pointer';
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (e.clientX + 10) + 'px';
+                        tooltip.style.top = (e.clientY + 10) + 'px';
+                        const art = globalData.artworks[foundArtwork.id];
+                        tooltip.innerHTML = `<strong>${art.title}</strong><br>${art.artist}`;
+                    } else {
+                        canvas.style.cursor = 'default';
+                        tooltip.style.display = 'none';
+                    }
+                };
+                canvas.onmouseleave = function() {
+                    tooltip.style.display = 'none';
+                };
+                canvas.onclick = function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    let foundCluster = null;
+                    clusters.forEach((cluster, index) => {
+                        const cx = cluster.centroid.x * canvas.width;
+                        const cy = cluster.centroid.y * canvas.height;
+                        const dist = Math.sqrt((cx - mouseX) ** 2 + (cy - mouseY) ** 2);
+                        if (dist < 12) {
                             foundCluster = cluster;
                         }
                     });
-                });
-                
-                if (foundArtwork) {
-                    tooltip.innerHTML = `
-                        <div class="title">${foundArtwork.title}</div>
-                        <div class="artist">${foundArtwork.artist}</div>
-                        <div class="keyword">${foundCluster.cluster_label}</div>
-                        ${foundArtwork.year ? `<div class="year">${foundArtwork.year}</div>` : ''}
-                    `;
-                    tooltip.style.display = 'block';
-                    tooltip.style.left = (e.pageX + 10) + 'px';
-                    tooltip.style.top = (e.pageY - 10) + 'px';
-                    canvas.style.cursor = 'pointer';
-                } else {
-                    tooltip.style.display = 'none';
-                    canvas.style.cursor = 'crosshair';
-                }
-            };
-            
-            canvas.onmouseleave = function() {
-                tooltip.style.display = 'none';
-            };
-            
-            // Click handler for cluster selection
-            canvas.onclick = function(e) {
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                // Find which cluster was clicked
-                data.clusters.forEach((cluster, index) => {
-                    const cx = cluster.centroid.x * canvas.width;
-                    const cy = cluster.centroid.y * canvas.height;
-                    const distance = Math.sqrt(Math.pow(cx - mouseX, 2) + Math.pow(cy - mouseY, 2));
-                    
-                    if (distance < 20) {
-                        selectedCluster = index;
-                        showClusterInfo(cluster);
-                        highlightCluster(data, index);
+                    if (foundCluster) {
+                        showClusterInfo(foundCluster);
                     }
-                });
-            };
+                };
+            } else {
+                canvas.onmousemove = null;
+                canvas.onclick = null;
+                canvas.onmouseleave = null;
+                tooltip.style.display = 'none';
+            }
         }
 
-        function createLegend(data) {
+        function createLegend(data, level) {
             const legend = document.getElementById('legend');
             legend.innerHTML = '<h3>Clusters</h3>';
-            
-            data.clusters.forEach((cluster, index) => {
+            let clusters = data[level] || [];
+            clusters.forEach((cluster, index) => {
                 const color = getColorForCluster(index);
                 const item = document.createElement('div');
                 item.className = 'legend-item';
-                item.innerHTML = `
-                    <div class="legend-color" style="background-color: ${color}"></div>
-                    <div class="legend-text">${cluster.cluster_label}</div>
-                    <div class="legend-count">${cluster.artworks_map.length} artworks</div>
-                `;
-                
-                // Click handler for highlighting
+                let label = cluster.cluster_label || `Cluster ${index+1}`;
+                let count = (level === 'level_1' && cluster.artworks_map) ? cluster.artworks_map.length : '';
+                item.innerHTML = `<span style="background:${color};width:16px;height:16px;display:inline-block;margin-right:6px;"></span> ${label} ${count ? '('+count+' artworks)' : ''}`;
                 item.onclick = function() {
-                    selectedCluster = index;
-                    showClusterInfo(cluster);
-                    highlightCluster(data, index);
+                    highlightCluster(data, index, level);
                 };
-                
                 legend.appendChild(item);
             });
         }
         
-        function highlightCluster(data, clusterIndex) {
+        function highlightCluster(data, clusterIndex, level) {
             const canvas = document.getElementById('mapCanvas');
-            drawHierarchicalMap(data); // Redraw
-            
-            // Add highlight effect
+            drawHierarchicalMap(data, level);
             const ctx = canvas.getContext('2d');
-            const cluster = data.clusters[clusterIndex];
+            const clusters = data[level] || [];
+            const cluster = clusters[clusterIndex];
             const color = getColorForCluster(clusterIndex);
-            
-            // Highlight Voronoi cell
             if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
                 ctx.beginPath();
                 const firstVertex = cluster.voronoi_vertices[0];
                 ctx.moveTo(firstVertex[0] * canvas.width, firstVertex[1] * canvas.height);
-                
                 cluster.voronoi_vertices.forEach(vertex => {
                     ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
                 });
                 ctx.closePath();
-                
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 4;
                 ctx.stroke();
             }
         }
-        
+
         function showClusterInfo(cluster) {
             const info = document.getElementById('clusterInfo');
-            const repArtwork = globalData.artworks[cluster.representative_artwork_id];
+            
+            // Get representative artworks
+            const repArtworks = (cluster.representative_artworks || [])
+                .map(id => globalData.artworks[id])
+                .filter(artwork => artwork); // Remove any undefined
             
             info.innerHTML = `
                 <h3>${cluster.cluster_label}</h3>
                 <p><strong>Artworks:</strong> ${cluster.artworks_map.length}</p>
-                <p><strong>Representative:</strong> ${repArtwork.title} by ${repArtwork.artist}</p>
+                ${repArtworks.length > 0 ? `
+                    <div class="representative-artworks">
+                        <h4>Representative Artworks:</h4>
+                        ${repArtworks.map(artwork => 
+                            `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>`
+                        ).join('')}
+                    </div>
+                ` : ''}
                 <div class="artwork-list">
-                    <h4>Sample Artworks:</h4>
+                    <h4>All Artworks:</h4>
                     ${cluster.artworks_map.slice(0, 5).map(artworkMap => {
                         const artwork = globalData.artworks[artworkMap.id];
-                        return `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>`;
+                        return artwork ? `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>` : '';
                     }).join('')}
                     ${cluster.artworks_map.length > 5 ? `<div class="artwork-item">... and ${cluster.artworks_map.length - 5} more</div>` : ''}
                 </div>
             `;
         }
-        
         function toggleResponseDetails() {
             const details = document.getElementById('responseDetails');
             details.style.display = details.style.display === 'none' ? 'block' : 'none';

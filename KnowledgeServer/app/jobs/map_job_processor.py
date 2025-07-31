@@ -130,18 +130,28 @@ def process_map_job(job_id, request_params, update_job_status):
             padding_factor=padding_factor
         )
         dprint("Generated per-cluster UMAP coordinates")
+        # === HIERARCHICAL LEVELS ===
+        update_job_status(job_id, 'processing', 'Generating hierarchical levels (merging level 1 cells)...')
+
+        level2_data, level3_data = vhf.generate_level2_level3(clusters_raw, voronoi_data, dprint) 
+
+        dprint(f"Generated hierarchical levels - level2: {len(level2_data['clusters'])} clusters, level3: {len(level3_data['clusters'])} clusters")
+        
         # === JSON FORMATTING ===
         update_job_status(job_id, 'processing', 'Finishing touches...')
         # 8. Fetch artwork metadata only now
         artworks_metadata = vhf.fetch_artwork_metadata_batch(artwork_ids, db)
         dprint(f"Fetched metadata for {len(artworks_metadata)} artworks")
+
         # 9. Format everything for JSON response
         response_data = format_map_response(
             clusters_raw,
             voronoi_data,
             per_cluster_coords,
             artworks_metadata,
-            n_clusters
+            n_clusters,
+            level2_data,
+            level3_data
         )
         # Before saving to cache, add these fields:
         response_data['cache_key'] = cache_key
@@ -159,24 +169,27 @@ def process_map_job(job_id, request_params, update_job_status):
         print(f"Job {job_id} failed:", traceback.format_exc())
         update_job_status(job_id, 'failed', error_message=error_msg)
 
-
-def format_map_response(clusters_raw, voronoi_data, per_cluster_coords, artworks_metadata, n_clusters):
+def format_map_response(clusters_raw, voronoi_data, per_cluster_coords, artworks_metadata, n_clusters, level2_data, level3_data):
     """
-    Convert all raw data to the final JSON-safe response format with smart cluster labeling.
+    Convert all raw data to the final JSON-safe response format with hierarchical levels.
     """
-    formatted_clusters = []
+    # Format level 1 (existing clusters)
+    level1_clusters = []
     for cluster_id in sorted(clusters_raw.keys()):
         cluster = clusters_raw[cluster_id]
         voronoi = voronoi_data.get(cluster_id, {'vertices': []})
         coords = per_cluster_coords.get(cluster_id, [])
+        
         cluster_label = generate_smart_cluster_label(
             cluster['artwork_ids'], 
             artworks_metadata, 
             cluster_id
         )
+        
         formatted_cluster = {
+            'cluster_id': cluster_id,
             'cluster_label': cluster_label,
-            'representative_artwork_id': cluster['representative_id'],
+            'representative_artworks': cluster.get('representative_ids', [])[:3],  # Top 3
             'centroid': {
                 'x': float(cluster['centroid'][0]),
                 'y': float(cluster['centroid'][1])
@@ -184,6 +197,7 @@ def format_map_response(clusters_raw, voronoi_data, per_cluster_coords, artworks
             'voronoi_vertices': [[float(x), float(y)] for x, y in voronoi['vertices']],
             'artworks_map': []
         }
+        
         for i, artwork_id in enumerate(cluster['artwork_ids']):
             if i < len(coords):
                 formatted_cluster['artworks_map'].append({
@@ -193,11 +207,53 @@ def format_map_response(clusters_raw, voronoi_data, per_cluster_coords, artworks
                         'y': float(coords[i][1])
                     }
                 })
-        formatted_clusters.append(formatted_cluster)
+        
+        level1_clusters.append(formatted_cluster)
+    
+    # Format level 2 and 3 from the new data structure
+    level2_clusters = format_hierarchical_level(level2_data['clusters'], level2_data['voronoi'], artworks_metadata)
+    level3_clusters = format_hierarchical_level(level3_data['clusters'], level3_data['voronoi'], artworks_metadata)
+    
     return {
-        'clusters': formatted_clusters,
+        'level_1': level1_clusters,
+        'level_2': level2_clusters,
+        'level_3': level3_clusters,
         'artworks': artworks_metadata
     }
+
+def format_hierarchical_level(clusters_dict, voronoi_dict, artworks_metadata):
+    """Format a hierarchical level from dict format."""
+    formatted_clusters = []
+    
+    for cluster_id in sorted(clusters_dict.keys()):
+        cluster = clusters_dict[cluster_id]
+        voronoi = voronoi_dict.get(cluster_id, {'vertices': []})
+        
+        # Generate label (reuse the same logic)
+        cluster_label = generate_smart_cluster_label(
+            cluster['artwork_ids'], 
+            artworks_metadata, 
+            cluster_id
+        )
+        
+        formatted_cluster = {
+            'cluster_id': cluster_id,
+            'cluster_label': cluster_label,
+            'representative_artworks': cluster.get('representative_ids', [])[:3],
+            'centroid': {
+                'x': float(cluster['centroid'][0]),
+                'y': float(cluster['centroid'][1])
+            },
+            'voronoi_vertices': [[float(x), float(y)] for x, y in voronoi['vertices']]
+        }
+        
+        # Add child clusters if this is a merged region
+        if 'child_clusters' in cluster and cluster['child_clusters']:
+            formatted_cluster['child_clusters'] = cluster['child_clusters']
+        
+        formatted_clusters.append(formatted_cluster)
+    
+    return formatted_clusters
 
 def generate_smart_cluster_label(artwork_ids, metadata, cluster_id):
     """Generate a meaningful label for a cluster based on its artworks"""

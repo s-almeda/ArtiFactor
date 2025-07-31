@@ -1,13 +1,10 @@
 # map_api_v3 third iteration of the map api routes we neeed uwu
 
-from flask import Blueprint, jsonify, request, g, render_template
-from index import get_db
+from flask import Blueprint, jsonify, request, render_template
 import os
 import json
-import hashlib
-import numpy as np
-import traceback
-import math
+
+
 from config import BASE_DIR
 import helperfunctions as hf
 import sys
@@ -15,11 +12,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import voronoi_helper_functions as vhf
 
-from shapely.geometry import Polygon, Point
-from shapely.ops import unary_union
-from shapely.strtree import STRtree  # Import STRtree for spatial indexing
-from timeout_decorator import timeout, TimeoutError
-
+# 
 MAPS_DIR = os.path.join(BASE_DIR, 'generated_maps')
 os.makedirs(MAPS_DIR, exist_ok=True)
 
