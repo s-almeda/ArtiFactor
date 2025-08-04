@@ -703,7 +703,7 @@ def lookup_image(img, top_k=3):
     db = get_db()
 
     # Find the most similar images
-    similar_images = find_most_similar_images(query_features, db, top_k=top_k)
+    similar_images = helpers.find_most_similar_images(query_features, db, top_k=top_k)
     print(f"Found {len(similar_images)} similar images")
 
     # Get detailed information for each match
@@ -845,37 +845,6 @@ def get_text_features():
 
 
 
-
-def find_most_similar_images(image_features, conn, top_k=3):
-    """
-    Find the top-k most similar images by cosine similarity.
-    
-    Args:
-        image_features: Feature vector from the query image
-        conn: Database connection
-        top_k: Number of results to return
-        
-    Returns:
-        List of dicts with image_id and distance
-    """
-    print("Finding similar images...", end=' ')
-
-    # Query the database for the most similar images
-    query = """
-        SELECT
-            image_id,
-            distance
-        FROM vec_image_features
-        WHERE embedding MATCH ?
-        ORDER BY distance
-        LIMIT ?
-    """
-    rows = conn.execute(query, [image_features, top_k]).fetchall()
-
-    # Convert the results to a list of dictionaries
-    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
-
-    return similar_images
 
 
 # function for getting the matched enty matched_entry = next((entry for entry in dataset if entry["filename"] == row.filename), None)

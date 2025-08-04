@@ -174,15 +174,14 @@ def heuristic_cluster_count(n_points):
    return max(3, min(15, int(np.sqrt(n_points / 2))))
 
 
-# categorical salience
 def get_salient_keywords(db, min_works=5, max_works=500, n=None):
     """
-    Calculate keyword salience based on number of artworks associated with that keyword and distinctiveness.
-    Distinctiveness = unique artworks / total artworks.
-    Return: [{keyword, entry_id, count, salience_score}] sorted by salience_score desc.
+    Calculate keyword salience based on marginal contribution to artwork coverage.
+    Uses greedy selection to maximize total coverage while minimizing overlap.
+    Return: [{keyword, entry_id, count, salience_score, image_ids}] sorted by selection order.
     If n is provided, only the top n results are returned.
     """
-
+    
     # Step 1: Get all keywords and their associated images
     cursor = db.execute("""
         SELECT entry_id, value as keyword, images
@@ -192,8 +191,9 @@ def get_salient_keywords(db, min_works=5, max_works=500, n=None):
     keyword_rows = cursor.fetchall()
 
     # Step 2: Build mapping of keyword to unique image ids
-    keyword_data = []
+    keyword_candidates = []
     all_image_ids = set()
+    
     for row in keyword_rows:
         entry_id = row['entry_id']
         keyword = row['keyword']
@@ -203,33 +203,103 @@ def get_salient_keywords(db, min_works=5, max_works=500, n=None):
             image_ids = set()
         if not image_ids:
             continue
-        keyword_data.append({
+            
+        count = len(image_ids)
+        if count < min_works or count > max_works:
+            continue
+            
+        keyword_candidates.append({
             'keyword': keyword,
             'entry_id': entry_id,
             'image_ids': image_ids,
-            'count': len(image_ids)
+            'count': count
         })
         all_image_ids.update(image_ids)
 
     total_artworks = len(all_image_ids)
+    if total_artworks == 0:
+        return []
+
+    # Step 3: Calculate initial salience scores for all candidates
+    for item in keyword_candidates:
+        # True distinctiveness = how unique this keyword's artworks are
+        distinctiveness = item['count'] / total_artworks if total_artworks else 0
+        item['initial_salience'] = item['count'] * distinctiveness
+
+    # Step 4: Greedy selection with overlap penalty
+    selected_keywords = []
+    covered_artworks = set()
+    remaining_candidates = keyword_candidates.copy()
+    
+    # Determine how many keywords to select
+    target_count = n if n is not None else len(keyword_candidates)
+    
+    while len(selected_keywords) < target_count and remaining_candidates:
+        best_score = -1
+        best_idx = -1
+        best_keyword = None
+        
+        for i, candidate in enumerate(remaining_candidates):
+            # Calculate marginal contribution (new artworks only)
+            new_artworks = candidate['image_ids'] - covered_artworks
+            new_count = len(new_artworks)
+            
+            if new_count == 0:
+                # This keyword adds no new artworks
+                marginal_score = 0
+            else:
+                # Score based on new artworks added
+                # Higher weight for keywords that add substantial new coverage
+                coverage_boost = new_count / total_artworks
+                
+                # Bonus for keywords that had high initial salience
+                initial_salience_factor = candidate['initial_salience'] / (candidate['count'] ** 2 / total_artworks)
+                
+                marginal_score = new_count * coverage_boost * initial_salience_factor
+            
+            if marginal_score > best_score:
+                best_score = marginal_score
+                best_idx = i
+                best_keyword = candidate
+        
+        # Select the best keyword
+        if best_idx >= 0 and best_score > 0:
+            selected_keyword = remaining_candidates.pop(best_idx)
+            new_artworks = selected_keyword['image_ids'] - covered_artworks
+            
+            # Update the selected keyword with final stats
+            selected_keyword['new_artworks_added'] = len(new_artworks)
+            selected_keyword['salience_score'] = best_score
+            selected_keyword['total_coverage'] = len(covered_artworks | selected_keyword['image_ids'])
+            
+            selected_keywords.append(selected_keyword)
+            covered_artworks.update(selected_keyword['image_ids'])
+            
+            print(f"Selected '{selected_keyword['keyword']}': +{len(new_artworks)} new artworks, "
+                  f"total coverage: {len(covered_artworks)}/{total_artworks} "
+                  f"({100*len(covered_artworks)/total_artworks:.1f}%)")
+        else:
+            # No more keywords contribute new artworks
+            break
+    
+    # Step 5: Clean up the return format
     results = []
-    for item in keyword_data:
-        count = item['count']
-        if count < min_works or count > max_works:
-            continue
-        distinctiveness = count / total_artworks if total_artworks else 0
-        salience_score = count * distinctiveness
+    for item in selected_keywords:
         results.append({
             'keyword': item['keyword'],
             'entry_id': item['entry_id'],
-            'count': count,
-            'salience_score': salience_score
+            'count': item['count'],
+            'salience_score': item['salience_score'],
+            'image_ids': item['image_ids'],  # Include for downstream deduplication
+            'new_artworks_added': item['new_artworks_added'],
+            'coverage_contribution': item['new_artworks_added'] / total_artworks
         })
-
-    results.sort(key=lambda x: x['salience_score'], reverse=True)
-    if n is not None:
-        return results[:n]
+    
+    print(f"\nFinal selection: {len(results)} keywords covering {len(covered_artworks)}/{total_artworks} artworks "
+          f"({100*len(covered_artworks)/total_artworks:.1f}% coverage)")
+    
     return results
+
 
 
 def get_keyword_biased_embedding(artwork_id, main_keyword_id, db, weights={
@@ -433,6 +503,11 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
     total_keywords = len(salient_keywords)
     multi_keyword_count = 0
     single_keyword_count = 0
+    duplicate_count = 0
+    unique_count = 0
+
+    # Deduplication set
+    seen_artworks = set()
 
     # Process each salient keyword
     for keyword_idx, keyword in enumerate(salient_keywords):
@@ -459,6 +534,10 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
 
         # Process each artwork
         for artwork_id in artwork_ids_for_keyword:
+            if artwork_id in seen_artworks:
+                duplicate_count += 1
+                continue  # Skip duplicates
+
             embedding = get_keyword_biased_embedding(
                 artwork_id=artwork_id,
                 main_keyword_id=entry_id,
@@ -471,6 +550,9 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
                 embeddings_list.append(embedding)
                 keyword_map[artwork_id] = entry_id
                 processed += 1
+                seen_artworks.add(artwork_id)
+                unique_count += 1
+
                 # Count if artwork has multiple keywords (other than main)
                 cursor = db.execute("SELECT relatedKeywordIds FROM image_entries WHERE image_id = ?", (artwork_id,))
                 row = cursor.fetchone()
@@ -497,7 +579,8 @@ def get_keyword_biased_embeddings(db, salient_keywords, weights=None):
     embeddings_np = np.array(embeddings_list) if embeddings_list else np.array([])
 
     if debug:
-        print(f"\nProcessed {total_artworks} artworks total across {total_keywords} keywords.")
+        print(f"\nProcessed {unique_count} unique artworks (skipped {duplicate_count} duplicates) across {total_keywords} keywords.")
+        print(f"Deduplication rate: {duplicate_count/(unique_count + duplicate_count)*100:.1f}% duplicates removed")
         print(f"Artworks with multiple keywords: {multi_keyword_count}")
         print(f"Artworks with only one keyword: {single_keyword_count}")
         if embeddings_np.size > 0:
@@ -558,12 +641,18 @@ def generate_level2_level3(clusters_raw, voronoi_data, dprint):
     
     # Select level 2 and 3 from merge history
     if len(merge_history) >= 2:
-        level2_idx = len(merge_history) // 2  # Halfway point
-        level2_data = merge_history[level2_idx]
-        level3_data = merge_history[-1]  # Final merge
+        # Use first merge for level 2, last merge for level 3
+        level2_data = merge_history[0]  # First merge result
+        level3_data = merge_history[-1]  # Final merge result
     elif len(merge_history) == 1:
-        level2_data = merge_history[0]
-        level3_data = merge_history[0]
+        # If only one merge, use original clusters for level 2
+        level2_clusters = clusters_raw.copy()
+        add_representative_artworks(level2_clusters)
+        level2_data = {
+            'clusters': level2_clusters,
+            'voronoi': voronoi_data
+        }
+        level3_data = merge_history[0]  # Use the only merge for level 3
     else:
         # No successful merges - return copies with representatives added
         level2_clusters = current_clusters.copy()
@@ -1233,3 +1322,84 @@ def normalize_coords_to_polygon(global_coords, voronoi_vertices):
     return np.array(mapped_coords)
 
 
+def fetch_artwork_metadata_batch(artwork_ids, db):
+    """
+    Efficiently fetch metadata for all artwork IDs in one query.
+
+    Args:
+        artwork_ids: list of artwork IDs to fetch
+        db: database connection
+
+    Returns:
+        dict of artwork_id -> metadata dict (with full nested descriptions)
+    """
+    import json
+
+    if not artwork_ids:
+        return {}
+
+    placeholders = ','.join(['?' for _ in artwork_ids])
+
+    cursor = db.execute(f"""
+        SELECT 
+            image_id,
+            value as title,
+            artist_names,
+            image_urls,
+            filename,
+            rights,
+            descriptions,
+            relatedKeywordIds,
+            relatedKeywordStrings
+        FROM image_entries
+        WHERE image_id IN ({placeholders})
+    """, artwork_ids)
+
+    metadata = {}
+    for row in cursor:
+        try:
+            artist_names = json.loads(row['artist_names']) if row['artist_names'] else []
+            image_urls = json.loads(row['image_urls']) if row['image_urls'] else {}
+            descriptions = json.loads(row['descriptions']) if row['descriptions'] else {}
+            related_keywords = json.loads(row['relatedKeywordStrings']) if row['relatedKeywordStrings'] else []
+
+            thumbnail_url = (
+                image_urls.get('small') or 
+                image_urls.get('medium_rectangle') or 
+                image_urls.get('normalized') or 
+                ''
+            )
+
+            full_url = (
+                image_urls.get('large') or 
+                image_urls.get('normalized') or 
+                thumbnail_url
+            )
+
+            metadata[row['image_id']] = {
+                'title': row['title'] or 'Untitled',
+                'artist': artist_names[0] if artist_names else 'Unknown Artist',
+                'artist_names': artist_names,
+                'image_urls': image_urls,
+                'thumbnail_url': thumbnail_url,
+                'url': full_url,
+                'descriptions': descriptions,  # full raw descriptions by source
+                'rights': row['rights'] or '',
+                'keywords': related_keywords[:10]
+            }
+
+        except Exception as e:
+            print(f"Error parsing metadata for {row['image_id']}: {e}")
+            metadata[row['image_id']] = {
+                'title': row.get('value', 'Untitled'),
+                'artist': 'Unknown Artist',
+                'artist_names': [],
+                'image_urls': {},
+                'thumbnail_url': '',
+                'url': '',
+                'descriptions': {},
+                'rights': row.get('rights', ''),
+                'keywords': []
+            }
+
+    return metadata

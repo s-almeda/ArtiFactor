@@ -374,6 +374,37 @@ def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=3):
     return matches
 
 
+def find_most_similar_images(image_features, conn, top_k=3):
+    """
+    Find the top-k most similar images by cosine similarity.
+    
+    Args:
+        image_features: Feature vector from the query image
+        conn: Database connection
+        top_k: Number of results to return
+        
+    Returns:
+        List of dicts with image_id and distance
+    """
+    print("Finding similar images...", end=' ')
+
+    # Query the database for the most similar images
+    query = """
+        SELECT
+            image_id,
+            distance
+        FROM vec_image_features
+        WHERE embedding MATCH ?
+        ORDER BY distance
+        LIMIT ?
+    """
+    rows = conn.execute(query, [image_features, top_k]).fetchall()
+
+    # Convert the results to a list of dictionaries
+    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
+
+    return similar_images
+
 
 
 def find_most_similar_texts(text_features, conn, top_k=3, search_in="description"):
