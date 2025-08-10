@@ -1,0 +1,2377 @@
+{
+  "nodes": [
+    {
+      "id": "text-a96d6cda-53fa-46bf-9114-31abc13d1e8c",
+      "type": "text",
+      "zIndex": 1000,
+      "position": {
+        "x": -184.9365771984286,
+        "y": 204.10741004131648
+      },
+      "data": {
+        "words": [
+          {
+            "value": "Welcome"
+          },
+          {
+            "value": "to"
+          },
+          {
+            "value": "Artifactor!"
+          },
+          {
+            "value": "Click"
+          },
+          {
+            "value": "the"
+          },
+          {
+            "value": "[+]"
+          },
+          {
+            "value": "button"
+          },
+          {
+            "value": "to"
+          },
+          {
+            "value": "create"
+          },
+          {
+            "value": "a"
+          },
+          {
+            "value": "new"
+          },
+          {
+            "value": "note."
+          },
+          {
+            "value": "Click"
+          },
+          {
+            "value": "the"
+          },
+          {
+            "value": "pencil"
+          },
+          {
+            "value": "icon"
+          },
+          {
+            "value": "to"
+          },
+          {
+            "value": "edit"
+          },
+          {
+            "value": "a"
+          },
+          {
+            "value": "note."
+          },
+          {
+            "value": "Right-click"
+          },
+          {
+            "value": "or"
+          },
+          {
+            "value": "Option-Click"
+          },
+          {
+            "value": "anything"
+          },
+          {
+            "value": "to"
+          },
+          {
+            "value": "generate"
+          },
+          {
+            "value": "something"
+          },
+          {
+            "value": "new."
+          }
+        ],
+        "intersections": [
+          {
+            "id": "text-a96d6cda-53fa-46bf-9114-31abc13d1e8c",
+            "position": {
+              "x": -184.9365771984286,
+              "y": 204.10741004131648
+            },
+            "content": "Welcome to Artifactor! Click the [+] button to create a new note. Click the pencil icon to edit a note. Right-click or Option-Click anything to generate something new."
+          }
+        ],
+        "similarTexts": [
+          {
+            "value": "Musical Instrument",
+            "entryId": "577ff0889c18db0a00000029",
+            "images": [],
+            "isArtist": false,
+            "type": "Antiquities, Artifacts, and Religious Objects",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Musical instruments—not depictions of them, in paintings or photographs, but the physical objects. Musical instruments might be exquisitely designed objects intended to be played, or components of sculptures."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Glitch Aesthetic",
+            "entryId": "4fe4835bdaf5180001001b66",
+            "images": [],
+            "isArtist": false,
+            "type": "Medium and Techniques",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Applied to artworks that incorporate, depict, or recreate technological errors—or “glitches”—such as static, spliced or distorted images, and computer bugs or viruses. "
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Use of Paper",
+            "entryId": "555e53af72616923809a0100",
+            "images": [],
+            "isArtist": false,
+            "type": "Materials",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "An artwork that incorporates paper as a sculptural or craft medium for expression, as opposed to as a canvas. "
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Intaglio",
+            "entryId": "509854bad7d0430002000025",
+            "images": [],
+            "isArtist": false,
+            "type": "Medium and Techniques",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Most likely developed from the decoration of precious metals in medieval times (and with its named derived from the Italian  intagliare, or “to cut into”), intaglio printmaking refers to all printmaking in which an acid or pointed tool is used to incise a metal matrix generally composed of copper, iron, steel, or zinc. The plate is then inked and printed under pressure, forcing the paper into the recessed areas and picking up the ink resulting in characteristically raised lines. Intaglio techniques include [etching, engraving](/gene/etching-slash-engraving), aquatint, photogravure, mezzotint, and drypoint; oftentimes used  in combination, these techniques can produce variations in both tone and contrast, as seen in this [intaglio print](/artwork/francisco-de-goya-figures-dancing-in-a-circle-from-los-disparates) by Francisco Goya.\n"
+              }
+            ],
+            "relatedKeywordIds": [
+              "4f39397e6779d800010009fa",
+              "4eaf0d2e6899c80001008f80",
+              "503bdf81c61f2c00020000b2",
+              "4f0b521c939bf200010004c1",
+              "4d8b92964eb68a1b2c000288",
+              "506ba2b74d985b000200034d",
+              "4eb3016b48eeb8000100eb13"
+            ],
+            "relatedKeywordStrings": [
+              "James Abbott McNeill Whistler",
+              "Albrecht Dürer",
+              "Giambattista Tiepolo",
+              "François Boucher",
+              "Winslow Homer",
+              "Jacques Callot",
+              "Giovanni Battista Piranesi"
+            ]
+          },
+          {
+            "value": "Stone",
+            "entryId": "509b3406770bbc0002000112",
+            "images": [],
+            "isArtist": false,
+            "type": "Materials",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A general category for artworks, design objects, or architectural works made from rock, such as [marble](/gene/marble), granite, or limestone."
+              }
+            ],
+            "relatedKeywordIds": [
+              "52027df18b3b81c4410004f2",
+              "4ee77a2da4e3570001001241",
+              "515b37ec223afa29bd0001f8",
+              "515b929dcd4b8ed0b9000792",
+              "50773de3e4109600020003ed",
+              "515b929b1b12b0e668000f64"
+            ],
+            "relatedKeywordStrings": [
+              "Claus Sluter",
+              "Tilman Riemenschneider",
+              "Jean-Baptiste Carpeaux",
+              "Alessandro Vittoria",
+              "Apollodorus of Damascus",
+              "Karl Friedrich Schinkel"
+            ]
+          }
+        ],
+        "provenance": "user",
+        "hasNoKeywords": false,
+        "hasNoSimilarTexts": false,
+        "content": "Welcome to Artifactor! Click the [+] button to create a new note. Click the pencil icon to edit a note. Right-click or Option(Alt)+Click anything to generate something new."
+      },
+      "measured": {
+        "width": 200,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "text-20c4ed85-758e-48d2-b07f-55a8c735d65e",
+      "type": "text",
+      "zIndex": 1000,
+      "position": {
+        "x": 196.67331643974222,
+        "y": 3.015168659536897
+      },
+      "data": {
+        "words": [
+          {
+            "value": "a"
+          },
+          {
+            "value": "cat"
+          }
+        ],
+        "intersections": [
+          {
+            "id": "text-20c4ed85-758e-48d2-b07f-55a8c735d65e",
+            "position": {
+              "x": 196.67331643974222,
+              "y": 3.015168659536897
+            },
+            "content": "a cat"
+          }
+        ],
+        "similarTexts": [
+          {
+            "value": "Animal Portrait",
+            "entryId": "500d93c1d1ecdc00020011f9",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A category for artworks that capture the likeness of animals. These images might closely resemble human portraits in style, but with animals in the place of human subjects."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b11219562c86fb800075b"
+            ],
+            "relatedKeywordStrings": [
+              "Rosa Bonheur"
+            ]
+          },
+          {
+            "value": "Animals",
+            "entryId": "4d937b5517cb1325370000ee",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "_“Animals are such agreeable friends—they ask no questions, they pass no criticisms.” —George Eliot_\n\nWhether pets, mythological beasts, or wild creatures, animals have always been a major subject of art and literature. Dating back to Paleolithic cave paintings in France and ancient Egyptian reliefs and artifacts, animals have been depicted by artists as friends, allegories, muses, and reflections on human nature."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b6d1894714c2de0000367",
+              "521660559c18dbad160003be",
+              "515b11219562c86fb800075b",
+              "515b1443056351dc33000b1f",
+              "530bb301a09a67b0ba000030",
+              "515b7415cd4b8ef7fd00061d",
+              "530bb53a9c18db8ea6000026",
+              "530bba3ba09a67055c000034",
+              "530bbc9cb202a38198000032",
+              "515b1126223afae9a50005fa",
+              "516cb4df472cb83069000f28",
+              "516c9d27b83d23c471000512"
+            ],
+            "relatedKeywordStrings": [
+              "Judith Leyster",
+              "Rachel Ruysch",
+              "Rosa Bonheur",
+              "Carle Vernet",
+              "Fiore Furlan dei Liberi da Premariacco",
+              "Giovanni Benedetto Castiglione",
+              "Jean-Gabriel Eynard",
+              "Nicolas Spierinck",
+              "Taddeo Crivelli",
+              "Félix Bracquemond",
+              "Conrad Gessner",
+              "Étienne-Jules Marey"
+            ]
+          },
+          {
+            "value": "Louis Wain",
+            "entryId": "m_hu5sb9x0glo",
+            "images": [
+              "w_c17fbd3e59ae4157b8404a9",
+              "w_b62c5b5a1f544e588005865",
+              "w_ebc0f604a9fd4ba4a45d439",
+              "w_c13fbb53ef9842b78e2d2b1",
+              "w_963a9a61c6e8407cbd11b57",
+              "w_e94a450e509a45e790bbdd3",
+              "w_136f79f67474491ab722cbf",
+              "w_e5da044d6ceb44f78aa2a35",
+              "w_857f4742e77d4fbc8f6f6f7",
+              "w_f65c92ecb740466eb7373f6",
+              "w_4856cfc578a94544b99fdb2"
+            ],
+            "isArtist": true,
+            "type": "artist",
+            "aliases": [
+              null
+            ],
+            "descriptions": [
+              {
+                "source": "wikiart",
+                "description": "Louis Wain (5 August 1860 – 4 July 1939) was an English artist best known for his drawings, which consistently featured anthropomorphised large-eyed cats and kittens. In his later years he may have suffered from schizophrenia (although this claim is widely disputed among many specialists if this is true or not), which, according to some psychiatrists, can be seen in his works.",
+                "art_movement": "Art Nouveau, Outsider art (Art brut)",
+                "birth": "August 5, 1860",
+                "birthPlace": "London, United Kingdom",
+                "death": "July 4, 1939",
+                "deathPlace": "London, United Kingdom",
+                "genre": "animal painting",
+                "license": "This is a part of the Wikipedia article used under the Creative Commons Attribution-Sharealike 3.0 Unported License (CC-BY-SA).",
+                "nationality": "British"
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut"
+            ]
+          },
+          {
+            "value": "Anthropomorphism",
+            "entryId": "4dc7ed538101da00010001da",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Attributing to nonhuman animals and objects human traits or forms."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b11219562c86fb800075b"
+            ],
+            "relatedKeywordStrings": [
+              "Rosa Bonheur"
+            ]
+          },
+          {
+            "value": "Floor Lamp",
+            "entryId": "507c4c8eb5f0450002001b55",
+            "images": [],
+            "isArtist": false,
+            "type": "Furniture and Lighting",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Lighting that characteristically includes a heavy base and a long neck, upon which a light source is attached. Floor lamps are often installed near a couch or chair to provide light for reading."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          }
+        ],
+        "provenance": "user",
+        "hasNoKeywords": false,
+        "hasNoSimilarTexts": false,
+        "content": "a cat"
+      },
+      "measured": {
+        "width": 200,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "type": "image",
+      "position": {
+        "x": 217.0725955955562,
+        "y": 166.40795518857078
+      },
+      "zIndex": 1000,
+      "data": {
+        "content": "https://noggin-run-outputs.rgdata.net/0d726ff3-189e-4dd7-a8c1-336de4ef1a2b.webp",
+        "prompt": "a cat",
+        "provenance": "ai",
+        "parentNodeId": "text-20c4ed85-758e-48d2-b07f-55a8c735d65e",
+        "similarArtworks": [
+          {
+            "image_id": "w_857f4742e77d4fbc8f6f6f7",
+            "image_url": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+            "image_urls": {
+              "large": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg!Blog.jpg",
+              "small": "https://uploads8.wikiart.org/images/louis-wain/untitled.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_857f4742e77d4fbc8f6f6f7_small.jpg",
+            "value": "Untitled",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 16.656702041625977
+          },
+          {
+            "image_id": "w_963a9a61c6e8407cbd11b57",
+            "image_url": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+            "image_urls": {
+              "large": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/blue-cat-1932.jpg!Portrait.jpg",
+              "small": "https://uploads4.wikiart.org/images/louis-wain/blue-cat-1932.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_963a9a61c6e8407cbd11b57_small.jpg",
+            "value": "Blue Cat",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "1932",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 17.196258544921875
+          },
+          {
+            "image_id": "w_f65c92ecb740466eb7373f6",
+            "image_url": "https://uploads7.wikiart.org/images/louis-wain/mistletoe-for-you.jpg",
+            "image_urls": {
+              "large": "https://uploads7.wikiart.org/images/louis-wain/mistletoe-for-you.jpg",
+              "medium": "https://uploads2.wikiart.org/images/louis-wain/mistletoe-for-you.jpg!Portrait.jpg",
+              "small": "https://uploads8.wikiart.org/images/louis-wain/mistletoe-for-you.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_f65c92ecb740466eb7373f6_small.jpg",
+            "value": "MISTLETOE FOR YOU",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 20.104625701904297
+          }
+        ],
+        "intersections": [
+          {
+            "id": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+            "position": {
+              "x": 217.0725955955562,
+              "y": 166.40795518857078
+            },
+            "content": "a cat"
+          }
+        ]
+      },
+      "dragHandle": ".drag-handle__invisible",
+      "measured": {
+        "width": 150,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "image-ba248fdf-726a-43da-abc1-f314eca6d4c2",
+      "type": "image",
+      "position": {
+        "x": 70.23832284231992,
+        "y": 372.95857333496167
+      },
+      "zIndex": 1000,
+      "data": {
+        "content": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg!Blog.jpg",
+        "prompt": "\"Untitled\" (c. 1860-1939) by Louis Wain",
+        "provenance": "history",
+        "parentNodeId": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+        "similarArtworks": [
+          {
+            "image_id": "w_857f4742e77d4fbc8f6f6f7",
+            "image_url": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+            "image_urls": {
+              "large": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg!Blog.jpg",
+              "small": "https://uploads8.wikiart.org/images/louis-wain/untitled.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_857f4742e77d4fbc8f6f6f7_small.jpg",
+            "value": "Untitled",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 7.098658561706543
+          },
+          {
+            "image_id": "w_136f79f67474491ab722cbf",
+            "image_url": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+            "image_urls": {
+              "large": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+              "medium": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg!Blog.jpg",
+              "small": "https://uploads2.wikiart.org/images/louis-wain/a-good-read.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_136f79f67474491ab722cbf_small.jpg",
+            "value": "A GOOD READ",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 13.696293830871582
+          },
+          {
+            "image_id": "w_963a9a61c6e8407cbd11b57",
+            "image_url": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+            "image_urls": {
+              "large": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/blue-cat-1932.jpg!Portrait.jpg",
+              "small": "https://uploads4.wikiart.org/images/louis-wain/blue-cat-1932.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_963a9a61c6e8407cbd11b57_small.jpg",
+            "value": "Blue Cat",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "1932",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 13.90935230255127
+          }
+        ],
+        "intersections": [
+          {
+            "id": "image-ba248fdf-726a-43da-abc1-f314eca6d4c2",
+            "position": {
+              "x": 70.23832284231992,
+              "y": 372.95857333496167
+            },
+            "content": "\"Untitled\" (c. 1860-1939) by Louis Wain"
+          }
+        ]
+      },
+      "dragHandle": ".drag-handle__invisible",
+      "measured": {
+        "width": 150,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "image-561fa54d-4180-4b12-bd51-99c4aa82d8f0",
+      "type": "image",
+      "position": {
+        "x": 232.332076483597,
+        "y": 391.94133526446467
+      },
+      "zIndex": 1000,
+      "data": {
+        "content": "https://uploads7.wikiart.org/images/louis-wain/blue-cat-1932.jpg!Portrait.jpg",
+        "prompt": "\"Blue Cat\" (1932) by Louis Wain",
+        "provenance": "history",
+        "parentNodeId": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+        "similarArtworks": [
+          {
+            "image_id": "w_963a9a61c6e8407cbd11b57",
+            "image_url": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+            "image_urls": {
+              "large": "https://uploads3.wikiart.org/images/louis-wain/blue-cat-1932.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/blue-cat-1932.jpg!Portrait.jpg",
+              "small": "https://uploads4.wikiart.org/images/louis-wain/blue-cat-1932.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_963a9a61c6e8407cbd11b57_small.jpg",
+            "value": "Blue Cat",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "1932",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 8.500275611877441
+          },
+          {
+            "image_id": "w_857f4742e77d4fbc8f6f6f7",
+            "image_url": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+            "image_urls": {
+              "large": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg",
+              "medium": "https://uploads7.wikiart.org/images/louis-wain/untitled.jpg!Blog.jpg",
+              "small": "https://uploads8.wikiart.org/images/louis-wain/untitled.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_857f4742e77d4fbc8f6f6f7_small.jpg",
+            "value": "Untitled",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 15.823444366455078
+          },
+          {
+            "image_id": "w_136f79f67474491ab722cbf",
+            "image_url": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+            "image_urls": {
+              "large": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+              "medium": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg!Blog.jpg",
+              "small": "https://uploads2.wikiart.org/images/louis-wain/a-good-read.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_136f79f67474491ab722cbf_small.jpg",
+            "value": "A GOOD READ",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 17.73298454284668
+          }
+        ],
+        "intersections": [
+          {
+            "id": "image-561fa54d-4180-4b12-bd51-99c4aa82d8f0",
+            "position": {
+              "x": 434.88069083703886,
+              "y": 499.0960860837049
+            },
+            "content": "\"Blue Cat\" (1932) by Louis Wain"
+          }
+        ]
+      },
+      "dragHandle": ".drag-handle__invisible",
+      "measured": {
+        "width": 150,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "type": "image",
+      "position": {
+        "x": 399.64918116282405,
+        "y": 364.858225553491
+      },
+      "zIndex": 1000,
+      "data": {
+        "content": "https://uploads2.wikiart.org/images/louis-wain/mistletoe-for-you.jpg!Portrait.jpg",
+        "prompt": "\"MISTLETOE FOR YOU\" (c. 1860-1939) by Louis Wain",
+        "provenance": "history",
+        "parentNodeId": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+        "similarArtworks": [
+          {
+            "image_id": "w_f65c92ecb740466eb7373f6",
+            "image_url": "https://uploads7.wikiart.org/images/louis-wain/mistletoe-for-you.jpg",
+            "image_urls": {
+              "large": "https://uploads7.wikiart.org/images/louis-wain/mistletoe-for-you.jpg",
+              "medium": "https://uploads2.wikiart.org/images/louis-wain/mistletoe-for-you.jpg!Portrait.jpg",
+              "small": "https://uploads8.wikiart.org/images/louis-wain/mistletoe-for-you.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_f65c92ecb740466eb7373f6_small.jpg",
+            "value": "MISTLETOE FOR YOU",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 9.823477745056152
+          },
+          {
+            "image_id": "w_136f79f67474491ab722cbf",
+            "image_url": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+            "image_urls": {
+              "large": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg",
+              "medium": "https://uploads1.wikiart.org/images/louis-wain/a-good-read.jpg!Blog.jpg",
+              "small": "https://uploads2.wikiart.org/images/louis-wain/a-good-read.jpg!PinterestSmall.jpg"
+            },
+            "filename": "w_136f79f67474491ab722cbf_small.jpg",
+            "value": "A GOOD READ",
+            "artist_names": [
+              "Louis Wain"
+            ],
+            "descriptions": {
+              "wikiart": {
+                "date": "c. 1860-1939",
+                "genre": "animal painting",
+                "style": "Art Nouveau (Modern)"
+              }
+            },
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9",
+              "m_hu5sb9x0glo"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut",
+              "Louis Wain"
+            ],
+            "rights": "Public domain",
+            "distance": 16.40226936340332
+          },
+          {
+            "image_id": "5075a1933a32d60002000bda",
+            "image_url": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/large.jpg",
+            "image_urls": {
+              "large": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/large.jpg",
+              "large_rectangle": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/large_rectangle.jpg",
+              "larger": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/larger.jpg",
+              "medium": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/medium.jpg",
+              "medium_rectangle": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/medium_rectangle.jpg",
+              "normalized": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/normalized.jpg",
+              "small": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/small.jpg",
+              "square": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/square.jpg",
+              "tall": "https://d32dm0rphc51dk.cloudfront.net/R_cEC7on0mTdpGqZ3K_Ykg/tall.jpg"
+            },
+            "filename": "5075a1933a32d60002000bda_small.jpg",
+            "value": "Le Divan Japonais",
+            "artist_names": [
+              "Henri de Toulouse-Lautrec"
+            ],
+            "descriptions": {
+              "artsy": {
+                "additional_information": "[Image source](http://commons.wikimedia.org/wiki/File:Henri_de_Toulouse-Lautrec_-_Le_Divan_Japonais_-_Google_Art_Project.jpg)",
+                "category": "Posters",
+                "collecting_institution": "Musée Toulouse-Lautrec, Albi",
+                "date": "1892",
+                "description": "",
+                "medium": "Color lithograph"
+              }
+            },
+            "relatedKeywordIds": [
+              "4edf9b8890192b0001001789",
+              "56539404ebad647f5493ac0f",
+              "51b662628b3b8149ed0002e8",
+              "4f3eba372ee99a0001000665",
+              "4d90d18fdcdd5f44a500002e",
+              "573a4823cb4c274cf800078a",
+              "4e4ec2464c2606000104bff1",
+              "4eb427060253b80001018cc2",
+              "4e8e17313aac3f0001276e2b",
+              "4f0613b2848eb27bc6003b2c",
+              "4e60374fe890b1000125c530",
+              "52d9a44ba6ca6d9f450000b0",
+              "4d90d193dcdd5f44a500007c",
+              "51f18d0e275b24a84d00063a",
+              "4dd6e2ae3ccb2f00010056a9",
+              "4db85c704f6b2471d7000081",
+              "51b662538b3b8190570001e2",
+              "4fec76fd81f8f10001002004",
+              "56539ab1ebad6425e9000020",
+              "4e5ffebe1bb9170001001566",
+              "4e779a8869b76500010050ae",
+              "4d9396db17cb13253700048c",
+              "4d90d192dcdd5f44a5000065",
+              "507c6812f1a2ab0002000309",
+              "5058f057d0c2eb4f3200030d",
+              "4e3ada7da658730001031166",
+              "4ef104481c23d400010063ec",
+              "4eaf60c7d2a582000100bef6",
+              "4e4ec03c5fbc570001002fc9"
+            ],
+            "relatedKeywordStrings": [
+              "Henri de Toulouse-Lautrec",
+              "1860–1969",
+              "19th Century",
+              "Advertising and Brands",
+              "Art Nouveau",
+              "Bars and Restaurants",
+              "City Scenes",
+              "Collective History",
+              "Cross-Cultural Dialogue",
+              "Flatness",
+              "France",
+              "Graphic Design",
+              "Human Figure",
+              "Iconic Works of Art History",
+              "Illustration",
+              "Japonisme",
+              "Late 19th Century",
+              "Leisure",
+              "Lithograph",
+              "Patterns",
+              "Performing Arts",
+              "Popular Culture",
+              "Post-Impressionism",
+              "Poster",
+              "Prints",
+              "Related to Music",
+              "Text",
+              "Typography",
+              "Urbanization"
+            ],
+            "rights": "Source: Wikimedia Commons / Public Domain",
+            "distance": 16.458234786987305
+          }
+        ],
+        "intersections": [
+          {
+            "id": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+            "position": {
+              "x": 399.64918116282405,
+              "y": 364.858225553491
+            },
+            "content": "\"MISTLETOE FOR YOU\" (c. 1860-1939) by Louis Wain"
+          }
+        ]
+      },
+      "dragHandle": ".drag-handle__invisible",
+      "measured": {
+        "width": 150,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "text-2519737c-bfe7-40e6-96af-ff5a15e32ca8",
+      "type": "text",
+      "zIndex": 1000,
+      "position": {
+        "x": 217.01613125764948,
+        "y": 583.3906505888076
+      },
+      "data": {
+        "words": [
+          {
+            "value": "Genre:"
+          },
+          {
+            "value": "animal",
+            "entryId": "4d937b5517cb1325370000ee",
+            "databaseValue": "Animals",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "_“Animals are such agreeable friends—they ask no questions, they pass no criticisms.” —George Eliot_\n\nWhether pets, mythological beasts, or wild creatures, animals have always been a major subject of art and literature. Dating back to Paleolithic cave paintings in France and ancient Egyptian reliefs and artifacts, animals have been depicted by artists as friends, allegories, muses, and reflections on human nature."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b6d1894714c2de0000367",
+              "521660559c18dbad160003be",
+              "515b11219562c86fb800075b",
+              "515b1443056351dc33000b1f",
+              "530bb301a09a67b0ba000030",
+              "515b7415cd4b8ef7fd00061d",
+              "530bb53a9c18db8ea6000026",
+              "530bba3ba09a67055c000034",
+              "530bbc9cb202a38198000032",
+              "515b1126223afae9a50005fa",
+              "516cb4df472cb83069000f28",
+              "516c9d27b83d23c471000512"
+            ],
+            "relatedKeywordStrings": [
+              "Judith Leyster",
+              "Rachel Ruysch",
+              "Rosa Bonheur",
+              "Carle Vernet",
+              "Fiore Furlan dei Liberi da Premariacco",
+              "Giovanni Benedetto Castiglione",
+              "Jean-Gabriel Eynard",
+              "Nicolas Spierinck",
+              "Taddeo Crivelli",
+              "Félix Bracquemond",
+              "Conrad Gessner",
+              "Étienne-Jules Marey"
+            ]
+          },
+          {
+            "value": "painting",
+            "entryId": "4d90d18edcdd5f44a5000010",
+            "databaseValue": "Painting",
+            "images": [],
+            "isArtist": false,
+            "type": "Medium and Techniques",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "_\"Painting completed my life.\"—[Frida Kahlo](/artist/frida-kahlo)_\n\nPainting—for many, the answer to the question \"What is art?\"—could be as old as humanity itself. Practiced across virtually all cultures, it is our primary visual record of the world, and as such has a history of incredible complexity. Important touchpoints include the traditional Western emphasis on illusionism; the difference between figuration and abstraction; the rise of oil painting; and the significant art-historical movements in which painting was central, such as the [Renaissance](/gene/renaissance), the [Baroque](/gene/baroque), [Impressionism](/gene/impressionism), [Cubism](/gene/cubism), and [Abstract Expressionism](/gene/abstract-expressionism)."
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d8b92b64eb68a1b2c000414",
+              "4d8b929c4eb68a1b2c0002e2",
+              "4d8b927e4eb68a1b2c000168",
+              "4eaeec71bddaf7000100681b",
+              "4eaeed56ec5cf600010091d5",
+              "4d8b92624eb68a1b2c000066",
+              "4eaefa23ec5cf6000100c25d",
+              "4d8b92684eb68a1b2c00009e",
+              "4eaf08816899c80001008a91",
+              "50ec6e2fde2538e308000ed6",
+              "4eaf1873d2a582000100bb7d",
+              "4eaf1cb0ec5cf6000100f69a",
+              "4eaf1de96899c80001009ce4",
+              "4eb02539f21e2500010014a2",
+              "4d8b929c4eb68a1b2c0002e0",
+              "4d8b92884eb68a1b2c0001dc",
+              "4d8b92944eb68a1b2c000264",
+              "4d8b929e4eb68a1b2c0002f0",
+              "4eb07f28b19764000100e191",
+              "4d8b92774eb68a1b2c000134",
+              "4eaf2207bddaf7000100dc5d",
+              "4eb02481f21e2500010013de",
+              "4f0648328501fa10ca000287",
+              "4f0648328501fa10ca00015a",
+              "4d8b92834eb68a1b2c00019e",
+              "4d8b92884eb68a1b2c0001d4",
+              "4d8b92b44eb68a1b2c0003fe",
+              "4edfe0614645a70001000ab5",
+              "4dadd2177129f05924000c68",
+              "5051c8583d0d3500020003c0",
+              "50749e8957362b0002001c65",
+              "4edf9b8890192b0001001789",
+              "503ccf1000779400020005d3",
+              "4eb19570085cf50001001098",
+              "4f39397e6779d800010009fa",
+              "4d8b928e4eb68a1b2c000222",
+              "4f958f7daa701d0001000e26",
+              "4f956f0b99f03b000100091c",
+              "4d8b92b84eb68a1b2c000424",
+              "4f956a33ceaf2a000100089a",
+              "4f0648328501fa10ca00009d",
+              "4d8b92624eb68a1b2c00006c",
+              "4eaeef476899c80001006c66",
+              "51dc5620275b24c39700001e",
+              "4eaf0255bddaf7000100a7eb",
+              "4f9594c10eaacc0001000c96",
+              "4f0648328501fa10ca000177",
+              "51f0230c275b24a539000160",
+              "51f045e0275b24c77a000300",
+              "51f04677275b24ffc000033a",
+              "51f17636275b24e6ce000475",
+              "51f17a6a8b3b8199d6000262",
+              "52026ff39c18db8cf300001c",
+              "4d8b92a44eb68a1b2c00032e",
+              "503be7f30077940002000185",
+              "515b3ea338ad2d25a7000dd4",
+              "5051e44087a7db000200049e",
+              "5202970fc9dc24d5ec000013",
+              "52029defa09a677392000043",
+              "51535a8e7b00a2dd24000142",
+              "4f95637a0eaacc0001000896",
+              "4f956e21ceaf2a0001000948",
+              "5203fb297622ddf8b100005e",
+              "52052735275b2498fe000085",
+              "4f0b5324fe46fc00010004c1",
+              "5050f209bc037b0002000032",
+              "4d8b92be4eb68a1b2c000480",
+              "515b5af81b12b0244a0000f7",
+              "4eaf213abddaf7000100dbd7",
+              "5052266c32b1e70002000287",
+              "4f0648318501fa10ca00003e",
+              "4f0648328501fa10ca0000c0",
+              "4f0648328501fa10ca000313",
+              "4f0b520e0e88e2000100047b",
+              "4f95940aceaf2a0001000c78",
+              "50eb4cd49bf55352e6000056",
+              "52126ee09c18dbb1df000017",
+              "4f0648328501fa10ca00030d",
+              "4eaf0d2e6899c80001008f80",
+              "52138ef5139b2108810001c6",
+              "4ee77a2da4e3570001001241",
+              "5159f18d1b77fe9d0a000038",
+              "4eaf10b66899c800010091da",
+              "4fc66848cfef220001000cd7",
+              "5213b063275b244b9b0001d5",
+              "515b34aa223afa29bd000074",
+              "4eaee8deec5cf60001007624",
+              "4f0648328501fa10ca000302",
+              "5155f3e5b88851af51000220",
+              "4ee140460fe6220001001fe0",
+              "4ee29475b422a30001001449",
+              "4eaf1b73bddaf7000100d260",
+              "4eb2f4ace742d7000100aa58",
+              "515b6d1894714c2de0000367",
+              "515b4e5d9562c8b443000519",
+              "521660559c18dbad160003be",
+              "504a4196f0bbe500020003b5",
+              "52166706139b21789c000376",
+              "4f0648328501fa10ca0000eb",
+              "4f0648328501fa10ca0002e9",
+              "4f0648328501fa10ca000242",
+              "503bdf81c61f2c00020000b2",
+              "4f0b521c939bf200010004c1",
+              "4eaf1199ec5cf6000100e41b",
+              "515b079f223afa7ea8000151",
+              "4ee13b1ec45af70001001913",
+              "4eb081c4af493000010109cc",
+              "50531f6bb77c790002000245",
+              "508e99a603d4290002000d3f",
+              "4eb07be4193c79000100df4f",
+              "515bc58fcd4b8ef7fd0024da",
+              "4f958917bf76eb0001000c4b",
+              "4ee28d391817c700010017c4",
+              "4eaf12f5d2a582000100b9a6",
+              "4eaef729bddaf700010098c1",
+              "4ee66adf8f10ec000100129c",
+              "515b37ec223afa29bd0001f8",
+              "515b11219562c86fb800075b",
+              "4eaf0ecf35118f000100c153",
+              "4f0648328501fa10ca000303",
+              "4eb1ac352135c20001001f96",
+              "4d8b92964eb68a1b2c000288",
+              "4d8b92b74eb68a1b2c00041e",
+              "4fbac5c08b3137000100074d",
+              "4d8b927c4eb68a1b2c00015a",
+              "4f0648328501fa10ca000297",
+              "4eaeeb4776e78f0001006adb",
+              "4f0648328501fa10ca000315",
+              "503bb956a004980002000091",
+              "515d66a07b70570a13004a2c",
+              "50475fb3061fd50002000356",
+              "4f0648328501fa10ca0003ac",
+              "4f0648328501fa10ca0003ba",
+              "4ee67a9b9fe02600010021cf",
+              "515bc289cd4b8ed0b9001ce1",
+              "51cc6ec78b3b814f1c000358",
+              "50eaf11d07cefe83cf0000b0",
+              "4eb2e40b6e2a5c00010085b8",
+              "515b37ec38ad2d25a7000aa1",
+              "4ee67e3507b83a0001002c2f",
+              "507d7af320929500020020ec",
+              "50fd639c79e445f42400013a",
+              "515b5f441b12b0244a000277",
+              "516df5f2fdc4419488000b0c",
+              "50fc8b80ee97f98755000043",
+              "4f0648328501fa10ca00015c",
+              "50eaf6c91f4a9ee55d0000f9",
+              "515b0e1d38ad2d78ca00048c",
+              "515cebffb5907b33b100145e",
+              "515bc58eea092f003c001970",
+              "515d5a335eeb1c904c0043d4",
+              "515b450b223afaab8f0011aa",
+              "50eaf86c06989303e30001f4",
+              "515b1443056351dc33000b1f",
+              "50eaf8ef493c2c6f75000185",
+              "503bd4cb027f150002000031",
+              "50eafaf84a45fa296800010a",
+              "513ddccaeedac36a120002a8",
+              "515b5f4294714c2de0000057",
+              "515b6d18cd4b8ed25f00042a",
+              "515cc5b0769659e1fb000381",
+              "516cbe7e9ad2d32bec000117",
+              "515b3b5038ad2dfb2f000920",
+              "515b1442056351dc33000b11",
+              "503bd8ec5ccfe30002000058",
+              "530bab8acd530e977600000e",
+              "4ee25e42319d7e0001000165",
+              "4f0648318501fa10ca00003a",
+              "515b079e38ad2dfc77000155",
+              "515cbf03769659e1fb00001f",
+              "515cd3607b70570a130009fb",
+              "516ca77b472cb83069000938",
+              "515b805bea092fa63900035d",
+              "4d8b92aa4eb68a1b2c000378",
+              "4f0648318501fa10ca000031",
+              "50eb2b5eee0e16ef0f000400",
+              "515d05d6b5907bf7e800213a",
+              "515b805c1b12b0e668000a9e",
+              "530bb301a09a67b0ba000030",
+              "4eb1b8842135c20001004626",
+              "4edfe18f0f64f500010000a7",
+              "530b9f559c18db99230000c5",
+              "515b1ac8056351dc33000edc",
+              "515bacf01b12b0e668001a7d",
+              "515b07a405635113a5000371",
+              "513de03f1665c8d548000002",
+              "515b7415cd4b8ef7fd00061d",
+              "4eb2f708e742d7000100ba28",
+              "530bb67cb202a34c53000030",
+              "530bb7a2a09a672d1400001e",
+              "530bb905b202a321ab00001f",
+              "530bba3ba09a67055c000034",
+              "530bbba0a09a67055c00003a",
+              "530bbc00275b24047c000048",
+              "515d4e7db5907b33b1003e80",
+              "530bbc597622ddc18f00001a",
+              "530bbc9cb202a38198000032",
+              "50eca4b531950352a5000109",
+              "515b1ac705635113a5000f0d",
+              "516ca778472cb883150008b1",
+              "515b1126223afae9a50005fa",
+              "515b1e019562c8fee2000e9e",
+              "4f0648328501fa10ca0000cd",
+              "515bb94ccd4b8ef7fd001ee3",
+              "515b07a3223afae9a500001e",
+              "531506657622ddd82c000195",
+              "531506da275b243cfe000396",
+              "503ce371aff0d400020006f2",
+              "4fe8a03373f5a000010021d0",
+              "508f37725a8c8c0002000809",
+              "50ec99a0217b7c9793000053",
+              "515b045b9562c8fee20000d5",
+              "515d42a77696593fde003e6b",
+              "515b045f223afa7ea800006b",
+              "515b929b1b12b0e668000f64",
+              "515cf2c87b70570a1300196e",
+              "5159e80570f40fa1cd0001c1",
+              "515d08967b7057eb4c0025aa",
+              "4eb1a842b4da1900010030c4",
+              "4f0648328501fa10ca0003c7"
+            ],
+            "relatedKeywordStrings": [
+              "Gustav Klimt",
+              "Rembrandt van Rijn",
+              "Édouard Manet",
+              "Sandro Botticelli",
+              "Alexandre Cabanel",
+              "Michelangelo Merisi da Caravaggio",
+              "Gustave Courbet",
+              "Leonardo da Vinci",
+              "Eugène Delacroix",
+              "Théodore Géricault",
+              "Matthias Grünewald",
+              "William Hogarth",
+              "Jean-Auguste-Dominique Ingres",
+              "Berthe Morisot",
+              "Pierre-Auguste Renoir",
+              "Peter Paul Rubens",
+              "Vincent van Gogh",
+              "Johannes Vermeer",
+              "Jean-Antoine Watteau",
+              "Claude Monet",
+              "Masaccio",
+              "Jean-François Millet",
+              "John Everett Millais",
+              "Artemisia Gentileschi",
+              "Michelangelo Buonarroti",
+              "Titian",
+              "Francisco de Goya",
+              "J. M. W. Turner",
+              "Edgar Degas",
+              "Fra Filippo Lippi",
+              "Filippino Lippi",
+              "Henri de Toulouse-Lautrec",
+              "Limbourg Brothers",
+              "Paolo Veronese",
+              "James Abbott McNeill Whistler",
+              "Juan Gris",
+              "Lorenzo Ghiberti",
+              "Rogier van der Weyden",
+              "Diego Velázquez",
+              "Piero della Francesca",
+              "Jean-Siméon Chardin",
+              "Paul Cézanne",
+              "Gustave Caillebotte",
+              "Quentin Metsys (Quinten Massys)",
+              "Jacques-Louis David",
+              "Domenico Ghirlandaio",
+              "Hendrik Goltzius",
+              "Gu Kaizhi 顾恺之",
+              "Xu Daoning",
+              "Fan Kuan",
+              "Xia Gui",
+              "Zhang Zeduan",
+              "Melchior Broederlam",
+              "Jan van Eyck",
+              "Hugo van der Goes",
+              "Petrus Christus",
+              "Robert Campin",
+              "Jean Fouquet",
+              "Nuno Gonçalves",
+              "Martin Schongauer",
+              "Giotto",
+              "Duccio",
+              "Ambrogio Lorenzetti",
+              "Coppo di Marcovaldo",
+              "Paolo Uccello",
+              "Leon Battista Alberti",
+              "Fra Angelico",
+              "Andrea del Castagno",
+              "Andrea Mantegna",
+              "Pietro Perugino",
+              "Giovanni Bellini",
+              "Correggio",
+              "Giulio Romano",
+              "Giorgione",
+              "Agnolo Bronzino",
+              "Francesco Mazzola, called Parmigianino",
+              "Lavinia Fontana",
+              "Jacopo Tintoretto",
+              "Albrecht Dürer",
+              "Veit Stoss",
+              "Tilman Riemenschneider",
+              "Albrecht Altdorfer",
+              "El Greco",
+              "Jan Gossaert",
+              "Catharina van Hemessen",
+              "Hyacinthe Rigaud",
+              "Gian Lorenzo Bernini",
+              "Guido Reni",
+              "Giovanni Battista Gaulli, called Baciccio",
+              "Anthony van Dyck",
+              "Bartolomé Esteban Murillo",
+              "Frans Hals",
+              "Clara Peeters",
+              "Judith Leyster",
+              "Gerard ter Borch the Younger",
+              "Rachel Ruysch",
+              "Pieter Claesz",
+              "Antoine Le Nain",
+              "Georges de La Tour",
+              "Nicolas Poussin",
+              "Claude Lorrain",
+              "Giambattista Tiepolo",
+              "François Boucher",
+              "Jean-Honoré Fragonard",
+              "Canaletto",
+              "Joshua Reynolds",
+              "Benjamin West",
+              "Joseph Wright of Derby",
+              "Henry Fuseli",
+              "Élisabeth Louise Vigée-Le Brun",
+              "Adélaïde Labille-Guiard",
+              "Anne-Louis Girodet-Trioson",
+              "Johann Joseph Zoffany",
+              "Caspar David Friedrich",
+              "Thomas Cole",
+              "Jean-Léon Gérôme",
+              "Jean-Baptiste Carpeaux",
+              "Rosa Bonheur",
+              "Thomas Eakins",
+              "Ilya Efimovich Repin",
+              "Honoré Daumier",
+              "Winslow Homer",
+              "Mary Cassatt",
+              "Albert Pinkham Ryder",
+              "Paul Gauguin",
+              "Gustave Moreau",
+              "Umberto Boccioni",
+              "Dante Gabriel Rossetti",
+              "Abraham Bloemaert",
+              "Adam Elsheimer",
+              "Adriaen van de Velde",
+              "Adriaen Pietersz van de Venne",
+              "Adriaen van Ostade",
+              "Aelbert Cuyp",
+              "Agostino Carracci",
+              "Albert Dubois-Pillet",
+              "Alessandro Magnasco, called il Lissandrino",
+              "Alfred Sisley",
+              "André Giroux",
+              "Andrea del Sarto",
+              "Andrea Sacchi",
+              "Annibale Carracci",
+              "Anton Raphael Mengs",
+              "Arnold Böcklin",
+              "Antonio D'Ubertino Verdi (called Bachiacca)",
+              "François-Pascal-Simon, called Baron Gérard",
+              "Bartholomeus Breenbergh",
+              "Bartolomeo Biscaino",
+              "Bartolomeo Cesi",
+              "Bartolomeo Passarotti",
+              "Bartolomeo Vivarini",
+              "Bernaert van Orley",
+              "Bernardino Fungai",
+              "Carle Vernet",
+              "Carlo Dolci",
+              "Cenni di Francesco di Ser Cenni",
+              "Charles de La Fosse",
+              "Charles Le Brun",
+              "Charles Nègre",
+              "Charles-Antoine Coypel",
+              "Christoph Heinrich Kniep",
+              "Claude-Joseph Vernet",
+              "Constantin Guys",
+              "Cornelis Bega",
+              "Cornelis van Poelenburgh",
+              "Dieric Bouts",
+              "Domenichino",
+              "Domenico Beccafumi",
+              "Domenico Campagnola",
+              "Domenico Fetti",
+              "Domenico Maria Canuti",
+              "Domenico Tintoretto",
+              "Dosso Dossi",
+              "Edvard Munch",
+              "Federico Barocci",
+              "Federico Zuccaro",
+              "Felice Beato",
+              "Ferdinand Kobell",
+              "Fiore Furlan dei Liberi da Premariacco",
+              "Baccio della Porta, called Fra Bartolommeo",
+              "Francesco Guardi",
+              "Francesco Primaticcio",
+              "Francesco Salviati",
+              "Francesco Solimena",
+              "Gabriel de Saint-Aubin",
+              "Gentile da Fabriano",
+              "Giovanni Benedetto Castiglione",
+              "Jean-Baptiste Joseph Pater",
+              "Lievan van Lathem",
+              "Master of James IV of Scotland",
+              "Master of the Llangattock Hours",
+              "Nicolas Spierinck",
+              "Simon Bening",
+              "Simon Marmion",
+              "Sodoma",
+              "Spitz Master",
+              "Taddeo Crivelli",
+              "Taddeo Zuccaro",
+              "Wolf Huber",
+              "Jan de Bisschop",
+              "Félix Bracquemond",
+              "Vincenzo Camuccini",
+              "Henri Edmond Cross",
+              "Romeyn de Hooghe",
+              "Themistocles von Eckenbrecher",
+              "Joao Clama",
+              "Andreas Benedikt Göbl",
+              "Maerten van Heemskerck",
+              "Thomas H. Hope",
+              "François Perrier",
+              "Pietro Berrettini, called Pietro da Cortona",
+              "Thomas Rowlandson",
+              "Jean Claude Richard de Saint-Non (author)",
+              "Raffaello Schiaminossi",
+              "Karl Friedrich Schinkel",
+              "James Stuart",
+              "Antonio Tempesta",
+              "Theodoor van Thulden",
+              "Giovanni Domenico Tiepolo",
+              "José María Velasco"
+            ]
+          }
+        ],
+        "provenance": "history",
+        "content": "Genre: animal painting",
+        "intersections": [],
+        "similarTexts": [
+          {
+            "value": "Animal Portrait",
+            "entryId": "500d93c1d1ecdc00020011f9",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A category for artworks that capture the likeness of animals. These images might closely resemble human portraits in style, but with animals in the place of human subjects."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b11219562c86fb800075b"
+            ],
+            "relatedKeywordStrings": [
+              "Rosa Bonheur"
+            ]
+          },
+          {
+            "value": "Atmospheric Landscapes",
+            "entryId": "518ba7fd9c0dedda83000235",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A general category for landscapes with a particularly hazy or soft-focus look. Major examples include paintings by [Tonalists](/gene/tonalism), [Impressionists](/gene/impressionism) (like [Claude Monet](/artist/claude-monet)), and [Romantics](/gene/romanticism) (like [Joseph William Mallord Turner](/artist/joseph-mallord-william-turner)), as well as, more recently, the works of [Wolf Kahn](/artist/wolf-kahn)."
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d8b92774eb68a1b2c000134",
+              "4edfe0614645a70001000ab5",
+              "51f045e0275b24c77a000300",
+              "51f17636275b24e6ce000475",
+              "516df5f2fdc4419488000b0c"
+            ],
+            "relatedKeywordStrings": [
+              "Claude Monet",
+              "J. M. W. Turner",
+              "Xu Daoning",
+              "Xia Gui",
+              "Arnold Böcklin"
+            ]
+          },
+          {
+            "value": "Animals",
+            "entryId": "4d937b5517cb1325370000ee",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "_“Animals are such agreeable friends—they ask no questions, they pass no criticisms.” —George Eliot_\n\nWhether pets, mythological beasts, or wild creatures, animals have always been a major subject of art and literature. Dating back to Paleolithic cave paintings in France and ancient Egyptian reliefs and artifacts, animals have been depicted by artists as friends, allegories, muses, and reflections on human nature."
+              }
+            ],
+            "relatedKeywordIds": [
+              "515b6d1894714c2de0000367",
+              "521660559c18dbad160003be",
+              "515b11219562c86fb800075b",
+              "515b1443056351dc33000b1f",
+              "530bb301a09a67b0ba000030",
+              "515b7415cd4b8ef7fd00061d",
+              "530bb53a9c18db8ea6000026",
+              "530bba3ba09a67055c000034",
+              "530bbc9cb202a38198000032",
+              "515b1126223afae9a50005fa",
+              "516cb4df472cb83069000f28",
+              "516c9d27b83d23c471000512"
+            ],
+            "relatedKeywordStrings": [
+              "Judith Leyster",
+              "Rachel Ruysch",
+              "Rosa Bonheur",
+              "Carle Vernet",
+              "Fiore Furlan dei Liberi da Premariacco",
+              "Giovanni Benedetto Castiglione",
+              "Jean-Gabriel Eynard",
+              "Nicolas Spierinck",
+              "Taddeo Crivelli",
+              "Félix Bracquemond",
+              "Conrad Gessner",
+              "Étienne-Jules Marey"
+            ]
+          },
+          {
+            "value": "History Painting",
+            "entryId": "50a14b03509ee8ebb8000f7b",
+            "images": [],
+            "isArtist": false,
+            "type": "Medium and Techniques",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A genre of [painting](/gene/painting) that was influential from the mid-[15th century](/gene/15th-century) through the [19th century](/gene/19th-century). A history painting was generally understood to depict an important event or action involving several people. These events could be historical, religious, mythical, or the stuff of fable. History painting was long considered to be the highest (and most challenging) genre of painting, due to its connection to powerful subject matter and its ability to educate the public in lofty themes and virtues. Before the 19th century, history painting was subject to certain requirements—as elucidated by [Joshua Reynolds](/artist/sir-joshua-reynolds), among others. While history painting’s popularity has waned, some [modern](/gene/modern) and [contemporary](/gene/contemporary-art) artists still engage with the genre, often attempting to update or revise its themes and styles."
+              }
+            ],
+            "relatedKeywordIds": [
+              "50ec6e2fde2538e308000ed6",
+              "4eaf1de96899c80001009ce4",
+              "4d8b92884eb68a1b2c0001dc",
+              "4edfe0614645a70001000ab5",
+              "4edfe7b17cb5c400010000eb",
+              "4d8b92b84eb68a1b2c000424",
+              "4eaf0255bddaf7000100a7eb",
+              "4f0b5324fe46fc00010004c1",
+              "515d66a07b70570a13004a2c",
+              "4f0648328501fa10ca00015c",
+              "513ddccaeedac36a120002a8",
+              "515b6d18cd4b8ed25f00042a",
+              "516cbe7e9ad2d32bec000117",
+              "530b9f559c18db99230000c5",
+              "515b1ac8056351dc33000edc",
+              "515d4e7db5907b33b1003e80",
+              "515b1e019562c8fee2000e9e",
+              "5159e80570f40fa1cd0001c1",
+              "515d08967b7057eb4c0025aa"
+            ],
+            "relatedKeywordStrings": [
+              "Théodore Géricault",
+              "Jean-Auguste-Dominique Ingres",
+              "Peter Paul Rubens",
+              "J. M. W. Turner",
+              "Raphael",
+              "Diego Velázquez",
+              "Jacques-Louis David",
+              "Paolo Uccello",
+              "Adam Elsheimer",
+              "François-Pascal-Simon, called Baron Gérard",
+              "Charles Le Brun",
+              "Charles-Antoine Coypel",
+              "Claude-Joseph Vernet",
+              "Francesco Primaticcio",
+              "Francesco Salviati",
+              "Sodoma",
+              "Vincenzo Camuccini",
+              "Antonio Tempesta",
+              "Theodoor van Thulden"
+            ]
+          },
+          {
+            "value": "Contemporary Graphic Realism",
+            "entryId": "4f50f37bd9c50c027b138413",
+            "images": [],
+            "isArtist": false,
+            "type": "Styles and Movements",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Figurative artworks rendered in a highly graphic style, often featuring reductive shapes, streamlined contours, and flattened planes of color. Works in this category often resemble comic book illustrations, propaganda posters, or photographs altered with the use of a high-contrast filter."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          }
+        ],
+        "hasNoKeywords": false
+      },
+      "measured": {
+        "width": 200,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "text-538c9f94-1c7d-46a0-b679-13a7ae3751ce",
+      "type": "text",
+      "zIndex": 1000,
+      "position": {
+        "x": 334.4383779899132,
+        "y": 602.5355821212419
+      },
+      "data": {
+        "words": [
+          {
+            "value": "Art Brut",
+            "entryId": "4de7caaa5a225f0001006fb9",
+            "databaseValue": "Art Brut",
+            "images": [],
+            "isArtist": false,
+            "type": "Styles and Movements",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A French term meaning “raw art” or “rough art” that was coined by artist [Jean Dubuffet](/artist/jean-dubuffet) to denote works more popularly known as [Outsider Art](/gene/outsider-art), which he championed as exemplifying powerful originality, not stifled by education or socialization. Dubuffet began collecting, writing about, and lecturing on Art Brut in the mid 1940s after visiting Switzerland and seeing works by psychiatric patients collected in hospitals there."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          }
+        ],
+        "provenance": "history",
+        "content": "Art Brut",
+        "intersections": [
+          {
+            "id": "text-538c9f94-1c7d-46a0-b679-13a7ae3751ce",
+            "position": {
+              "x": 536.986992343355,
+              "y": 709.6903329404821
+            },
+            "content": "Art Brut"
+          },
+          {
+            "id": "text-2519737c-bfe7-40e6-96af-ff5a15e32ca8",
+            "position": {
+              "x": 419.5647456110913,
+              "y": 690.5454014080478
+            },
+            "content": "Genre: animal painting"
+          }
+        ],
+        "similarTexts": [
+          {
+            "value": "Art Brut",
+            "entryId": "4de7caaa5a225f0001006fb9",
+            "images": [],
+            "isArtist": false,
+            "type": "Styles and Movements",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A French term meaning “raw art” or “rough art” that was coined by artist [Jean Dubuffet](/artist/jean-dubuffet) to denote works more popularly known as [Outsider Art](/gene/outsider-art), which he championed as exemplifying powerful originality, not stifled by education or socialization. Dubuffet began collecting, writing about, and lecturing on Art Brut in the mid 1940s after visiting Switzerland and seeing works by psychiatric patients collected in hospitals there."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Sculpture-Based Photography",
+            "entryId": "4f2c597f8d53d100010007c5",
+            "images": [],
+            "isArtist": false,
+            "type": "Medium and Techniques",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Photographs of a sculpture—or a more complex installation—that has been built primarily for the purpose of being photographed and most often does not exist outside of the documentation. [Thomas Demand](/artist/thomas-demand)’s photographs of highly-realistic \"rooms\" composed of paper are arguably the best-known examples of this type of work. Sculpture-based photography is related to [Staged Photography](/gene/staged-photography) and [Performance](/gene/performance-art), as well as [Trompe l'oeil](/gene/trompe-loeil)."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Cluj School",
+            "entryId": "4f56d74d5cdd0d00010000be",
+            "images": [],
+            "isArtist": false,
+            "type": "Styles and Movements",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "A group of painters who coalesced in Cluj-Napoca (the unofficial capital of the historic Transylvania region of Romania) after the 1989 Romanian Revolution. Their style is characterized by the loose application of paint—often with dark, sultry palettes—and the presentation of vignettes illustrating the uncertainty and banality of life after the fall of Communism."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "1970–present",
+            "entryId": "4d90d18fdcdd5f44a5000025",
+            "images": [],
+            "isArtist": false,
+            "type": "Time Periods",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Contemporary art refers to work made by living artists.  By this definition, all art has been contemporary at the moment of its creation.  However, the art world often narrowly limits the use of this term to artwork made after 1970 as a successor to [modern art](/gene/modern-1).  Distinguished by a lack of medium specificity and ideological “-isms,” contemporary art reflects the diversity of our current culture and society.  Today’s artists are responding to complex concepts such as [identity politics](/gene/identity-politics-1), [institutional critique](/institutional-critique), and [globalization](/gene/globalization), often through artwork with challenging aesthetics.  Defying the status quo, contemporaries like [Tania Bruguera](/artist/tania-bruguera), [Kara Walker](/artist/kara-walker), and [Ai Weiwei](/artist/ai-weiwei) are forging paths for [emerging talents](/gene/emerging-art) and future provocateurs."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Figures of the Art World",
+            "entryId": "5025764c1f250900020006b6",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Where there’s art there are people: those who make, transport, buy, sell, hang, restore, study, or spurn it. These people make up “the art world,” as amorphous as it may be. For some, it is an exclusive party or a venerable club; for others, a workplace, or still yet, an all-inclusive sociological study. For artists, it is often all these and more: an endless source of subject matter. (See also [Spaces of the Art World](/gene/spaces-of-the-art-world) and [Art Market Critique](/gene/the-art-market).)"
+              }
+            ],
+            "relatedKeywordIds": [
+              "4eb4168f5fdd9f0001000ad2",
+              "503bf7a45ccfe3000200026a",
+              "4f0648328501fa10ca000303",
+              "4e96f7705554c900010027db"
+            ],
+            "relatedKeywordStrings": [
+              "Julia Margaret Cameron",
+              "Nadar",
+              "Ilya Efimovich Repin",
+              "Berenice Abbott"
+            ]
+          }
+        ],
+        "hasNoKeywords": false
+      },
+      "measured": {
+        "width": 200,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "text-8fea4709-9032-49c0-a091-be76868ddf54",
+      "type": "text",
+      "zIndex": 1000,
+      "position": {
+        "x": 518.2297207012824,
+        "y": 546.377116292768
+      },
+      "data": {
+        "words": [
+          {
+            "value": "\"MISTLETOE"
+          },
+          {
+            "value": "FOR"
+          },
+          {
+            "value": "YOU\""
+          },
+          {
+            "value": "(c."
+          },
+          {
+            "value": "1860-1939)",
+            "entryId": "56539404ebad647f5493ac0f",
+            "databaseValue": "1860–1969",
+            "images": [],
+            "isArtist": false,
+            "type": "Time Periods",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "All art, design, decorative art, and architecture produced from roughly 1860 to 1970."
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d8b92b64eb68a1b2c000414",
+              "4d8b927e4eb68a1b2c000168",
+              "4eb02539f21e2500010014a2",
+              "4d8b929c4eb68a1b2c0002e0",
+              "4e9764016ba71200010022d9",
+              "4d8b92944eb68a1b2c000264",
+              "4d8b92774eb68a1b2c000134",
+              "4f0648328501fa10ca000287",
+              "4dadd2177129f05924000c68",
+              "4edf9b8890192b0001001789",
+              "4f39397e6779d800010009fa",
+              "4d8b928e4eb68a1b2c000222",
+              "4d8b92624eb68a1b2c00006c",
+              "4eaeef476899c80001006c66",
+              "4eb0600d5fb415000100891d",
+              "508f366e1b78900002000900",
+              "4eb4168f5fdd9f0001000ad2",
+              "515b37ec223afa29bd0001f8",
+              "515b11219562c86fb800075b",
+              "503bf7a45ccfe3000200026a",
+              "4eaf0ecf35118f000100c153",
+              "4f0648328501fa10ca000303",
+              "4d8b92964eb68a1b2c000288",
+              "4d8b92b74eb68a1b2c00041e",
+              "4fbac5c08b3137000100074d",
+              "4d8b927c4eb68a1b2c00015a",
+              "4f0648328501fa10ca000297",
+              "4eaeeb4776e78f0001006adb",
+              "4f0648328501fa10ca000315",
+              "51cc6ec78b3b814f1c000358",
+              "515bb62194714c2e38001572",
+              "4eb2e40b6e2a5c00010085b8",
+              "4ee791716e539d0001001e64",
+              "515b929d1b12b0244a000f5e",
+              "4e96f7705554c900010027db",
+              "4eb2e9d26e2a5c0001008d80",
+              "50a3d2e5db1337355c000029",
+              "506b33d544661700020012ee",
+              "515b3b5038ad2dfb2f000920",
+              "515b318c056351dc33001a49",
+              "530bb1c28b3b81f458000026",
+              "515bb3241b12b0e668001e2f",
+              "4d8b92aa4eb68a1b2c000378",
+              "4f552b2e3b5552417000001f",
+              "515d05d6b5907bf7e800213a",
+              "530bbd11a09a672d14000027",
+              "515b1126223afae9a50005fa",
+              "4f0648328501fa10ca0000cd",
+              "515b07a3223afae9a500001e",
+              "4fe8a03373f5a000010021d0",
+              "5315095fa09a6751a700045d",
+              "516c9d27b83d23c471000512",
+              "5315f2899c18dbfde10001a0"
+            ],
+            "relatedKeywordStrings": [
+              "Gustav Klimt",
+              "Édouard Manet",
+              "Berthe Morisot",
+              "Pierre-Auguste Renoir",
+              "Auguste Rodin",
+              "Vincent van Gogh",
+              "Claude Monet",
+              "John Everett Millais",
+              "Edgar Degas",
+              "Henri de Toulouse-Lautrec",
+              "James Abbott McNeill Whistler",
+              "Juan Gris",
+              "Paul Cézanne",
+              "Gustave Caillebotte",
+              "Timothy H. O'Sullivan",
+              "Oscar Gustav Rejlander",
+              "Julia Margaret Cameron",
+              "Jean-Baptiste Carpeaux",
+              "Rosa Bonheur",
+              "Nadar",
+              "Thomas Eakins",
+              "Ilya Efimovich Repin",
+              "Winslow Homer",
+              "Mary Cassatt",
+              "Albert Pinkham Ryder",
+              "Paul Gauguin",
+              "Gustave Moreau",
+              "Umberto Boccioni",
+              "Dante Gabriel Rossetti",
+              "Albert Dubois-Pillet",
+              "Alexander Gardner",
+              "Alfred Sisley",
+              "Alfred Stieglitz",
+              "André Adolphe-Eugené Disdéri",
+              "Berenice Abbott",
+              "Camille Pissarro",
+              "Carleton E. Watkins",
+              "Charles Marville",
+              "Constantin Guys",
+              "Claude Joseph Désiré Charnay",
+              "Doris Ulmann",
+              "Édouard Baldus",
+              "Edvard Munch",
+              "Eugène Atget",
+              "Felice Beato",
+              "William Henry Jackson",
+              "Félix Bracquemond",
+              "Henri Edmond Cross",
+              "Themistocles von Eckenbrecher",
+              "Thomas H. Hope",
+              "A. Leroux",
+              "Étienne-Jules Marey",
+              "Bert Underwood"
+            ]
+          },
+          {
+            "value": "by"
+          },
+          {
+            "value": "Louis Wain",
+            "entryId": "m_hu5sb9x0glo",
+            "databaseValue": "Louis Wain",
+            "images": [
+              "w_c17fbd3e59ae4157b8404a9",
+              "w_b62c5b5a1f544e588005865",
+              "w_ebc0f604a9fd4ba4a45d439",
+              "w_c13fbb53ef9842b78e2d2b1",
+              "w_963a9a61c6e8407cbd11b57",
+              "w_e94a450e509a45e790bbdd3",
+              "w_136f79f67474491ab722cbf",
+              "w_e5da044d6ceb44f78aa2a35",
+              "w_857f4742e77d4fbc8f6f6f7",
+              "w_f65c92ecb740466eb7373f6",
+              "w_4856cfc578a94544b99fdb2"
+            ],
+            "isArtist": true,
+            "type": "artist",
+            "aliases": [
+              null
+            ],
+            "descriptions": [
+              {
+                "source": "wikiart",
+                "description": "Louis Wain (5 August 1860 – 4 July 1939) was an English artist best known for his drawings, which consistently featured anthropomorphised large-eyed cats and kittens. In his later years he may have suffered from schizophrenia (although this claim is widely disputed among many specialists if this is true or not), which, according to some psychiatrists, can be seen in his works.",
+                "art_movement": "Art Nouveau, Outsider art (Art brut)",
+                "birth": "August 5, 1860",
+                "birthPlace": "London, United Kingdom",
+                "death": "July 4, 1939",
+                "deathPlace": "London, United Kingdom",
+                "genre": "animal painting",
+                "license": "This is a part of the Wikipedia article used under the Creative Commons Attribution-Sharealike 3.0 Unported License (CC-BY-SA).",
+                "nationality": "British"
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut"
+            ]
+          }
+        ],
+        "provenance": "history",
+        "content": "\"MISTLETOE FOR YOU\" (c. 1860-1939) by Louis Wain",
+        "intersections": [
+          {
+            "id": "text-8fea4709-9032-49c0-a091-be76868ddf54",
+            "position": {
+              "x": 720.7783350547243,
+              "y": 653.5318671120083
+            },
+            "content": "\"MISTLETOE FOR YOU\" (c. 1860-1939) by Louis Wain"
+          },
+          {
+            "id": "text-538c9f94-1c7d-46a0-b679-13a7ae3751ce",
+            "position": {
+              "x": 536.986992343355,
+              "y": 709.6903329404821
+            },
+            "content": "Art Brut"
+          }
+        ],
+        "similarTexts": [
+          {
+            "value": "Louis Wain",
+            "entryId": "m_hu5sb9x0glo",
+            "images": [
+              "w_c17fbd3e59ae4157b8404a9",
+              "w_b62c5b5a1f544e588005865",
+              "w_ebc0f604a9fd4ba4a45d439",
+              "w_c13fbb53ef9842b78e2d2b1",
+              "w_963a9a61c6e8407cbd11b57",
+              "w_e94a450e509a45e790bbdd3",
+              "w_136f79f67474491ab722cbf",
+              "w_e5da044d6ceb44f78aa2a35",
+              "w_857f4742e77d4fbc8f6f6f7",
+              "w_f65c92ecb740466eb7373f6",
+              "w_4856cfc578a94544b99fdb2"
+            ],
+            "isArtist": true,
+            "type": "artist",
+            "aliases": [
+              null
+            ],
+            "descriptions": [
+              {
+                "source": "wikiart",
+                "description": "Louis Wain (5 August 1860 – 4 July 1939) was an English artist best known for his drawings, which consistently featured anthropomorphised large-eyed cats and kittens. In his later years he may have suffered from schizophrenia (although this claim is widely disputed among many specialists if this is true or not), which, according to some psychiatrists, can be seen in his works.",
+                "art_movement": "Art Nouveau, Outsider art (Art brut)",
+                "birth": "August 5, 1860",
+                "birthPlace": "London, United Kingdom",
+                "death": "July 4, 1939",
+                "deathPlace": "London, United Kingdom",
+                "genre": "animal painting",
+                "license": "This is a part of the Wikipedia article used under the Creative Commons Attribution-Sharealike 3.0 Unported License (CC-BY-SA).",
+                "nationality": "British"
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d937b5517cb1325370000ee",
+              "4de7caaa5a225f0001006fb9"
+            ],
+            "relatedKeywordStrings": [
+              "Animals",
+              "Art Brut"
+            ]
+          },
+          {
+            "value": "Arrivals/Departures",
+            "entryId": "5266f4888b3b81ab780002cb",
+            "images": [],
+            "isArtist": false,
+            "type": "Subject Matter",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Artists have long used arrival and departure scenes as catalysts for dramatic action, from depictions of the Holy Family’s flight to Egypt to Antoine Watteau's [_The Embarkation for Cythera_](/artwork/jean-antoine-watteau-lembarquement-pour-cythere-the-embarkation-for-cythera) (1717), an ambiguous allegory depicting a festive party leaving for an island that is the birthplace of the goddess of love. This category includes both direct depictions of arrivals and departures, and more conceptual works that focus on comings and goings, greetings and farewells."
+              }
+            ],
+            "relatedKeywordIds": [],
+            "relatedKeywordStrings": []
+          },
+          {
+            "value": "Jean-Baptiste Joseph Pater",
+            "entryId": "4eb2f708e742d7000100ba28",
+            "images": [
+              "5328966b0bb6d6acf40000f6"
+            ],
+            "isArtist": true,
+            "type": "artist",
+            "aliases": [
+              null
+            ],
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "",
+                "birth": "1695",
+                "death": "1736",
+                "gender": "male",
+                "hometown": "Valenciennes, France",
+                "location": "Paris, France",
+                "nationality": "French"
+              }
+            ],
+            "relatedKeywordIds": [
+              "51b662718b3b816b5c00034b",
+              "4e0ce81239bed00001005a74",
+              "4e4ec2464c2606000104bff1",
+              "4fbabaa5be12d400010007c4",
+              "4e60374fe890b1000125c530",
+              "4dc7fd6fb1783b000100029c",
+              "4d90d193dcdd5f44a500007c",
+              "4d90d193dcdd5f44a500007d",
+              "4ddecceb17922e0001005c17",
+              "4dcdf920522d6e00010042ca",
+              "4d90d18edcdd5f44a5000010",
+              "4e779a8869b76500010050ae",
+              "4dc7ebf3b1783b0001000221",
+              "4f147e28e79a750001000317",
+              "4dc7ebb432e67b000100012f",
+              "4e5f948912c5db0001385a2c",
+              "4e5ffabde890b1000108f479",
+              "4e5ff520e890b10001073a72",
+              "4d90d18fdcdd5f44a5000016"
+            ],
+            "relatedKeywordStrings": [
+              "18th Century",
+              "Bright and Vivid Colors",
+              "City Scenes",
+              "Figurative Painting",
+              "France",
+              "Glamour",
+              "Human Figure",
+              "Landscapes",
+              "Narrative",
+              "Nature",
+              "Painting",
+              "Performing Arts",
+              "Related to Fashion",
+              "Rococo Art and Design",
+              "Rural Life",
+              "Scenes of Everyday Life",
+              "Stolen Moments",
+              "The Fantastic",
+              "Work on Paper"
+            ]
+          },
+          {
+            "value": "1860–1969",
+            "entryId": "56539404ebad647f5493ac0f",
+            "images": [],
+            "isArtist": false,
+            "type": "Time Periods",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "All art, design, decorative art, and architecture produced from roughly 1860 to 1970."
+              }
+            ],
+            "relatedKeywordIds": [
+              "4d8b92b64eb68a1b2c000414",
+              "4d8b927e4eb68a1b2c000168",
+              "4eb02539f21e2500010014a2",
+              "4d8b929c4eb68a1b2c0002e0",
+              "4e9764016ba71200010022d9",
+              "4d8b92944eb68a1b2c000264",
+              "4d8b92774eb68a1b2c000134",
+              "4f0648328501fa10ca000287",
+              "4dadd2177129f05924000c68",
+              "4edf9b8890192b0001001789",
+              "4f39397e6779d800010009fa",
+              "4d8b928e4eb68a1b2c000222",
+              "4d8b92624eb68a1b2c00006c",
+              "4eaeef476899c80001006c66",
+              "4eb0600d5fb415000100891d",
+              "508f366e1b78900002000900",
+              "4eb4168f5fdd9f0001000ad2",
+              "515b37ec223afa29bd0001f8",
+              "515b11219562c86fb800075b",
+              "503bf7a45ccfe3000200026a",
+              "4eaf0ecf35118f000100c153",
+              "4f0648328501fa10ca000303",
+              "4d8b92964eb68a1b2c000288",
+              "4d8b92b74eb68a1b2c00041e",
+              "4fbac5c08b3137000100074d",
+              "4d8b927c4eb68a1b2c00015a",
+              "4f0648328501fa10ca000297",
+              "4eaeeb4776e78f0001006adb",
+              "4f0648328501fa10ca000315",
+              "51cc6ec78b3b814f1c000358",
+              "515bb62194714c2e38001572",
+              "4eb2e40b6e2a5c00010085b8",
+              "4ee791716e539d0001001e64",
+              "515b929d1b12b0244a000f5e",
+              "4e96f7705554c900010027db",
+              "4eb2e9d26e2a5c0001008d80",
+              "50a3d2e5db1337355c000029",
+              "506b33d544661700020012ee",
+              "515b3b5038ad2dfb2f000920",
+              "515b318c056351dc33001a49",
+              "530bb1c28b3b81f458000026",
+              "515bb3241b12b0e668001e2f",
+              "4d8b92aa4eb68a1b2c000378",
+              "4f552b2e3b5552417000001f",
+              "515d05d6b5907bf7e800213a",
+              "530bbd11a09a672d14000027",
+              "515b1126223afae9a50005fa",
+              "4f0648328501fa10ca0000cd",
+              "515b07a3223afae9a500001e",
+              "4fe8a03373f5a000010021d0",
+              "5315095fa09a6751a700045d",
+              "516c9d27b83d23c471000512",
+              "5315f2899c18dbfde10001a0"
+            ],
+            "relatedKeywordStrings": [
+              "Gustav Klimt",
+              "Édouard Manet",
+              "Berthe Morisot",
+              "Pierre-Auguste Renoir",
+              "Auguste Rodin",
+              "Vincent van Gogh",
+              "Claude Monet",
+              "John Everett Millais",
+              "Edgar Degas",
+              "Henri de Toulouse-Lautrec",
+              "James Abbott McNeill Whistler",
+              "Juan Gris",
+              "Paul Cézanne",
+              "Gustave Caillebotte",
+              "Timothy H. O'Sullivan",
+              "Oscar Gustav Rejlander",
+              "Julia Margaret Cameron",
+              "Jean-Baptiste Carpeaux",
+              "Rosa Bonheur",
+              "Nadar",
+              "Thomas Eakins",
+              "Ilya Efimovich Repin",
+              "Winslow Homer",
+              "Mary Cassatt",
+              "Albert Pinkham Ryder",
+              "Paul Gauguin",
+              "Gustave Moreau",
+              "Umberto Boccioni",
+              "Dante Gabriel Rossetti",
+              "Albert Dubois-Pillet",
+              "Alexander Gardner",
+              "Alfred Sisley",
+              "Alfred Stieglitz",
+              "André Adolphe-Eugené Disdéri",
+              "Berenice Abbott",
+              "Camille Pissarro",
+              "Carleton E. Watkins",
+              "Charles Marville",
+              "Constantin Guys",
+              "Claude Joseph Désiré Charnay",
+              "Doris Ulmann",
+              "Édouard Baldus",
+              "Edvard Munch",
+              "Eugène Atget",
+              "Felice Beato",
+              "William Henry Jackson",
+              "Félix Bracquemond",
+              "Henri Edmond Cross",
+              "Themistocles von Eckenbrecher",
+              "Thomas H. Hope",
+              "A. Leroux",
+              "Étienne-Jules Marey",
+              "Bert Underwood"
+            ]
+          },
+          {
+            "value": "Social Realism",
+            "entryId": "4d90d192dcdd5f44a500006e",
+            "images": [],
+            "isArtist": false,
+            "type": "Styles and Movements",
+            "descriptions": [
+              {
+                "source": "artsy",
+                "description": "Art drawing attention to social injustice, exemplified by the work of American artists of the 1920s and ’30s like [Ben Shahn](/artist/ben-shahn), [Thomas Hart Benton](/artist/thomas-hart-benton), [Walker Evans](/artist/walker-evans), and Dorothea Lange, as well [Ashcan School](/gene/ashcan-school) painters. The label has also been applied to the approach of 19th-century French Realism, the [Mexican muralism](/gene/mexican-muralism) of the 1920s and ‘30s, and the [Neue Sachlichkeit](/gene/neue-sachlichkeit) of Weimar Germany."
+              }
+            ],
+            "relatedKeywordIds": [
+              "4f0648328501fa10ca000303"
+            ],
+            "relatedKeywordStrings": [
+              "Ilya Efimovich Repin"
+            ]
+          }
+        ],
+        "hasNoKeywords": false
+      },
+      "measured": {
+        "width": 200,
+        "height": 150
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-text-20c4ed85-758e-48d2-b07f-55a8c735d65e-image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "source": "text-20c4ed85-758e-48d2-b07f-55a8c735d65e",
+      "target": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-14c15330-80f6-4852-bff2-423648f7b9a1-image-ba248fdf-726a-43da-abc1-f314eca6d4c2",
+      "source": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "target": "image-ba248fdf-726a-43da-abc1-f314eca6d4c2",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-14c15330-80f6-4852-bff2-423648f7b9a1-image-561fa54d-4180-4b12-bd51-99c4aa82d8f0",
+      "source": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "target": "image-561fa54d-4180-4b12-bd51-99c4aa82d8f0",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-14c15330-80f6-4852-bff2-423648f7b9a1-image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "source": "image-14c15330-80f6-4852-bff2-423648f7b9a1",
+      "target": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2-text-2519737c-bfe7-40e6-96af-ff5a15e32ca8",
+      "source": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "target": "text-2519737c-bfe7-40e6-96af-ff5a15e32ca8",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2-text-538c9f94-1c7d-46a0-b679-13a7ae3751ce",
+      "source": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "target": "text-538c9f94-1c7d-46a0-b679-13a7ae3751ce",
+      "type": "default",
+      "selected": false
+    },
+    {
+      "id": "edge-image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2-text-8fea4709-9032-49c0-a091-be76868ddf54",
+      "source": "image-b7fee1bd-bfe4-43f2-8a73-79a3ab4381e2",
+      "target": "text-8fea4709-9032-49c0-a091-be76868ddf54",
+      "type": "default",
+      "selected": false
+    }
+  ],
+  "viewport": {
+    "x": 221.20113123378349,
+    "y": 42.34547526211952,
+    "zoom": 0.8633395585744122
+  }
+}
