@@ -17,15 +17,17 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy application files
 COPY app/bootstrap.sh .
 COPY app/gunicorn_config.py .
-COPY app/helperfunctions.py .
+COPY app/helper_functions helper_functions/
 COPY app/index.py .
-COPY app/voronoi_helper_functions.py .
 COPY app/templates/ templates/
 COPY app/static/ static/
 COPY app/config.py .
 
 # ADD THESE LINES FOR JOBS SYSTEM:
-COPY app/jobs/ jobs/
+COPY app/jobs/__init__.py jobs/
+COPY app/jobs/map_job_processor.py jobs/
+COPY app/jobs/schema.sql jobs/
+COPY app/jobs/worker.py jobs/
 
 # Ensure bootstrap.sh is executable
 RUN chmod +x bootstrap.sh

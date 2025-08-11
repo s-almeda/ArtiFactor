@@ -14,11 +14,11 @@ import numpy as np
 import traceback
 import math
 from config import BASE_DIR
-import helperfunctions as hf
+from helper_functions import helperfunctions as hf  # helper functions including preprocess_text
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from voronoi_helper_functions import sort_vertices_clockwise, calculate_centroid, clip_infinite_voronoi_region, create_optimal_pairs_compactness
+from helper_functions.voronoi_helper_functions import sort_vertices_clockwise, calculate_centroid, clip_infinite_voronoi_region, create_optimal_pairs_compactness
 from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
 from shapely.strtree import STRtree  # Import STRtree for spatial indexing

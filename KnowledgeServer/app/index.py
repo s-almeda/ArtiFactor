@@ -22,7 +22,7 @@ import sqlite_vec
 import sqlean as sqlite3
 # then using the sqlite vector extension... https://alexgarcia.xyz/sqlite-vec/python.html
 
-import helperfunctions as helpers # helper functions including preprocess_text
+from helper_functions import helperfunctions as helpers  # helper functions including preprocess_text
 
 import re, os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"

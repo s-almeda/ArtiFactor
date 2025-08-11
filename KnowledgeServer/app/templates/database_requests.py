@@ -6,7 +6,7 @@ endpoints for retrieving entries from the image_entries and text_entries tables
 
 from flask import Blueprint, jsonify, request, g
 from index import get_db
-import helperfunctions as hf
+from helper_functions import helperfunctions as hf  # helper functions including preprocess_text
 import json
 
 # Define the blueprint
