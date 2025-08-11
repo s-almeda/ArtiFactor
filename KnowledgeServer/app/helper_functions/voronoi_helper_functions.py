@@ -603,8 +603,8 @@ def generate_level2_level3(clusters_raw, voronoi_data, dprint):
     current_voronoi = voronoi_data.copy()
     merge_history = []
     
-    # Keep merging until we have ≤5 regions
-    while len(current_clusters) > 5:
+    # Keep merging until we have ≤10 regions
+    while len(current_clusters) > 10:
         # Find adjacent pairs
         adjacency_result = find_voronoi_adjacency_pairs(current_voronoi, dprint)
         

@@ -127,7 +127,7 @@ def get_cached_result(cache_key):
 def place_query_multimodal():
     """
     API endpoint to place a query image using multimodal similarity (CLIP, ResNet, MiniLM).
-    
+
     Expected JSON payload:
     {
         "queryImage": "data:image/jpeg;base64,/9j/4AAQ..." OR as an imageURL,
@@ -139,17 +139,17 @@ def place_query_multimodal():
             "similarityWeight": 0.7
         }
     }
-    
+
     Returns:
     {
         "success": true,
-        "position": [0.23, 0.45],  // Primary CLIP-based placement
+        "position": [0.23, 0.45],
         "regionId": "region_1",
         "confidence": 0.87,
         "anchors": [
             {"artworkId": "123", "distance": 0.1, "type": "clip", "position": [...]},
             {"artworkId": "456", "distance": 0.3, "type": "image", "position": [...]},
-            {"artworkId": "789", "distance": 0.2, "type": "text", "position": [...]}
+            {"artworkId": "789", "distance": 0.2, "type": "text", "position": [...]}  
         ],
         "alternativePlacements": {
             "visualOnly": {"position": [0.18, 0.52], "regionId": "region_2"},
@@ -160,43 +160,22 @@ def place_query_multimodal():
     try:
         print("Received request for /api/place-query-multimodal")
         if not request.is_json:
-            print("Request is not JSON")
             return jsonify({"error": "Request must be JSON"}), 400
-        
+
         data = request.get_json()
-        print(f"Received multimodal request with {len(data.get('regions', []))} regions")
-        
-        # Check required fields
         required_fields = ['queryImage', 'promptText', 'regions']
         missing_fields = [field for field in required_fields if field not in data]
         if missing_fields:
-            print(f"Missing required fields: {missing_fields}")
-            return jsonify({
-                "error": f"Missing required fields: {missing_fields}"
-            }), 400
-        
-        # Extract data
+            return jsonify({"error": f"Missing required fields: {missing_fields}"}), 400
+
         query_image = data['queryImage']
         prompt_text = data['promptText']
         regions = data['regions']
         params = data.get('params', {})
 
-        print("Extracted all required fields from multimodal request")
-        
-        # Validate data
         if not regions:
-            print("No regions provided")
             return jsonify({"error": "No regions provided"}), 400
-        
-        if not query_image:
-            print("No query image provided")
-            return jsonify({"error": "No query image provided"}), 400
-            
-        if not prompt_text:
-            print("No prompt text provided")
-            return jsonify({"error": "No prompt text provided"}), 400
-        
-        # Build data structures from regions (same as legacy route)
+
         artwork_positions = {}
         artwork_to_region = {}
         region_vertices = {}
@@ -204,7 +183,7 @@ def place_query_multimodal():
         for region in regions:
             region_id = str(region['id'])
             region_vertices[region_id] = region['vertices']
-            
+
             for artwork in region.get('artworksMap', []):
                 artwork_id = artwork['id']
                 artwork_positions[artwork_id] = [
@@ -213,20 +192,13 @@ def place_query_multimodal():
                 ]
                 artwork_to_region[artwork_id] = region_id
 
-        print(f"Region summary: {len(region_vertices)} regions, {len(artwork_positions)} artworks")
-        
         from index import get_db
         db = get_db()
-        print("Database connection acquired")
-        
-        # Extract optional parameters
+
         min_distance = params.get('minDistance', 0.1)
         max_distance = params.get('maxDistance', 0.5)
         similarity_weight = params.get('similarityWeight', 0.7)
 
-        print(f"Using params: minDistance={min_distance}, maxDistance={max_distance}, similarityWeight={similarity_weight}")
-        
-        # Process the multimodal request
         result = place_query_image_multimodal(
             query_image=query_image,
             prompt_text=prompt_text,
@@ -238,20 +210,13 @@ def place_query_multimodal():
             max_distance=max_distance,
             similarity_weight=similarity_weight
         )
-        
-        print(f"Result from place_query_image_multimodal: {result}")
-        
-        # Return result
+
         if "error" in result:
-            print("Error in multimodal placement")
             return jsonify(result), 400
-        else:
-            print("Returning successful multimodal result")
-            return jsonify(result), 200
-            
+        return jsonify(result), 200
+
     except Exception as e:
         import traceback
-        print(f"Exception in multimodal route: {e}")
         return jsonify({
             "error": f"Server error: {str(e)}",
             "traceback": traceback.format_exc()

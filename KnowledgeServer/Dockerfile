@@ -32,8 +32,10 @@ COPY app/jobs/worker.py jobs/
 # Ensure bootstrap.sh is executable
 RUN chmod +x bootstrap.sh
 
-# CREATE JOBS CACHE DIRECTORY
-RUN mkdir -p /app/jobs/cache
+# CREATE GENERATED MAPS CACHE DIRECTORY, and a finished cached version of the full map (albeit one i don't love)
+# RUN mkdir -p /generated_maps
+# COPY app/generated_maps/map_v3_8198064e0648.json generated_maps/ 
+# Uncomment the above statements to copy a version of the full map over. 
 
 # Expose port 8080 for Flask
 EXPOSE 8080

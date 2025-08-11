@@ -1,7 +1,7 @@
 import numpy as np
 from shapely.geometry import Point, Polygon
 from helper_functions.helperfunctions import base64_to_image, url_to_image, find_most_similar_images, extract_img_features
-from helper_functions.helperfunctions import find_most_similar_texts, find_most_similar_clip
+from helper_functions.helperfunctions import find_similar_artworks_by_text, find_most_similar_clip
 from helper_functions.helperfunctions import extract_text_features, extract_clip_multimodal_features
 
 # Added debug statements to log function inputs and outputs for better traceability.
@@ -319,39 +319,22 @@ def calculate_triangulated_position(anchors, artwork_to_region_map, region_verti
         'wasConstrained': not np.allclose(target_position, constrained_position, atol=1e-6)
     }
 
+
 def place_query_image_multimodal(query_image, prompt_text, artwork_positions, artwork_to_region_map, region_vertices, db, 
                                  min_distance=0.1, max_distance=0.5, similarity_weight=0.7):
-    print(f"DEBUG: place_query_image_multimodal called with query_image={query_image}, prompt_text={prompt_text}")
     """
-    Place query image using multimodal triangulation (CLIP and visual-only).
-
-    Args:
-        query_image: image as base64 or URL
-        prompt_text: text description for multimodal placement
-        artwork_positions: Dict of artwork_id -> [x, y] coordinates
-        artwork_to_region_map: Dict of artwork_id -> region_id
-        region_vertices: Dict of region_id -> list of [x, y] polygon vertices
-        db: Database connection
-        min_distance: Minimum distance from most similar artwork
-        max_distance: Maximum distance from most similar artwork
-        similarity_weight: 0.0 = centroid, 1.0 = closest to anchor1
-
-    Returns:
-        Dict with primary placement, alternative placements, and anchor information
+    Simple multimodal placement: place near the most similar artwork, 
+    with direction determined by the 2nd most similar artwork.
     """
     try:
-        print("Processing multimodal query...")
-
-        # Step 1: Process inputs
-        if hasattr(query_image, 'size'):  # PIL Image
+        # Step 1: Process inputs (same as before)
+        if hasattr(query_image, 'size'):
             query_img = query_image
         elif isinstance(query_image, str) and query_image.startswith('http'):
-            print("Loading image from URL...")
             query_img = url_to_image(query_image)
         elif isinstance(query_image, str):
             if query_image.startswith('data:image'):
                 query_image = query_image.split(',')[1]
-            print("Decoding base64 image...")
             query_img = base64_to_image(query_image)
         else:
             return {"error": "Unsupported query image format"}
@@ -359,157 +342,203 @@ def place_query_image_multimodal(query_image, prompt_text, artwork_positions, ar
         if query_img is None:
             return {"error": "Failed to decode query image"}
 
-        print("Extracting features from query image and text...")
-
         # Step 2: Generate embeddings
-        image_features = extract_img_features(query_img)        # ResNet visual features
-        clip_features = extract_clip_multimodal_features(query_img, prompt_text)  # CLIP multimodal features
+        image_features = extract_img_features(query_img)
+        text_features = extract_text_features(prompt_text)
+        clip_features = extract_clip_multimodal_features(query_img, prompt_text)
 
         # Step 3: Run similarity searches
-        artwork_ids_list = list(artwork_positions.keys())
-        print(f"Running similarity searches among {len(artwork_ids_list)} artworks...")
+        # artwork_ids_list = list(artwork_positions.keys())
+        clip_results = find_most_similar_clip(clip_features, db, top_k=10, artwork_ids=None)
+        image_results = find_most_similar_images(image_features, db, top_k=10, artwork_ids=None)
+        text_results = find_similar_artworks_by_text(text_features, db, top_k=10)
 
-        clip_results = find_most_similar_clip(clip_features, db, top_k=3, artwork_ids=artwork_ids_list)
-        image_results = find_most_similar_images(image_features, db, top_k=3, artwork_ids=artwork_ids_list)
+        # Step 4: Build and score all candidates
+        all_candidates = []
 
-        # Debugging unfiltered searches
-        print("=== TESTING WITHOUT ARTWORK ID FILTERING ===")
+        # Add CLIP results with adjustment
+        for result in clip_results:
+            artwork_id = result.get('entry_id') or result.get('image_id')
+            if artwork_id and artwork_id in artwork_positions:
+                base_similarity = 1.0 / (1.0 + result['distance'])
+                adjusted_similarity = base_similarity * 0.3  # Reduce CLIP dominance
+                all_candidates.append({
+                    'id': artwork_id,
+                    'position': np.array(artwork_positions[artwork_id]),
+                    'type': 'clip',
+                    'distance': result['distance'],
+                    'base_similarity': base_similarity,
+                    'adjusted_similarity': adjusted_similarity
+                })
 
-        print("Running CLIP search without artwork_ids filter...")
-        clip_results_unfiltered = find_most_similar_clip(clip_features, db, top_k=10, artwork_ids=None)
-        print(f"CLIP results (unfiltered): {len(clip_results_unfiltered)}")
-        for result in clip_results_unfiltered[:5]:
-            print(f"  CLIP: {result}")
+        # Add image results with boost
+        for result in image_results:
+            artwork_id = result.get('entry_id') or result.get('image_id')
+            if artwork_id and artwork_id in artwork_positions:
+                base_similarity = 1.0 / (1.0 + result['distance'])
+                adjusted_similarity = base_similarity * 8.0  # Boost ResNet scores
+                all_candidates.append({
+                    'id': artwork_id,
+                    'position': np.array(artwork_positions[artwork_id]),
+                    'type': 'image',
+                    'distance': result['distance'],
+                    'base_similarity': base_similarity,
+                    'adjusted_similarity': adjusted_similarity
+                })
 
-        print("Running image search without artwork_ids filter...")
-        image_results_unfiltered = find_most_similar_images(image_features, db, top_k=10, artwork_ids=None)
-        print(f"Image results (unfiltered): {len(image_results_unfiltered)}")
-        for result in image_results_unfiltered[:5]:
-            print(f"  Image: {result}")
+        # Add text results
+        for result in text_results:
+            artwork_id = result.get('image_id')
+            if artwork_id and artwork_id in artwork_positions:
+                base_similarity = 1.0 / (1.0 + result['distance'])
+                adjusted_similarity = base_similarity  # Keep text scores as-is
+                all_candidates.append({
+                    'id': artwork_id,
+                    'position': np.array(artwork_positions[artwork_id]),
+                    'type': 'text',
+                    'distance': result['distance'],
+                    'base_similarity': base_similarity,
+                    'adjusted_similarity': adjusted_similarity
+                })
 
-        print("=== CHECKING ID OVERLAPS ===")
-        all_vector_ids = set()
-        for result in clip_results_unfiltered + image_results_unfiltered:
-            vector_id = result.get('image_id') or result.get('entry_id')
-            if vector_id:
-                all_vector_ids.add(vector_id)
-
-        artwork_position_ids = set(artwork_positions.keys())
-        overlap = all_vector_ids.intersection(artwork_position_ids)
-
-        print(f"Vector table IDs (sample): {list(all_vector_ids)[:10]}")
-        print(f"Artwork position IDs (sample): {list(artwork_position_ids)[:10]}")
-        print(f"ID overlap found: {len(overlap)} matches")
-
-        if overlap:
-            print(f"✅ Overlapping IDs: {list(overlap)[:5]}")
-            valid_clip_results = [r for r in clip_results_unfiltered 
-                                if (r.get('image_id') or r.get('entry_id')) in overlap]
-            valid_image_results = [r for r in image_results_unfiltered 
-                                 if (r.get('image_id') or r.get('entry_id')) in overlap]
-            clip_results = valid_clip_results
-            image_results = valid_image_results
-        else:
-            print("❌ NO ID OVERLAP - Vector tables and artwork positions use different ID formats")
-
-        # Step 4: Build anchor collection with proper key handling
-        all_anchors = []
-
-        def add_anchors(results, anchor_type):
-            for result in results:
-                artwork_id = result.get('entry_id') or result.get('image_id')
-                if artwork_id and artwork_id in artwork_positions:
-                    all_anchors.append({
-                        'id': artwork_id,
-                        'position': np.array(artwork_positions[artwork_id]),
-                        'type': anchor_type,
-                        'distance': result['distance'],
-                        'similarity': 1.0 / (1.0 + result['distance'])
-                    })
-
-        add_anchors(clip_results, 'clip')
-        add_anchors(image_results, 'image')
-
-        if len(all_anchors) < 3:
+        if len(all_candidates) < 2:
             return {
-                "error": f"Need at least 3 anchors total, found {len(all_anchors)}",
-                "found_anchors": len(all_anchors)
+                "error": f"Need at least 2 similar artworks, found {len(all_candidates)}",
+                "found_candidates": len(all_candidates)
             }
 
-        print(f"Found {len(all_anchors)} total anchors")
+        # Step 5: Sort by adjusted similarity and pick top 2
+        all_candidates.sort(key=lambda x: x['adjusted_similarity'], reverse=True)
+        
+        anchor1 = all_candidates[0]  # Most similar
+        anchor2 = all_candidates[1]  # Second most similar
 
-        # Step 5: Calculate placements
-        def get_anchors_by_type(anchor_type):
-            return [a for a in all_anchors if a['type'] == anchor_type]
+        # Step 6: Calculate placement position with distance scaling
+        primary_pos = anchor1['position']
+        secondary_pos = anchor2['position']
+        
+        # Scale placement distance based on similarity score
+        min_distance = 0.005   # Very close for perfect matches
+        max_distance = 0.1    # Farther for poor matches (remember, coords are normalized to [0.0, 1.0])
+        max_similarity = anchor1['adjusted_similarity']
+        scaled_distance = min_distance + (max_distance - min_distance) * (1.0 - max_similarity)
+        scaled_distance = max(min_distance, min(scaled_distance, max_distance))  # Clamp to bounds
 
-        def calculate_placement(anchors):
-            if len(anchors) >= 3:
-                return calculate_triangulated_position(anchors[:3], artwork_to_region_map, region_vertices, min_distance, max_distance, similarity_weight)
-            return None
-
-        # Primary placement (CLIP-based with fallback)
-        clip_anchors = get_anchors_by_type('clip')
-        if len(clip_anchors) >= 3:
-            primary_anchors = clip_anchors[:3]
+        # Calculate direction from primary to secondary
+        direction_vector = secondary_pos - primary_pos
+        direction_length = np.linalg.norm(direction_vector)
+        if direction_length > 0:
+            direction_unit = direction_vector / direction_length
         else:
-            primary_anchors = sorted(all_anchors, key=lambda x: (x['type'] != 'clip', x['distance']))[:3]
-            print(f"Using fallback primary anchors: CLIP={len(clip_anchors)}, total={len(primary_anchors)}")
+            direction_unit = np.random.random(2) - 0.5
+            direction_unit = direction_unit / np.linalg.norm(direction_unit)
 
-        primary_placement = calculate_placement(primary_anchors)
+        placement_position = primary_pos + direction_unit * scaled_distance
 
-        if not primary_placement:
-            return {
-                "error": "Failed to calculate primary placement. Ensure sufficient anchors are available.",
-                "anchorCounts": {
-                    "clip": len(clip_anchors),
-                    "image": len(get_anchors_by_type('image'))
-                }
-            }
+        # Step 7: Find containing region
+        regions_list = [
+            {'id': region_id, 'vertices': vertices} 
+            for region_id, vertices in region_vertices.items()
+        ]
+        primary_region = artwork_to_region_map.get(anchor1['id'])
+        priority_regions = [str(primary_region)] if primary_region else []
+        assigned_region = find_containing_region(
+            placement_position, regions_list, priority_regions
+        )
+        if not assigned_region:
+            assigned_region = primary_region
 
-        # Alternative placements
+        # Step 8: Calculate alternative placements (also with scaled distances)
         alternative_placements = {}
+        image_candidates = [c for c in all_candidates if c['type'] == 'image']
+        if len(image_candidates) >= 2:
+            img_primary = image_candidates[0]
+            img_secondary = image_candidates[1]
+            img_similarity = img_primary['adjusted_similarity']
+            img_scaled_distance = min_distance + (max_distance - min_distance) * (1.0 - img_similarity)
+            img_scaled_distance = max(min_distance, min(img_scaled_distance, max_distance))
+            img_direction = img_secondary['position'] - img_primary['position']
+            img_direction_norm = np.linalg.norm(img_direction)
+            if img_direction_norm > 0:
+                img_direction_unit = img_direction / img_direction_norm
+                img_position = img_primary['position'] + img_direction_unit * img_scaled_distance
+                img_region = find_containing_region(img_position, regions_list, [str(artwork_to_region_map.get(img_primary['id']))])
+                if not img_region:
+                    img_region = artwork_to_region_map.get(img_primary['id'])
+                alternative_placements['visualOnly'] = {
+                    'position': img_position.tolist(),
+                    'regionId': img_region
+                }
 
-        # Visual-only placement
-        image_anchors = get_anchors_by_type('image')
-        visual_only_placement = calculate_placement(image_anchors)
-        if visual_only_placement:
-            alternative_placements['visualOnly'] = visual_only_placement
+        text_candidates = [c for c in all_candidates if c['type'] == 'text']
+        if len(text_candidates) >= 2:
+            txt_primary = text_candidates[0]
+            txt_secondary = text_candidates[1]
+            txt_similarity = txt_primary['adjusted_similarity']
+            txt_scaled_distance = min_distance + (max_distance - min_distance) * (1.0 - txt_similarity)
+            txt_scaled_distance = max(min_distance, min(txt_scaled_distance, max_distance))
+            txt_direction = txt_secondary['position'] - txt_primary['position']
+            txt_direction_norm = np.linalg.norm(txt_direction)
+            if txt_direction_norm > 0:
+                txt_direction_unit = txt_direction / txt_direction_norm
+                txt_position = txt_primary['position'] + txt_direction_unit * txt_scaled_distance
+                txt_region = find_containing_region(txt_position, regions_list, [str(artwork_to_region_map.get(txt_primary['id']))])
+                if not txt_region:
+                    txt_region = artwork_to_region_map.get(txt_primary['id'])
+                alternative_placements['textOnly'] = {
+                    'position': txt_position.tolist(),
+                    'regionId': txt_region
+                }
 
-        # Step 6: Return result in expected API format
-        print(f"DEBUG: place_query_image_multimodal returning success={True}, position={primary_placement['position']}, regionId={primary_placement['regionId']}")
+        # Step 9: Return result
         return {
             "success": True,
-            "position": primary_placement['position'],
-            "regionId": primary_placement['regionId'],
-            "wasConstrained": primary_placement.get('wasConstrained', False),
-            "confidence": primary_anchors[0]['similarity'],
+            "position": placement_position.tolist(),
+            "regionId": assigned_region,
+            "confidence": anchor1['adjusted_similarity'],
+            "primaryAnchor": {
+                "artworkId": anchor1['id'],
+                "similarity": anchor1['base_similarity'],
+                "adjustedSimilarity": anchor1['adjusted_similarity'],
+                "position": anchor1['position'].tolist(),
+                "type": anchor1['type']
+            },
+            "secondaryAnchor": {
+                "artworkId": anchor2['id'],
+                "similarity": anchor2['base_similarity'],
+                "adjustedSimilarity": anchor2['adjusted_similarity'],
+                "position": anchor2['position'].tolist(),
+                "type": anchor2['type']
+            },
             "anchors": [
                 {
-                    "artworkId": anchor['id'],
-                    "similarity": anchor['similarity'],
-                    "position": anchor['position'].tolist(),
-                    "distance": anchor['distance'],
-                    "type": anchor['type']
+                    "artworkId": candidate['id'],
+                    "similarity": candidate['base_similarity'],
+                    "adjustedSimilarity": candidate['adjusted_similarity'],
+                    "position": candidate['position'].tolist(),
+                    "distance": candidate['distance'],
+                    "type": candidate['type']
                 }
-                for anchor in all_anchors[:9]  # Return up to 9 anchors
+                for candidate in all_candidates[:9]
             ],
             "alternativePlacements": alternative_placements,
             "parameters": {
                 "min_distance": min_distance,
                 "max_distance": max_distance,
-                "similarity_weight": similarity_weight
+                "scaled_distance": scaled_distance
             },
             "anchorCounts": {
-                "clip": len(clip_anchors),
-                "image": len(image_anchors)
+                "clip": len([c for c in all_candidates if c['type'] == 'clip']),
+                "image": len([c for c in all_candidates if c['type'] == 'image']),
+                "text": len([c for c in all_candidates if c['type'] == 'text'])
             }
         }
 
     except Exception as e:
         import traceback
-        print(f"Exception in multimodal placement: {e}")
+        print(f"Exception in simplified multimodal placement: {e}")
         traceback.print_exc()
         return {
-            "error": f"Error in multimodal placement: {str(e)}",
+            "error": f"Error in simplified placement: {str(e)}",
             "traceback": traceback.format_exc()
         }

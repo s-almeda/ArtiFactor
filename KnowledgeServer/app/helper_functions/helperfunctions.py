@@ -433,7 +433,6 @@ def find_most_similar_images(image_features, conn, top_k=3, artwork_ids=None):
     
     print(f"Found {len(similar_images)} similar images")
     return similar_images
-
 def find_similar_artworks_by_text(text_features, conn, top_k=5):
     """
     Find the top-k most similar artworks based on text features.
@@ -444,7 +443,7 @@ def find_similar_artworks_by_text(text_features, conn, top_k=5):
         top_k: Number of results to return (default: 5).
 
     Returns:
-        List of dictionaries with artwork_id and similarity score.
+        List of dictionaries with image_id and distance (consistent with other similarity functions).
     """
     print("Finding similar artworks by text...")
 
@@ -464,12 +463,13 @@ def find_similar_artworks_by_text(text_features, conn, top_k=5):
         # Convert the results to a list of dictionaries
         similar_artworks = []
         for row in rows:
-            similarity = 1.0 / (1.0 + row[1])  # Convert distance to similarity
+            distance = row[1]
+            similarity = 1.0 / (1.0 + distance)  # Calculate similarity for debug output
             similar_artworks.append({
                 "image_id": row[0],
-                "similarity": similarity
+                "distance": distance  # Return distance like other functions
             })
-            print(f"DEBUG: Artwork match - image_id={row[0]}, distance={row[1]}, similarity={similarity}")
+            print(f"DEBUG: Artwork match - image_id={row[0]}, distance={distance}, similarity={similarity}")
 
         print(f"Found {len(similar_artworks)} similar artworks")
         return similar_artworks
@@ -477,7 +477,7 @@ def find_similar_artworks_by_text(text_features, conn, top_k=5):
     except Exception as e:
         print(f"Error in text similarity search: {e}")
         return []
-
+        
 def find_most_similar_texts(text_features, conn, top_k=3, search_in="description"):
     """
     Find the top-k most similar texts by cosine similarity.
