@@ -5,6 +5,9 @@ from flask import Flask, jsonify, request, g, render_template
 # 
 import requests
 
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning, module='sklearn')
+
 
 # -- image conversion -- #
 import base64
@@ -19,7 +22,7 @@ import sqlite_vec
 import sqlean as sqlite3
 # then using the sqlite vector extension... https://alexgarcia.xyz/sqlite-vec/python.html
 
-import helperfunctions as helpers # helper functions including preprocess_text
+from helper_functions import helperfunctions as helpers  # helper functions including preprocess_text
 
 import re, os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -81,7 +84,15 @@ def get_db():
         
     return g.db
 
+
+
+# Initialize jobs database on startup
+from jobs import init_jobs_db
+init_jobs_db()
+print("Initialized jobs database.")
+
 print("Done! Time to run the app...")
+
 
 app = Flask(__name__, static_folder='static')
 
@@ -104,7 +115,8 @@ app.register_blueprint(data_cleaner_bp)
 from templates.database_requests import database_requests_bp
 app.register_blueprint(database_requests_bp)
 
-
+from templates.map_api_v3 import map_api_v3_bp
+app.register_blueprint(map_api_v3_bp)
 
 @app.route("/")
 def browse_database():
@@ -691,7 +703,7 @@ def lookup_image(img, top_k=3):
     db = get_db()
 
     # Find the most similar images
-    similar_images = find_most_similar_images(query_features, db, top_k=top_k)
+    similar_images = helpers.find_most_similar_images(query_features, db, top_k=top_k)
     print(f"Found {len(similar_images)} similar images")
 
     # Get detailed information for each match
@@ -834,37 +846,6 @@ def get_text_features():
 
 
 
-def find_most_similar_images(image_features, conn, top_k=3):
-    """
-    Find the top-k most similar images by cosine similarity.
-    
-    Args:
-        image_features: Feature vector from the query image
-        conn: Database connection
-        top_k: Number of results to return
-        
-    Returns:
-        List of dicts with image_id and distance
-    """
-    print("Finding similar images...", end=' ')
-
-    # Query the database for the most similar images
-    query = """
-        SELECT
-            image_id,
-            distance
-        FROM vec_image_features
-        WHERE embedding MATCH ?
-        ORDER BY distance
-        LIMIT ?
-    """
-    rows = conn.execute(query, [image_features, top_k]).fetchall()
-
-    # Convert the results to a list of dictionaries
-    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
-
-    return similar_images
-
 
 # function for getting the matched enty matched_entry = next((entry for entry in dataset if entry["filename"] == row.filename), None)
 def find_matching_entry(filename, conn):
@@ -923,6 +904,61 @@ def validate_admin_password():
         return jsonify({"success": True})
     else:
         return jsonify({"success": False})
+    
+
+# --- ADMIN CLEANUP ROUTE --- #
+import glob
+from jobs import cleanup_old_jobs
+
+@app.route('/cleanup', methods=['POST'])
+def cleanup_jobs_and_cache():
+    """
+    Admin endpoint to clean up old jobs and cache files.
+    Deletes jobs with status completed/failed older than N days (default 7), or all if days_old=0.
+    Removes all files in the generated_maps cache.
+    Returns a summary of what was deleted.
+    """
+    # Only allow if admin password is provided (optional, for safety)
+    data = request.get_json(silent=True) or {}
+    admin_password = os.environ.get('FINAL_SQL_ADMIN_PASSWORD')
+    if admin_password and data.get('password') != admin_password:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    # Get days_old parameter (default 7, 0 means all)
+    days_old = data.get('days_old', 7)
+    try:
+        days_old = int(days_old)
+    except Exception:
+        days_old = 7
+
+    # Clean up jobs
+    try:
+        cleanup_old_jobs(days_old=days_old)
+        jobs_cleaned = True
+        jobs_error = None
+    except Exception as e:
+        jobs_cleaned = False
+        jobs_error = str(e)
+
+    # Clean up cache files
+    cache_dir = os.path.join(BASE_DIR, 'generated_maps')
+    cache_files = glob.glob(os.path.join(cache_dir, '*.json'))
+    deleted_files = []
+    cache_error = None
+    for f in cache_files:
+        try:
+            os.remove(f)
+            deleted_files.append(os.path.basename(f))
+        except Exception as e:
+            cache_error = str(e)
+
+    return jsonify({
+        'success': jobs_cleaned and cache_error is None,
+        'jobs_cleaned': jobs_cleaned,
+        'jobs_error': jobs_error,
+        'cache_files_deleted': deleted_files,
+        'cache_error': cache_error
+    })
 
 @app.teardown_appcontext
 def close_db(error):

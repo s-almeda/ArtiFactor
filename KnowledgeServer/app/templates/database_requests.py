@@ -6,11 +6,50 @@ endpoints for retrieving entries from the image_entries and text_entries tables
 
 from flask import Blueprint, jsonify, request, g
 from index import get_db
-import helperfunctions as hf
+from helper_functions import helperfunctions as hf  # helper functions including preprocess_text
 import json
 
 # Define the blueprint
 database_requests_bp = Blueprint('database_requests', __name__)
+
+@database_requests_bp.route('/text_entry_by_name/<query>', methods=['GET'])
+def get_text_entry_by_name(query):
+    """
+    Retrieve text entries by keyword (exact match, sluggified).
+    Optionally restrict to artists and search aliases if artist_only=true is passed as a URL parameter.
+
+    Args:
+        query: Keyword to search for (string)
+
+    URL Params:
+        artist_only: (optional, bool) If true, restrict search to artists and search aliases.
+
+    Returns:
+        JSON response with matching entries or an error message
+    """
+    try:
+        db = get_db()
+        artist_only = request.args.get('artist_only', 'false').lower() == 'true'
+        slug = hf.slugify(query, ' ')
+        if artist_only:
+            matches = hf.find_exact_matches(slug, db, artists_only=True, search_aliases=True)
+        else:
+            matches = hf.find_exact_matches(slug, db, artists_only=False, search_aliases=False)
+        if matches:
+            return jsonify({
+                'success': True,
+                'data': matches
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'No entry found with name {slug}'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @database_requests_bp.route('/text/<entry_id>', methods=['GET'])
 def get_text_entry(entry_id):

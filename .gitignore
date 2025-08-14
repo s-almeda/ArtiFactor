@@ -43,5 +43,6 @@ backend/database.db
 
 .cache
 KnowledgeServer/app/generated_maps/*
+KnowledgeServer/app/jobs/__pycache__/*
 LOCALDB/staging/*
 *.json

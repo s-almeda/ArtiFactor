@@ -8,7 +8,7 @@ endpoints for turning subsets of the art history dataset --> maps, with zones (c
 from flask import Blueprint, jsonify, request, g, render_template
 import json
 import os
-import helperfunctions as hf
+from helper_functions import helperfunctions as hf
 from index import get_db
 # from config import IMAGES_PATH
 from PIL import Image
