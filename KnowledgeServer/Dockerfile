@@ -33,8 +33,8 @@ COPY app/jobs/worker.py jobs/
 RUN chmod +x bootstrap.sh
 
 # CREATE GENERATED MAPS CACHE DIRECTORY, and a finished cached version of the full map (albeit one i don't love)
-# RUN mkdir -p /generated_maps
-# COPY app/generated_maps/map_v3_8198064e0648.json generated_maps/ 
+RUN mkdir -p /generated_maps
+COPY app/generated_maps/map_v3_8198064e0648.json generated_maps/ 
 # Uncomment the above statements to copy a version of the full map over. 
 
 # Expose port 8080 for Flask
