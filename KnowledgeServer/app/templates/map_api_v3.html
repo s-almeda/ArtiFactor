@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map API v3 Check</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/map_api_v3.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1> Spatial Map Generator </h1>
+        
+        <div class="parameters-section">
+        <div class="parameters-section">
+            <div class="section-title">Padding</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="paddingFactor">padding_factor <span class="api-key-label">(Cluster UMAP padding, 0.0-0.5 typical)</span></label>
+                    <input type="number" id="paddingFactor" value="0.1" step="0.01" min="0" max="0.5">
+                </div>
+            </div>
+        </div>
+            <div class="section-title">Salient Keywords</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="numKeywords">Number of Keywords</label>
+                    <input type="number" id="numKeywords" value="50" min="1" max="200">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Embedding Weights</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="clipWeight">clip <span class="api-key-label">(CLIP visual)</span></label>
+                    <input type="number" id="clipWeight" value="0.3" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="resnetWeight">resnet <span class="api-key-label">(ResNet visual)</span></label>
+                    <input type="number" id="resnetWeight" value="0.5" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="keywordSemanticWeight">keyword_semantic <span class="api-key-label">(Text semantic)</span></label>
+                    <input type="number" id="keywordSemanticWeight" value="0.2" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="keywordBiasWeight">keyword_bias <span class="api-key-label">(Main keyword bias)</span></label>
+                    <input type="number" id="keywordBiasWeight" value="0.6" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="debugWeight">debug <span class="api-key-label">(Debug logging)</span></label>
+                    <input type="checkbox" id="debugWeight" checked>
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">UMAP Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="minDist">min_dist</label>
+                    <input type="number" id="minDist" value="0.9" step="0.1" min="0" max="1">
+                </div>
+                <div class="param-item">
+                    <label for="useParallel">parallel <span class="api-key-label">(Fast but non-deterministic)</span></label>
+                    <input type="checkbox" id="useParallel" checked>
+                </div>
+                <div class="param-item">
+                    <label for="randomState">random_state <span class="api-key-label">(Only used if parallel unchecked)</span></label>
+                    <input type="number" id="randomState" value="42" placeholder="42">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Clustering Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="nClusters">Number of Clusters <span class="api-key-label">(leave empty for auto)</span></label>
+                    <input type="number" id="nClusters" placeholder="Auto" min="2" max="50">
+                </div>
+            </div>
+        </div>
+
+        <div class="parameters-section">
+            <div class="section-title">Compression Parameters</div>
+            <div class="param-group">
+                <div class="param-item">
+                    <label for="thresholdPercentile">Threshold Percentile</label>
+                    <input type="number" id="thresholdPercentile" value="90" min="50" max="99">
+                </div>
+                <div class="param-item">
+                    <label for="compressionFactor">Compression Factor</label>
+                    <input type="number" id="compressionFactor" value="0.3" step="0.1" min="0.1" max="1">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="generateMap()" id="generateButton">Generate Map 🗺️</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        <div id="timer" class="timer" style="display: none;"></div>
+        
+        <!-- Visualization container -->
+        <div id="visualizationContainer" class="visualization-container" style="display: none;">
+            <h2>Hierarchical Artwork Map</h2>
+            <div class="map-switcher">
+                <button id="showLevel1Btn" onclick="switchMapLevel('level_1')">Level 1: Clusters + Artworks</button>
+                <button id="showLevel2Btn" onclick="switchMapLevel('level_2')">Level 2: Voronoi Merge</button>
+                <button id="showLevel3Btn" onclick="switchMapLevel('level_3')">Level 3: Voronoi Merge</button>
+            </div>
+            <canvas id="mapCanvas" width="1000" height="800"></canvas>
+            <div class="tooltip" id="tooltip"></div>
+            <div class="legend" id="legend"></div>
+            <h2>Cluster Details</h2>
+            <div id="clusterInfo" class="cluster-info"></div>
+            <span class="toggle-details" onclick="toggleResponseDetails()">Show/Hide Raw Response</span>
+            <div id="responseDetails" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let globalData = null;
+        let selectedCluster = null;
+        let timerInterval = null;
+        let startTime = null;
+        let currentJobId = null;
+        
+        // Color palette for clusters
+        const colorPalette = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+            '#48C9B0', '#9B59B6', '#E74C3C', '#3498DB', '#1ABC9C',
+            '#F39C12', '#D35400', '#7F8C8D', '#2C3E50', '#16A085',
+            '#E67E22', '#8E44AD', '#27AE60', '#C0392B', '#2980B9'
+        ];
+        
+        function getColorForCluster(index) {
+            return colorPalette[index % colorPalette.length];
+        }
+
+        async function generateMap() {
+            console.log('generateMap() called');
+            const status = document.getElementById('status');
+            const timer = document.getElementById('timer');
+            const visualizationContainer = document.getElementById('visualizationContainer');
+            const generateButton = document.getElementById('generateButton');
+
+            // Build parameters
+            const params = {
+                debug: document.getElementById('debugWeight').checked,
+                numKeywords: parseInt(document.getElementById('numKeywords').value),
+                weights: {
+                    clip: parseFloat(document.getElementById('clipWeight').value),
+                    resnet: parseFloat(document.getElementById('resnetWeight').value),
+                    keyword_semantic: parseFloat(document.getElementById('keywordSemanticWeight').value),
+                    keyword_bias: parseFloat(document.getElementById('keywordBiasWeight').value),
+                    debug: document.getElementById('debugWeight').checked
+                },
+                umap: {
+                    min_dist: parseFloat(document.getElementById('minDist').value),
+                    parallel: document.getElementById('useParallel').checked
+                },
+                compression: {
+                    threshold_percentile: parseInt(document.getElementById('thresholdPercentile').value),
+                    compression_factor: parseFloat(document.getElementById('compressionFactor').value)
+                },
+                padding_factor: parseFloat(document.getElementById('paddingFactor').value),
+                regenerate: true
+                
+            };
+ 
+            // Only add random_state if parallel is false
+            if (!params.umap.parallel) {
+                params.umap.random_state = parseInt(document.getElementById('randomState').value) || 42;
+            }
+
+            // Add n_clusters if specified
+            const nClustersInput = document.getElementById('nClusters').value;
+            if (nClustersInput && nClustersInput.trim() !== '') {
+                params.n_clusters = parseInt(nClustersInput);
+            }
+
+            // Disable button and show status
+            generateButton.disabled = true;
+            generateButton.textContent = 'Processing...';
+            status.style.display = 'block';
+            timer.style.display = 'block';
+            timer.textContent = '';
+            visualizationContainer.style.display = 'none';
+
+            try {
+                // Submit job
+                status.textContent = 'Submitting job...';
+                status.className = 'status loading';
+                
+                const jobResponse = await fetch('/submit_map_job', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+
+                const jobData = await jobResponse.json();
+                console.log('Job submission response:', jobData);
+                
+
+                if (!jobResponse.ok) {
+                    console.error('Job submission failed:', jobData);
+                    throw new Error(jobData.error || 'Failed to submit job');
+                }
+
+                // Check if result was cached
+
+                if (jobData.result) {
+                    console.log('Loaded from cache:', jobData.result);
+                    status.textContent = 'Loaded from cache!';
+                    status.className = 'status success';
+                    showResults(jobData.result);
+                    return;
+                }
+
+                // Start polling for job status
+                currentJobId = jobData.job_id;
+                startTime = Date.now();
+                
+                // Start timer
+                timerInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    // Show ms with 1 decimal (e.g. 5.3s)
+                    const seconds = (elapsed / 1000).toFixed(3);
+                    timer.textContent = `${seconds}s elapsed`;
+                }, 50);
+
+                console.log('Polling job status for jobId:', currentJobId);
+                pollJobStatus(currentJobId);
+                
+            } catch (error) {
+                resetUI();
+                status.textContent = `Error: ${error.message}`;
+                status.className = 'status error';
+            }
+        }
+
+        async function pollJobStatus(jobId) {
+            const status = document.getElementById('status');
+            const timer = document.getElementById('timer');
+            try {
+                console.log('Polling job status for jobId:', jobId);
+                const response = await fetch(`/job_status/${jobId}`);
+                const statusData = await response.json();
+                console.log('Job status response:', statusData);
+                
+                if (!response.ok) {
+                    console.error('Job status fetch failed:', statusData);
+                    throw new Error(statusData.error || 'Failed to get job status');
+                }
+
+                // Update status message (timer will add elapsed time)
+                status.textContent = statusData.message || 'Processing...';
+                
+                if (statusData.status === 'completed') {
+                    clearInterval(timerInterval);
+                    timer.textContent = '';
+                    timer.style.display = 'none';
+                    console.log('Job completed, fetching result for cache_key:', statusData.cache_key);
+                    // Get the result
+                    const resultResponse = await fetch(`/get_result/${statusData.cache_key}`);
+                    const result = await resultResponse.json();
+                    console.log('Result response:', result);
+                    if (resultResponse.ok) {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        status.textContent = `Completed in ${elapsed.toFixed(3)}s!`;
+                        status.className = 'status success';
+                        showResults(result);
+                    } else {
+                        console.error('Failed to get result:', result);
+                        throw new Error(result.error || 'Failed to get result');
+                    }
+                } else if (statusData.status === 'failed') {
+                    clearInterval(timerInterval);
+                    timer.textContent = '';
+                    timer.style.display = 'none';
+                    resetUI();
+                    status.textContent = `Job failed: ${statusData.error || 'Unknown error'}`;
+                    status.className = 'status error';
+                } else {
+                    // Still processing, poll again
+                    setTimeout(() => pollJobStatus(jobId), 2000);
+                }
+                
+            } catch (error) {
+                clearInterval(timerInterval);
+                resetUI();
+                console.error('Error in pollJobStatus:', error);
+                status.textContent = `Error checking status: ${error.message}`;
+                status.className = 'status error';
+            }
+        }
+
+        let currentMapLevel = 'level_1';
+        function showResults(data) {
+            resetUI();
+            globalData = data;
+            currentMapLevel = 'level_1';
+            document.getElementById('visualizationContainer').style.display = 'block';
+            document.getElementById('responseDetails').textContent = JSON.stringify(data, null, 2);
+            drawHierarchicalMap(data, 'level_1');
+            createLegend(data, 'level_1');
+            if (data.level_1 && data.level_1.length > 0) {
+                showClusterInfo(data.level_1[0]);
+            }
+        }
+
+        function switchMapLevel(level) {
+            currentMapLevel = level;
+            drawHierarchicalMap(globalData, level);
+            createLegend(globalData, level);
+            // Hide cluster info for level_2/3
+            if (level === 'level_1' && globalData.level_1 && globalData.level_1.length > 0) {
+                showClusterInfo(globalData.level_1[0]);
+                document.getElementById('clusterInfo').style.display = 'block';
+            } else {
+                document.getElementById('clusterInfo').style.display = 'none';
+            }
+        }
+
+        function resetUI() {
+            const generateButton = document.getElementById('generateButton');
+            const timer = document.getElementById('timer');
+            generateButton.disabled = false;
+            generateButton.textContent = 'Generate Map 🗺️';
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timer.textContent = '';
+            timer.style.display = 'none';
+            currentJobId = null;
+        }
+
+
+        
+
+        function drawHierarchicalMap(data, level) {
+            const canvas = document.getElementById('mapCanvas');
+            const ctx = canvas.getContext('2d');
+            const tooltip = document.getElementById('tooltip');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let clusters = data[level] || [];
+            // Draw Voronoi cells
+            clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
+                if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
+                    ctx.beginPath();
+                    const first = cluster.voronoi_vertices[0];
+                    ctx.moveTo(first[0] * canvas.width, first[1] * canvas.height);
+                    cluster.voronoi_vertices.forEach(vertex => {
+                        ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
+                    });
+                    ctx.closePath();
+                    ctx.fillStyle = color + '33'; // transparent fill
+                    ctx.fill();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+            // Draw centroids
+            clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
+                const cx = cluster.centroid.x * canvas.width;
+                const cy = cluster.centroid.y * canvas.height;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(cluster.cluster_label, cx, cy - 12);
+            });
+            // Only draw artworks for level_1
+            if (level === 'level_1') {
+                clusters.forEach((cluster, clusterIndex) => {
+                    const color = getColorForCluster(clusterIndex);
+                    cluster.artworks_map.forEach(artwork => {
+                        const x = artwork.coords.x * canvas.width;
+                        const y = artwork.coords.y * canvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.globalAlpha = 0.7;
+                        ctx.fill();
+                        ctx.globalAlpha = 1.0;
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    });
+                });
+            }
+            // Mouse hover and click only for level_1
+            if (level === 'level_1') {
+                canvas.onmousemove = function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    let foundArtwork = null;
+                    let foundCluster = null;
+                    const threshold = 10;
+                    clusters.forEach(cluster => {
+                        cluster.artworks_map.forEach(artwork => {
+                            const x = artwork.coords.x * canvas.width;
+                            const y = artwork.coords.y * canvas.height;
+                            const dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
+                            if (dist < threshold) {
+                                foundArtwork = artwork;
+                                foundCluster = cluster;
+                            }
+                        });
+                    });
+                    if (foundArtwork) {
+                        canvas.style.cursor = 'pointer';
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (e.clientX + 10) + 'px';
+                        tooltip.style.top = (e.clientY + 10) + 'px';
+                        const art = globalData.artworks[foundArtwork.id];
+                        tooltip.innerHTML = `<strong>${art.title}</strong><br>${art.artist}`;
+                    } else {
+                        canvas.style.cursor = 'default';
+                        tooltip.style.display = 'none';
+                    }
+                };
+                canvas.onmouseleave = function() {
+                    tooltip.style.display = 'none';
+                };
+                canvas.onclick = function(e) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    let foundCluster = null;
+                    clusters.forEach((cluster, index) => {
+                        const cx = cluster.centroid.x * canvas.width;
+                        const cy = cluster.centroid.y * canvas.height;
+                        const dist = Math.sqrt((cx - mouseX) ** 2 + (cy - mouseY) ** 2);
+                        if (dist < 12) {
+                            foundCluster = cluster;
+                        }
+                    });
+                    if (foundCluster) {
+                        showClusterInfo(foundCluster);
+                    }
+                };
+            } else {
+                canvas.onmousemove = null;
+                canvas.onclick = null;
+                canvas.onmouseleave = null;
+                tooltip.style.display = 'none';
+            }
+        }
+
+        function createLegend(data, level) {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '<h3>Clusters</h3>';
+            let clusters = data[level] || [];
+            clusters.forEach((cluster, index) => {
+                const color = getColorForCluster(index);
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                let label = cluster.cluster_label || `Cluster ${index+1}`;
+                let count = (level === 'level_1' && cluster.artworks_map) ? cluster.artworks_map.length : '';
+                item.innerHTML = `<span style="background:${color};width:16px;height:16px;display:inline-block;margin-right:6px;"></span> ${label} ${count ? '('+count+' artworks)' : ''}`;
+                item.onclick = function() {
+                    highlightCluster(data, index, level);
+                };
+                legend.appendChild(item);
+            });
+        }
+        
+        function highlightCluster(data, clusterIndex, level) {
+            const canvas = document.getElementById('mapCanvas');
+            drawHierarchicalMap(data, level);
+            const ctx = canvas.getContext('2d');
+            const clusters = data[level] || [];
+            const cluster = clusters[clusterIndex];
+            const color = getColorForCluster(clusterIndex);
+            if (cluster.voronoi_vertices && cluster.voronoi_vertices.length > 0) {
+                ctx.beginPath();
+                const firstVertex = cluster.voronoi_vertices[0];
+                ctx.moveTo(firstVertex[0] * canvas.width, firstVertex[1] * canvas.height);
+                cluster.voronoi_vertices.forEach(vertex => {
+                    ctx.lineTo(vertex[0] * canvas.width, vertex[1] * canvas.height);
+                });
+                ctx.closePath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
+        }
+
+        function showClusterInfo(cluster) {
+            const info = document.getElementById('clusterInfo');
+            
+            // Get representative artworks
+            const repArtworks = (cluster.representative_artworks || [])
+                .map(id => globalData.artworks[id])
+                .filter(artwork => artwork); // Remove any undefined
+            
+            info.innerHTML = `
+                <h3>${cluster.cluster_label}</h3>
+                <p><strong>Artworks:</strong> ${cluster.artworks_map.length}</p>
+                ${repArtworks.length > 0 ? `
+                    <div class="representative-artworks">
+                        <h4>Representative Artworks:</h4>
+                        ${repArtworks.map(artwork => 
+                            `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>`
+                        ).join('')}
+                    </div>
+                ` : ''}
+                <div class="artwork-list">
+                    <h4>All Artworks:</h4>
+                    ${cluster.artworks_map.slice(0, 5).map(artworkMap => {
+                        const artwork = globalData.artworks[artworkMap.id];
+                        return artwork ? `<div class="artwork-item">• ${artwork.title} - ${artwork.artist}</div>` : '';
+                    }).join('')}
+                    ${cluster.artworks_map.length > 5 ? `<div class="artwork-item">... and ${cluster.artworks_map.length - 5} more</div>` : ''}
+                </div>
+            `;
+        }
+        function toggleResponseDetails() {
+            const details = document.getElementById('responseDetails');
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+    
+</body>
+</html>

@@ -1,0 +1,1154 @@
+# from itertools import chain
+import numpy as np
+import sqlean as sqlite3
+import struct
+import pandas as pd
+import os
+import json
+import requests
+import umap
+# -- image conversion -- #
+import base64
+from io import BytesIO
+from PIL import (Image, UnidentifiedImageError)
+
+
+
+
+# --- imports for using ResNet50  --- #
+import torch
+import torchvision.transforms as transforms
+from torchvision.models import resnet50, ResNet50_Weights
+
+# -- imports for using CLIP -- #
+from transformers import CLIPProcessor, CLIPModel
+
+# -- for using KMeans clustering -- #
+from sklearn.cluster import KMeans
+from scipy.spatial import procrustes
+
+
+# The database paths inside the container will always be:
+from config import (
+    IMAGES_PATH, 
+    MODEL_CACHE_DIR, 
+    TRANSFORMERS_CACHE_DIR,
+)
+
+from sentence_transformers import SentenceTransformer
+print("Loading MiniLM text encoding model...")
+text_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+# print("loaded MiniLM!")
+
+# # Will use GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print(f"Loading ResNet50 from {MODEL_CACHE_DIR}...")
+# Load ResNet50 weights and remove the last classification layer
+model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+model = torch.nn.Sequential(*list(model.children())[:-1])  # Remove final classification layer
+# Move model to correct device
+model.to(device)
+model.eval()  # Set model to evaluation mode
+
+#-- CLIP model loading --#
+# Then use TRANSFORMERS_CACHE_DIR for CLIP:
+print(f"Loading CLIP model...")
+# clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32", cache_dir=TRANSFORMERS_CACHE_DIR)
+# clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32", cache_dir=TRANSFORMERS_CACHE_DIR)
+# clip_model.to(device)
+# clip_model.eval()
+
+clip_model = CLIPModel.from_pretrained(
+    "openai/clip-vit-base-patch32",
+    cache_dir=TRANSFORMERS_CACHE_DIR,
+    use_safetensors=True
+)
+
+clip_processor = CLIPProcessor.from_pretrained(
+    "openai/clip-vit-base-patch32",
+    cache_dir=TRANSFORMERS_CACHE_DIR
+)
+
+clip_model.to(device)
+clip_model.eval()
+print("Loaded CLIP!")
+
+
+
+# --------------- Function Definitions ------------------- #
+
+# ========== Functions that extract features ===========
+
+# Extracts CLIP features for an image + text pair
+def extract_clip_multimodal_features(image, text):
+    """
+    Extract CLIP embeddings for image-text pair.
+    Returns concatenated features to preserve both visual and semantic information.
+    
+    Args:
+        image: PIL Image object
+        text: String text from retrieve_artwork_text()
+    
+    Returns:
+        numpy array of concatenated embeddings (1024D)
+    """
+    # Truncate text to avoid token length issues
+    # CLIP has a max of 77 tokens, so we truncate conservatively
+    if len(text) > 200:  # Rough character limit
+        text = text[:200] + "..."
+    
+    # Process image and text separately to ensure consistent tokenization
+    image_inputs = clip_processor(images=image, return_tensors="pt", padding=True)
+    text_inputs = clip_processor(text=text, return_tensors="pt", padding=True, truncation=True, max_length=77)
+    
+    # Move to device
+    image_inputs = {k: v.to(device) for k, v in image_inputs.items()}
+    text_inputs = {k: v.to(device) for k, v in text_inputs.items()}
+    
+    with torch.no_grad():
+        # Get embeddings separately
+        image_outputs = clip_model.get_image_features(**image_inputs)
+        text_outputs = clip_model.get_text_features(**text_inputs)
+        
+        # Normalize
+        image_features = image_outputs / image_outputs.norm(dim=-1, keepdim=True)
+        text_features = text_outputs / text_outputs.norm(dim=-1, keepdim=True)
+        
+        # Concatenate
+        features = torch.cat([image_features, text_features], dim=-1)
+        features = features.cpu().numpy().squeeze()
+    
+    return features
+
+def extract_img_features(img): # USING RESNET50!
+    """
+    Extract features from a PIL image using ResNet50.
+    Returns a 2048D feature vector.
+    """
+    # Preprocess images sent from the client
+    preprocess = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    img_tensor = preprocess(img).unsqueeze(0).to(device)  # Preprocess & add batch dim
+
+    with torch.no_grad():
+        features = model(img_tensor)  # Extract features
+
+    result = features.view(-1).cpu().numpy()  # Flatten as NumPy array
+    print("Extracted feature vector shape:", result.shape)  
+    return result
+
+def extract_text_features(text): 
+    """
+    Extract features from text using MiniLM
+    Returns a feature vector.
+    """
+    features_array = text_model.encode(text) #364 float array
+    return features_array
+
+# ==== Functions that act on embeddings ====
+def reduce_to_2d_umap(embeddings, n_neighbors=None, min_dist=0.5, random_state=None, n_jobs=-1, parallel=True, init=None):
+    """
+    Reduce high-dimensional embeddings to 2D coordinates using UMAP.
+    
+    Args:
+        embeddings: numpy array of shape (n_samples, n_features)
+        n_neighbors: int, number of neighbors (default: auto-calculated)
+        min_dist: float, minimum distance between points (default 0.5)
+        random_state: int, for reproducibility (default None for parallelism)
+        n_jobs: int, number of parallel jobs (-1 for all cores, default -1)
+        parallel: bool, whether to run in parallel (default True)
+        init: numpy array of shape (n_samples, 2) or str, initialization for embedding 
+              (default None uses UMAP's default 'spectral')
+    
+    Returns:
+        numpy array of shape (n_samples, 2) with x,y coordinates normalized to [0, 1]
+    """
+    n_samples = embeddings.shape[0]
+    
+    # Auto-calculate n_neighbors if not provided
+    if n_neighbors is None:
+        n_neighbors = int(np.sqrt(n_samples))
+        n_neighbors = max(5, min(n_neighbors, 50))
+    else:
+        n_neighbors = min(n_neighbors, n_samples - 1)
+    
+    # Handle edge cases
+    if n_samples <= 2:
+        if n_samples == 1:
+            return np.array([[0.5, 0.5]])
+        else:
+            return np.array([[0.0, 0.5], [1.0, 0.5]])
+    
+    # If parallel is True, force random_state to None for parallelism (non-deterministic)
+    if parallel:
+        random_state = None
+
+    # If random_state is provided (and parallel is False), use it for reproducibility
+    if random_state is not None:
+        # Reproducible but single-threaded
+        reducer = umap.UMAP(
+            n_components=2,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            random_state=random_state,
+            init=init if init is not None else 'spectral'
+        )
+    else:
+        # Parallel but non-deterministic
+        reducer = umap.UMAP(
+            n_components=2,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            n_jobs=n_jobs,
+            init=init if init is not None else 'spectral'
+        )
+    
+    coordinates_2d = reducer.fit_transform(embeddings)
+    
+    # Normalize to [0, 1] range
+    min_coords = coordinates_2d.min(axis=0)
+    max_coords = coordinates_2d.max(axis=0)
+    coord_range = max_coords - min_coords
+    
+    if np.any(coord_range == 0):
+        coord_range[coord_range == 0] = 1.0
+    
+    coordinates_2d_normalized = (coordinates_2d - min_coords) / coord_range
+    
+    return coordinates_2d_normalized
+
+def apply_kmeans_clustering(coordinates_2d, k):
+    """
+    Run k-means clustering on 2D coordinates.
+    
+    Args:
+        coordinates_2d: numpy array of shape (n_samples, 2)
+        k: number of clusters
+    
+    Returns:
+        numpy array of cluster labels
+    """
+    # Adjust k if we have fewer points than clusters
+    n_samples = coordinates_2d.shape[0]
+    k = min(k, n_samples)
+    
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    cluster_labels = kmeans.fit_predict(coordinates_2d)
+    
+    return cluster_labels
+
+
+
+def compute_cosine_similarity(vec1, vec2):
+    """Compute cosine similarity between two vectors."""
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+
+
+
+# ====== Functions for retrieving stuff from the database ======
+
+def retrieve_by_id(entry_id, conn, entry_type="image"):
+    """
+    Retrieve a single entry by its ID from either image_entries or text_entries.
+
+    Args:
+        entry_id: ID of the entry (image_id or entry_id)
+        conn: database connection
+        entry_type: "image" (default) or "text"
+
+    Returns:
+        dict: Entry details or None if not found
+    """
+    if entry_type == "text":
+        table = "text_entries"
+        id_column = "entry_id"
+    else:
+        table = "image_entries"
+        id_column = "image_id"
+
+    cursor = conn.execute(f"SELECT * FROM {table} WHERE {id_column} = ?", (entry_id,))
+    row = cursor.fetchone()
+    if row:
+        return dict(row)
+    else:
+        return None
+    
+def convert_row_to_text(row):
+    """
+    Convert image_entries row into text for CLIP.
+    
+    Args:
+        row: sqlite3.Row object from image_entries table
+    
+    Returns:
+        str: Combined text description (limited length for CLIP)
+    """
+    text_parts = []
+    
+    # Title
+    if row['value']:
+        text_parts.append(row['value'])
+    
+    # Artists
+    if row['artist_names']:
+        try:
+            artists = json.loads(row['artist_names'])
+            if artists:
+                text_parts.append(f"by {', '.join(artists[:3])}")
+        except json.JSONDecodeError:
+            pass
+    
+    # Artwork description - grab all key-value pairs
+    if row['descriptions']:
+        try:
+            desc = json.loads(row['descriptions'])
+            for source, content in desc.items():
+                if isinstance(content, dict):
+                    for key, value in content.items():
+                        if isinstance(value, str) and value.strip():
+                            text_parts.append(f"{key}: {value}")
+                elif isinstance(content, str) and content.strip():
+                    text_parts.append(content)
+        except json.JSONDecodeError:
+            pass
+    
+    # Related keywords
+    if row['relatedKeywordStrings']:
+        try:
+            keywords = json.loads(row['relatedKeywordStrings'])
+            if keywords[:5]:  # Just first 5
+                text_parts.append(' '.join(keywords[:5]))
+        except json.JSONDecodeError:
+            pass
+    
+    result = ' '.join(text_parts) if text_parts else 'Untitled artwork'
+    
+    # Final length check
+    if len(result) > 200:
+        result = result[:197] + "..."
+    
+    return result
+
+def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=3):
+    """
+    Given a series of phrases, which are n-grams of the input text,
+    Finds the most semantically similar keywords using SQLite's `vec0` extension.
+    Returns:
+    list: A list of dictionaries containing:
+        - "phrase" (str): The phrase (an n-gram of the input text).
+        - "id" (int): The ID of the matched entry in the database.
+        - "similarity" (float): The similarity score of the match.
+    """
+    matches = []
+
+    for phrase, _, _ in ngrams:  # Extract only the phrase
+        phrase_embedding = extract_text_features(phrase)  # Convert phrase to embedding
+        serialized_embedding = serialize_f32(phrase_embedding)  # Convert embedding to binary format
+        query = """
+            SELECT id, distance
+            FROM vec_value_features
+            WHERE embedding MATCH ?
+            ORDER BY distance ASC
+            LIMIT ?
+        """
+        cursor = text_db.execute(query, [serialized_embedding, top_k])  # Correct parameterized query
+
+        rows = cursor.fetchall()
+        for row in rows:
+            similarity = 1 - row["distance"]  # Convert distance to similarity
+            if similarity >= threshold:
+                matches.append({
+                    "phrase": phrase,
+                    "id": row["id"],
+                    "similarity": similarity
+                })
+
+    return matches
+
+def find_most_similar_texts(text_features, conn, top_k=3, search_in="description", entry_ids=None):
+    """
+    Find the top-k most similar texts by cosine similarity.
+    Args:
+        text_features: embedding vector (serialized)
+        conn: database connection
+        top_k: number of results to return
+        search_in: "description", "value", or "both"
+        entry_ids: optional list of entry IDs to filter results to only a specific subset of entries
+    Returns:
+        pandas.DataFrame with entry_id and distance columns
+    """
+    print("Finding similar texts...")
+
+
+    queries = []
+    params = []
+
+    def add_artwork_id_filter(query, ids):
+        if ids:
+            placeholders = ','.join(['?' for _ in ids])
+            query += f" AND id IN ({placeholders})"
+        return query
+
+    if search_in == "description":
+        q = """
+            SELECT id AS entry_id, distance
+            FROM vec_description_features
+            WHERE embedding MATCH ?
+        """
+        q = add_artwork_id_filter(q, entry_ids)
+        queries.append(q)
+        params.append([text_features] + (list(entry_ids) if entry_ids else []))
+    elif search_in == "value":
+        q = """
+            SELECT id AS entry_id, distance
+            FROM vec_value_features
+            WHERE embedding MATCH ?
+        """
+        q = add_artwork_id_filter(q, entry_ids)
+        queries.append(q)
+        params.append([text_features] + (list(entry_ids) if entry_ids else []))
+    elif search_in == "both":
+        q1 = """
+            SELECT id AS entry_id, distance
+            FROM vec_description_features
+            WHERE embedding MATCH ?
+        """
+        q1 = add_artwork_id_filter(q1, entry_ids)
+        q2 = """
+            SELECT id AS entry_id, distance
+            FROM vec_value_features
+            WHERE embedding MATCH ?
+        """
+        q2 = add_artwork_id_filter(q2, entry_ids)
+        queries.extend([q1, q2])
+        params = [[text_features] + (list(entry_ids) if entry_ids else []), [text_features] + (list(entry_ids) if entry_ids else [])]
+    else:
+        raise ValueError("search_in must be 'description', 'value', or 'both'")
+
+    # Collect results from all queries
+    all_rows = []
+    for q, p in zip(queries, params):
+        rows = conn.execute(q + " ORDER BY distance LIMIT ?", p + [top_k]).fetchall()
+        all_rows.extend(rows)
+
+    # Combine, deduplicate by entry_id, and sort by distance
+    if all_rows:
+        df = pd.DataFrame(all_rows, columns=["entry_id", "distance"])
+        df = df.sort_values("distance").drop_duplicates("entry_id").head(top_k).reset_index(drop=True)
+    else:
+        df = pd.DataFrame(columns=["entry_id", "distance"])
+
+    if not df.empty:
+        for _, row in df.iterrows():
+            similarity = 1.0 / (1.0 + row['distance'])
+            print(f"DEBUG: Text match - entry_id={row['entry_id']}, distance={row['distance']}, similarity={similarity}")
+    print(f"Found {len(df)} similar texts")
+    return df
+
+
+def find_most_similar_images(image_features, conn, top_k=3, artwork_ids=None):
+    """
+    Find the top-k most similar images by cosine similarity.
+    
+    Args:
+        image_features: Feature vector from the query image
+        conn: Database connection
+        top_k: Number of results to return
+        artwork_ids: Optional list of artwork IDs to limit search to (for frontend map filtering)
+        
+    Returns:
+        List of dicts with image_id and distance
+    """
+    print("Finding similar images...", end=' ')
+
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
+    if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
+        placeholders = ','.join(['?' for _ in artwork_ids])
+        query = f"""
+            SELECT
+                image_id,
+                distance
+            FROM vec_image_features
+            WHERE embedding MATCH ?
+            AND image_id IN ({placeholders})
+            ORDER BY distance
+            LIMIT ?
+        """
+        params = [image_features] + list(artwork_ids) + [top_k]
+        rows = conn.execute(query, params).fetchall()
+    else:
+        query = """
+            SELECT
+                image_id,
+                distance
+            FROM vec_image_features
+            WHERE embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+        """
+        rows = conn.execute(query, [image_features, top_k]).fetchall()
+
+    # Convert the results to a list of dictionaries
+    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
+    
+    for row in rows:
+        similarity = 1.0 / (1.0 + row[1])
+        print(f"DEBUG: Image match - image_id={row[0]}, distance={row[1]}, similarity={similarity}")
+    
+    print(f"Found {len(similar_images)} similar images")
+    return similar_images
+
+def find_similar_artworks_by_text(text_features, conn, top_k=5, artwork_ids=None):
+    """
+    Find the top-k most similar artworks based on text features.
+
+    Args:
+        text_features: Feature vector from the query text.
+        conn: Database connection.
+        top_k: Number of results to return (default: 5).
+        artwork_ids: Optional list of artwork IDs to limit search to (for frontend map filtering).
+
+    Returns:
+        List of dictionaries with image_id and distance (consistent with other similarity functions).
+    """
+    print("Finding similar artworks using text...")
+    
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
+    if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
+        placeholders = ','.join(['?' for _ in artwork_ids])
+        query = f"""
+            SELECT image_id, distance
+            FROM vec_artworktext_features
+            WHERE embedding MATCH ?
+            AND image_id IN ({placeholders})
+            ORDER BY distance ASC
+            LIMIT ?
+        """
+        params = [serialize_f32(text_features)] + list(artwork_ids) + [top_k]
+    else:
+        query = """
+            SELECT image_id, distance
+            FROM vec_artworktext_features
+            WHERE embedding MATCH ?
+            ORDER BY distance ASC
+            LIMIT ?
+        """
+        params = [serialize_f32(text_features), top_k]
+
+    try:
+        rows = conn.execute(query, params).fetchall()
+
+        # Convert the results to a list of dictionaries
+        similar_artworks = []
+        for row in rows:
+            distance = row[1]
+            similarity = 1.0 / (1.0 + distance)  # Calculate similarity for debug output
+            similar_artworks.append({
+                "image_id": row[0],
+                "distance": distance  # Return distance like other functions
+            })
+            print(f"DEBUG: Artwork match - image_id={row[0]}, distance={distance}, similarity={similarity}")
+
+        print(f"Found {len(similar_artworks)} similar artworks")
+        return similar_artworks
+
+    except Exception as e:
+        print(f"Error in text similarity search: {e}")
+        return []
+        
+def find_most_similar_clip(clip_features, conn, top_k=3, artwork_ids=None):
+    """
+    Find the top-k most similar artworks using CLIP embeddings (multimodal).
+    
+    Args:
+        clip_features: CLIP embedding vector (serialized)
+        conn: database connection
+        top_k: number of results to return
+        artwork_ids: optional list of artwork IDs to filter by
+        
+    Returns:
+        list of dicts with entry_id, distance, and type="clip"
+    """
+    print(f"Finding similar CLIP embeddings (top_k={top_k})...")
+    
+    # Base query for CLIP similarity
+    query = """
+        SELECT image_id AS entry_id, distance
+        FROM vec_clip_features
+        WHERE embedding MATCH ?
+    """
+    params = [clip_features]
+    
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
+    if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
+        placeholders = ','.join('?' * len(artwork_ids))
+        query += f" AND image_id IN ({placeholders})"
+        params.extend(artwork_ids)
+    
+    # Execute query with ordering and limit
+    query += " ORDER BY distance LIMIT ?"
+    params.append(top_k)
+    
+    try:
+        rows = conn.execute(query, params).fetchall()
+        
+        results = []
+        for entry_id, distance in rows:
+            similarity = 1.0 / (1.0 + distance)
+            print(f"DEBUG: CLIP match - entry_id={entry_id}, distance={distance}, similarity={similarity}")
+            results.append({
+                'entry_id': entry_id,
+                'distance': distance,
+                'type': 'clip'
+            })
+        
+        print(f"Found {len(results)} CLIP matches")
+        return results
+        
+    except Exception as e:
+        print(f"Error in CLIP similarity search: {e}")
+        return []
+
+
+def retrieve_text_details(similar_texts, conn):
+    """
+    Given a DataFrame of similar texts, retrieve detailed information from the database.
+    """
+    result = []
+
+    for row in similar_texts.itertuples():  # similar_texts comes from the previous function, is a pd DataFrame
+        query = "SELECT * FROM text_entries WHERE entry_id = ?"
+        cursor = conn.execute(query, (row.entry_id,))
+        matched_entry = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
+        if not matched_entry.empty:
+            entry = matched_entry.iloc[0].to_dict()
+            print(entry)
+
+            # Parse descriptions
+            descriptions = entry.get("descriptions")
+            parsed_descriptions = None
+            if descriptions:
+                try:
+                    parsed_descriptions = json.loads(descriptions)
+                except json.JSONDecodeError:
+                    print("Error parsing descriptions JSON", descriptions)
+
+            # Retrieve images for the entry
+            try:
+                image_ids = json.loads(entry.get("images", "[]"))
+            except json.JSONDecodeError:
+                image_ids = entry.get("images", [])
+            images = get_images_from_image_ids(image_ids, conn)
+
+            result.append({
+                "entry_id": entry["entry_id"],
+                "database_value": entry["value"],
+                "type": entry["type"],
+                "isArtist": bool(entry.get("isArtist", 0)),
+                "description": entry.get("short_description"),
+                "full_description": parsed_descriptions,
+                "relatedKeywordIds": entry.get("relatedKeywordIds", []),
+                "relatedKeywordStrings": entry.get("relatedKeywordStrings", "").split(", ") if entry.get("relatedKeywordStrings") else [],
+                "images": images
+            })
+
+    return json.dumps(result)
+
+
+def get_images_from_image_ids(image_ids, conn, max=3):
+    """
+    Given a list of image IDs, retrieve their validated URLs or base64 representations.
+    Returns a list of up to 'max' images.
+    """
+    result = []
+    conn.row_factory = sqlite3.Row  # Process rows as dictionary-like objects
+
+    for image_id in image_ids[:max]:  # Limit to 'max' images
+        query = "SELECT * FROM image_entries WHERE image_id = ?"
+        cursor = conn.execute(query, (image_id,))
+        matched_entry = cursor.fetchone()
+
+        if matched_entry:
+            entry = dict(matched_entry)  # Convert row to dictionary
+            image_urls = entry.get('image_urls', {})
+            if isinstance(image_urls, str):
+                try:
+                    image_urls = json.loads(image_urls)
+                except json.JSONDecodeError:
+                    image_urls = {}
+
+            image_data = None
+
+            # Try to get the first valid image URL from 'large', 'medium', or 'small'
+            for size in ['large', 'medium', 'larger', 'small', 'square', 'tall']:
+                image_url = image_urls.get(size)
+                if image_url and check_image_url(image_url):
+                    print("✅")
+                    image_data = image_url
+                    break
+
+            # If no valid URL, fallback to base64 from filename
+            if not image_data:
+                try:
+                    print("Trying to load image from file...")
+                    image_path = os.path.join(IMAGES_PATH, entry['filename'])
+                    with open(image_path, "rb") as image_file:
+                        image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = f"data:image/jpeg;base64,{image_base64}"
+                except FileNotFoundError:
+                    print("Failed to load image from file, skipping...")
+                    continue
+
+            result.append(image_data)
+
+        if len(result) >= max:  # Stop if we reach the max number of images
+            break
+
+    return result
+
+#-- get precomputed embeddings from the vector tables --#
+
+def get_clip_embeddings(db, image_ids):
+    """
+    Get precomputed CLIP embeddings for given image IDs.
+    Returns dict mapping image_id -> embedding array.
+    This function replaces both get_clip_embeddings and query_clip_embeddings for backward compatibility.
+    """
+    if not image_ids:
+        return {}
+
+    placeholders = ','.join(['?' for _ in image_ids])
+    query = f"""
+        SELECT image_id, embedding 
+        FROM vec_clip_features 
+        WHERE image_id IN ({placeholders})
+    """
+
+    cursor = db.execute(query, image_ids)
+    results = cursor.fetchall()
+
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        elif isinstance(embedding_data, str):
+            try:
+                embedding = np.array(json.loads(embedding_data), dtype=np.float32)
+            except Exception:
+                continue
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except Exception:
+                continue
+        embeddings[row['image_id']] = embedding
+
+    return embeddings
+
+# For backward compatibility
+query_clip_embeddings = get_clip_embeddings
+
+
+def get_resnet_embeddings(db, image_ids):
+    """
+    Get precomputed ResNet50 embeddings for given image IDs.
+    Returns dict mapping image_id -> embedding array.
+    This function replaces both get_resnet_embeddings and query_resnet_embeddings for backward compatibility.
+    """
+    if not image_ids:
+        return {}
+
+    placeholders = ','.join(['?' for _ in image_ids])
+    query = f"""
+        SELECT image_id, embedding 
+        FROM vec_image_features 
+        WHERE image_id IN ({placeholders})
+    """
+
+    cursor = db.execute(query, image_ids)
+    results = cursor.fetchall()
+
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        elif isinstance(embedding_data, str):
+            try:
+                embedding = np.array(json.loads(embedding_data), dtype=np.float32)
+            except Exception:
+                continue
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except Exception:
+                continue
+        embeddings[row['image_id']] = embedding
+
+    return embeddings
+
+# For backward compatibility
+query_resnet_embeddings = get_resnet_embeddings
+
+
+def get_value_embeddings(db, entry_ids):
+    """Get value embeddings for given text_entries entry_ids (artists and keywords)."""
+    if not entry_ids:
+        return {}
+    
+    placeholders = ','.join(['?' for _ in entry_ids])
+    query = f"""
+        SELECT id, embedding 
+        FROM vec_value_features 
+        WHERE id IN ({placeholders})
+    """
+    
+    cursor = db.execute(query, entry_ids)
+    results = cursor.fetchall()
+    
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['id']] = embedding
+    
+    return embeddings
+def get_description_embeddings(db, entry_ids):
+    """Get description embeddings for given text_entries entry_ids (artists and keywords)."""
+    if not entry_ids:
+        return {}
+    
+    placeholders = ','.join(['?' for _ in entry_ids])
+    query = f"""
+        SELECT id, embedding 
+        FROM vec_description_features 
+        WHERE id IN ({placeholders})
+    """
+    
+    cursor = db.execute(query, entry_ids)
+    results = cursor.fetchall()
+    
+    embeddings = {}
+    for row in results:
+        embedding_data = row['embedding']
+        if isinstance(embedding_data, bytes):
+            embedding = np.frombuffer(embedding_data, dtype=np.float32)
+        else:
+            try:
+                embedding = np.array(embedding_data, dtype=np.float32)
+            except (ValueError, TypeError):
+                continue
+        embeddings[row['id']] = embedding
+    
+    return embeddings
+
+
+def slugify(name, separator='-'):
+    import re
+    """
+    Convert name to slug format (firstname-lastname or firstname lastname).
+    By default uses hyphens, but user can specify a different separator (e.g., space).
+    """
+    # Convert to lowercase
+    name = name.lower().strip()
+    
+    # Replace accented characters
+    accents = {
+        'à': 'a', 'á': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a', 'ā': 'a',
+        'è': 'e', 'é': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e',
+        'ì': 'i', 'í': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i',
+        'ò': 'o', 'ó': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o', 'ō': 'o',
+        'ù': 'u', 'ú': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u',
+        'ñ': 'n', 'ç': 'c', 'ś': 's', 'ź': 'z', 'ż': 'z',
+        'ą': 'a', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'š': 's', 'č': 'c', 'ř': 'r',
+        'ð': 'd', 'þ': 'th', 'ß': 'ss'
+    }
+    for accent, replacement in accents.items():
+        name = name.replace(accent, replacement)
+    
+    # Replace "%20" with space (will be replaced by separator below)
+    name = name.replace('%20', ' ')
+    # Replace all whitespace with single space
+    name = re.sub(r'\s+', ' ', name)
+    
+    # Remove any remaining non-alphanumeric characters except spaces
+    name = re.sub(r'[^a-z0-9 ]', '', name)
+    
+    # Replace spaces with the chosen separator
+    if separator != ' ':
+        name = name.replace(' ', separator)
+        # Remove multiple consecutive separators
+        name = re.sub(f'{re.escape(separator)}+', separator, name)
+        # Remove leading/trailing separators
+        name = name.strip(separator)
+    else:
+        # Remove leading/trailing spaces
+        name = name.strip()
+    
+    return name
+
+def find_exact_matches(query, conn, artists_only=False, search_aliases=False):
+    """
+    Find exact matches for a query in the text database.
+    Looks for matches in the 'value' column, ignoring case sensitivity.
+    Optionally, also searches for matches in the 'artist_aliases' column.
+
+    Args:
+        query: search string
+        conn: database connection
+        artists_only: if True, only return results where isArtist = 1
+        search_aliases: if True, also search for matches in artist_aliases
+
+    Returns:
+        list of matching rows as dictionaries
+    """
+    query_lower = query.lower()
+    matches = []
+
+    # Search in 'value' column
+    if artists_only:
+        sql_query = """
+            SELECT * FROM text_entries
+            WHERE LOWER(value) = ? AND isArtist = 1
+        """
+    else:
+        sql_query = """
+            SELECT * FROM text_entries
+            WHERE LOWER(value) = ?
+        """
+    cursor = conn.execute(sql_query, (query_lower,))
+    rows = cursor.fetchall()
+    matches.extend([{key: row[key] for key in row.keys()} for row in rows])
+
+    # Optionally search in 'artist_aliases' column
+    if search_aliases:
+        alias_query = """
+            SELECT * FROM text_entries
+            WHERE artist_aliases IS NOT NULL AND artist_aliases != ''
+        """
+        if artists_only:
+            alias_query += " AND isArtist = 1"
+        cursor = conn.execute(alias_query)
+        for row in cursor.fetchall():
+            try:
+                aliases = json.loads(row["artist_aliases"])
+                for alias in aliases:
+                    # Check all possible alias fields for exact match
+                    for field in ["name", "sortable_name", "last", "first", "slug"]:
+                        if alias.get(field, "").lower() == query_lower:
+                            matches.append({key: row[key] for key in row.keys()})
+                            break
+                    else:
+                        continue
+                    break  # Stop after first match in this row
+            except Exception:
+                continue
+
+    return matches
+
+
+
+# === Formatting / Preprocessing / data processing functions ===
+
+def preprocess_text(text, max_length=3):
+    """
+    Preprocesses text and extracts candidate phrases along with their positions.
+    - Splits text into words
+    - Generates n-grams (1-word to max_length words, up to 3-grams)
+    
+    Returns:
+    - List of tuples [(phrase, start_index, end_index)]
+    """
+    words = text.lower().split()  # Split text into words
+    candidate_phrases = []
+
+    # Generate n-grams (1-word to max_length words, up to 3-grams)
+    for n in range(1, max_length + 1):
+        for i in range(len(words) - n + 1):
+            ngram_words = words[i:i + n]
+            ngram = ' '.join(ngram_words)
+            start_index = i  # Start index of first word
+            end_index = i + n - 1  # End index of last word
+            candidate_phrases.append((ngram, start_index, end_index))
+
+    return candidate_phrases
+
+
+def serialize_f32(vector):
+    """Serializes a list of floats into a compact 'raw bytes' format for SQLite vector search."""
+    return struct.pack("%sf" % len(vector), *vector)
+
+
+def check_image_url(url):
+    """
+    Check if an image URL is valid (not 404).
+    Returns True if the image exists, False if it returns 404.
+    """
+    try:
+        print("checking image url...", url, end="")
+        response = requests.head(url, allow_redirects=True, timeout=5)  # Use HEAD to save bandwidth
+        #print(response.status_code == 200)
+        return response.status_code == 200  # Returns True if the URL is valid
+    except requests.RequestException:
+        print("❌ Error checking image URL:", url)
+        return False  # Return False if there's a connection error
+    
+
+def safe_json_loads(json_string, default=None):
+    try:
+        return json.loads(json_string)
+    except (json.JSONDecodeError, TypeError):
+        return default if default is not None else {}
+
+def base64_to_image(base64_string):
+    # what we will use for now before we have user database solution
+    # Convert base64 string to PIL Image
+    try:
+        img_data = base64.b64decode(base64_string)
+        img = Image.open(BytesIO(img_data)).convert('RGB')
+        return img
+    except (base64.binascii.Error, UnidentifiedImageError) as e:
+        print(f"Error decoding base64 image: {e}")
+        return None
+
+def url_to_image(url):
+    # what we will use once we have stable image urls
+    # Convert image URL to PIL Image
+    response = requests.get(url)
+    img = Image.open(BytesIO(response.content)).convert('RGB')
+    return img
+
+
+def match_input_text_to_keywords(original_words, candidate_keywords, all_matches, keyword_details):
+    final_results = []
+    seen_indices = set()
+
+    i = 0
+    while i < len(original_words):
+        matched_keyword = None
+
+        # Check if this position starts a matched phrase
+        for phrase, start_idx, end_idx in candidate_keywords:
+            if start_idx == i:
+                match = next((m for m in all_matches if m["phrase"] == phrase), None)
+                if match:
+                    details = keyword_details.get(match["id"])
+                    if details:
+                        original_phrase = ' '.join(original_words[start_idx:end_idx + 1])  # Restore original words
+                        matched_keyword = {
+                            "id": details["entry_id"],
+                            "value": original_phrase  # Use original words
+                        }
+                        seen_indices.update(range(start_idx, end_idx + 1))
+                        i = end_idx + 1  # Skip past the full phrase
+                        break  # Stop checking other matches
+
+        # If a matched keyword was found, add it as a single entry
+        if matched_keyword:
+            final_results.append(matched_keyword)
+        else:
+            i += 1
+
+    return final_results
+
+
+def soft_radial_compression(points, threshold_percentile=90, compression_factor=0.3):
+    # Find center
+    center = np.mean(points, axis=0)
+    
+    # Get distances from center
+    distances = np.linalg.norm(points - center, axis=1)
+    
+    # Set threshold at some percentile (e.g., 90th)
+    threshold = np.percentile(distances, threshold_percentile)
+    
+    # For points beyond threshold, compress the "excess" distance
+    compressed_points = points.copy()
+    for i, (point, dist) in enumerate(zip(points, distances)):
+        if dist > threshold:
+            excess = dist - threshold
+            compressed_excess = excess * compression_factor
+            new_dist = threshold + compressed_excess
+            
+            # Scale the point to the new distance
+            direction = (point - center) / dist
+            compressed_points[i] = center + direction * new_dist
+    
+    return compressed_points
+
+
+
+def calculate_n_neighbors(n_samples, min_neighbors=5, max_neighbors=50):
+    """
+    Calculate appropriate n_neighbors based on sample size.
+    Uses sqrt(n) as a heuristic, bounded by min and max values.
+    
+    Args:
+        n_samples: int, number of samples
+        min_neighbors: int, minimum n_neighbors (default 5)
+        max_neighbors: int, maximum n_neighbors (default 50)
+    
+    Returns:
+        int: calculated n_neighbors value
+    """
+    # sqrt(n) heuristic, but bounded
+    n_neighbors = int(np.sqrt(n_samples))
+    return max(min_neighbors, min(n_neighbors, max_neighbors))
+
+
+def generate_cache_key(data):
+    """
+    Generate a deterministic cache key from all parameters that affect the result
+    """
+    import hashlib
+    # Extract all parameters that affect the output
+    cache_params = {
+        'numKeywords': data.get('numKeywords', 100),
+        'weights': data.get('weights', {
+            'clip': 0.6,
+            'resnet': 0.0,
+            'keyword_semantic': 0.4,
+            'keyword_bias': 0.7
+        }),
+        'umap': {k: v for k, v in data.get('umap', {}).items() if k != 'debug'},  # Exclude debug
+        'compression': data.get('compression', {
+            'threshold_percentile': 90,
+            'compression_factor': 0.3
+        }),
+        'padding_factor': data.get('padding_factor', 0.1),
+        'n_clusters': data.get('n_clusters')  # Include even if None
+    }
+    
+    # Create deterministic string representation
+    cache_string = json.dumps(cache_params, sort_keys=True, separators=(',', ':'))
+    
+    # Generate hash
+    cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]  # First 12 chars
+    
+    return f"map_v3_{cache_hash}"
