@@ -53,6 +53,7 @@ def process_map_job(job_id, request_params, update_job_status):
             if debug:
                 print(*args, **kwargs)
         dprint("Received data:", data)
+
         # Generate cache key
         cache_key = hf.generate_cache_key(data)
         cache_file = os.path.join(MAPS_DIR, f"{cache_key}.json")

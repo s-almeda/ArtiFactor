@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎨 Map API Check v3</h1>
+        <h1> Spatial Map Generator </h1>
         
         <div class="parameters-section">
         <div class="parameters-section">
@@ -165,9 +165,11 @@
                     threshold_percentile: parseInt(document.getElementById('thresholdPercentile').value),
                     compression_factor: parseFloat(document.getElementById('compressionFactor').value)
                 },
-                padding_factor: parseFloat(document.getElementById('paddingFactor').value)
+                padding_factor: parseFloat(document.getElementById('paddingFactor').value),
+                regenerate: true
+                
             };
-
+ 
             // Only add random_state if parallel is false
             if (!params.umap.parallel) {
                 params.umap.random_state = parseInt(document.getElementById('randomState').value) || 42;

@@ -124,7 +124,7 @@ def browse_database():
 
 @app.route("/api/browse_database")
 def api_browse_database():
-    """API endpoint for database browsing with pagination and sorting"""
+    """API endpoint for database browsing with pagination, sorting, and search"""
     try:
         # Get query parameters
         table = request.args.get('table', 'text_entries')
@@ -132,6 +132,7 @@ def api_browse_database():
         page_size = int(request.args.get('page_size', 25))
         sort_by = request.args.get('sort_by', None)
         sort_dir = request.args.get('sort_dir', 'asc')
+        search_query = request.args.get('search', '').strip()  # NEW: Get search parameter
         
         # Validate table name
         if table not in ['text_entries', 'image_entries']:
@@ -144,22 +145,56 @@ def api_browse_database():
         if sort_dir not in ['asc', 'desc']:
             sort_dir = 'asc'
         
-        # Calculate offset
-        offset = (page - 1) * page_size
-        
         # Get database connection
         db = get_db()
         
-        # Get total count
-        count_cursor = db.execute(f"SELECT COUNT(*) as count FROM {table}")
+        # Build WHERE clause for search
+        where_clause = ""
+        search_params = []
+        
+        if search_query:
+            if table == 'text_entries':
+                where_clause = """
+                WHERE (
+                    value LIKE ? OR
+                    type LIKE ? OR
+                    CAST(entry_id AS TEXT) LIKE ? OR
+                    artist_aliases LIKE ? OR
+                    descriptions LIKE ? OR
+                    relatedKeywordStrings LIKE ?
+                )
+                """
+                search_pattern = f'%{search_query}%'
+                search_params = [search_pattern] * 6
+            else:  # image_entries
+                where_clause = """
+                WHERE (
+                    value LIKE ? OR
+                    filename LIKE ? OR
+                    CAST(image_id AS TEXT) LIKE ? OR
+                    artist_names LIKE ? OR
+                    descriptions LIKE ? OR
+                    relatedKeywordStrings LIKE ? OR
+                    rights LIKE ?
+                )
+                """
+                search_pattern = f'%{search_query}%'
+                search_params = [search_pattern] * 7
+        
+        # Get total count with search filter
+        count_query = f"SELECT COUNT(*) as count FROM {table} {where_clause}"
+        count_cursor = db.execute(count_query, search_params)
         total_rows = count_cursor.fetchone()['count']
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
         
         # Build ORDER BY clause
         if sort_by:
             # Validate sort column to prevent SQL injection
             valid_columns = {
                 'text_entries': ['entry_id', 'value', 'type', 'isArtist'],
-                'image_entries': ['image_id', 'value', 'filename']
+                'image_entries': ['image_id', 'value', 'filename', 'artist_names']  # Added artist_names
             }
             
             if sort_by in valid_columns.get(table, []):
@@ -169,12 +204,13 @@ def api_browse_database():
         else:
             order_clause = f"ORDER BY {'entry_id' if table == 'text_entries' else 'image_id'} ASC"
         
-        # Get paginated data
+        # Get paginated data with search filter
         if table == 'text_entries':
             query = f"""
                 SELECT entry_id, value, images, isArtist, type, 
                        artist_aliases, descriptions, relatedKeywordIds, relatedKeywordStrings
                 FROM text_entries
+                {where_clause}
                 {order_clause}
                 LIMIT ? OFFSET ?
             """
@@ -183,11 +219,14 @@ def api_browse_database():
                 SELECT image_id, value, artist_names, image_urls, filename,
                        rights, descriptions, relatedKeywordIds, relatedKeywordStrings
                 FROM image_entries
+                {where_clause}
                 {order_clause}
                 LIMIT ? OFFSET ?
             """
         
-        cursor = db.execute(query, (page_size, offset))
+        # Combine search params with pagination params
+        query_params = search_params + [page_size, offset]
+        cursor = db.execute(query, query_params)
         
         # Convert rows to list of dicts
         rows = []
@@ -201,7 +240,8 @@ def api_browse_database():
             'page': page,
             'page_size': page_size,
             'total_rows': total_rows,
-            'rows': rows
+            'rows': rows,
+            'search_query': search_query  # Optional: return the search query for debugging
         })
         
     except Exception as e:
@@ -874,21 +914,60 @@ def lookup_entry():
     }
     Returns the matching row from text_entries or image_entries, or 404 if not found.
     """
-    data = request.get_json()
-    entry_id = data.get('entryId')
-    entry_type = data.get('type')
+    try:
+        data = request.get_json()
+        
+        # More robust error handling for missing JSON
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        entry_id = data.get('entryId')
+        entry_type = data.get('type')
 
-    if not entry_id or entry_type not in ('text', 'image'):
-        return jsonify({"error": "Missing or invalid entryId/type"}), 400
+        if not entry_id:
+            return jsonify({"error": "Missing entryId"}), 400
+            
+        if entry_type not in ('text', 'image'):
+            return jsonify({"error": f"Invalid type: {entry_type}. Must be 'text' or 'image'"}), 400
 
-    db = get_db()
-    row_dict = helpers.retrieve_by_id(entry_id, db, entry_type=entry_type)
-    if not row_dict:
-        return jsonify({"error": "Entry not found"}), 404
+        db = get_db()
+        row_dict = helpers.retrieve_by_id(entry_id, db, entry_type=entry_type)
+        
+        if not row_dict:
+            return jsonify({"error": f"{entry_type.capitalize()} entry with ID {entry_id} not found"}), 404
 
-    return jsonify(row_dict)
+        # Ensure the response has the expected structure for the frontend
+        # The frontend expects these fields to exist (based on your HTML code)
+        if entry_type == 'text':
+            # Ensure all expected fields exist with defaults
+            row_dict.setdefault('entry_id', entry_id)
+            row_dict.setdefault('value', '')
+            row_dict.setdefault('type', '')
+            row_dict.setdefault('isArtist', False)
+            row_dict.setdefault('images', '[]')
+            row_dict.setdefault('artist_aliases', '[]')
+            row_dict.setdefault('descriptions', '{}')
+            row_dict.setdefault('relatedKeywordIds', '[]')
+            row_dict.setdefault('relatedKeywordStrings', '[]')
+        else:  # image
+            # Ensure all expected fields exist with defaults
+            row_dict.setdefault('image_id', entry_id)
+            row_dict.setdefault('value', '')
+            row_dict.setdefault('filename', '')
+            row_dict.setdefault('rights', '')
+            row_dict.setdefault('image_urls', '{}')
+            row_dict.setdefault('artist_names', '[]')
+            row_dict.setdefault('descriptions', '{}')
+            row_dict.setdefault('relatedKeywordIds', '[]')
+            row_dict.setdefault('relatedKeywordStrings', '[]')
 
-
+        return jsonify(row_dict)
+        
+    except Exception as e:
+        print(f"ERROR in lookup_entry: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+    
+    
 @app.route('/validate_admin_password', methods=['POST'])
 def validate_admin_password():
     """

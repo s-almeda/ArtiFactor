@@ -104,7 +104,7 @@ def test():
         'message': 'Map API is working!'
     })
 
-@map_api_bp.route('/map-check')
+@map_api_bp.route('/map-check-v0')
 def check_page():
     """Serve the API check page."""
     return render_template('map_api_check.html')

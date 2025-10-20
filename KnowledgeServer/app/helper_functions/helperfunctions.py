@@ -372,113 +372,7 @@ def find_semantic_keyword_matches(ngrams, text_db, threshold=0.3, top_k=3):
 
     return matches
 
-
-def find_most_similar_images(image_features, conn, top_k=3, artwork_ids=None):
-    """
-    Find the top-k most similar images by cosine similarity.
-    
-    Args:
-        image_features: Feature vector from the query image
-        conn: Database connection
-        top_k: Number of results to return
-        artwork_ids: Optional list of artwork IDs to limit search to (for frontend map filtering)
-        
-    Returns:
-        List of dicts with image_id and distance
-    """
-    print("Finding similar images...", end=' ')
-
-    if artwork_ids is None:
-        # Original behavior: search all artworks
-        query = """
-            SELECT
-                image_id,
-                distance
-            FROM vec_image_features
-            WHERE embedding MATCH ?
-            ORDER BY distance
-            LIMIT ?
-        """
-        rows = conn.execute(query, [image_features, top_k]).fetchall()
-    else:
-        # Filter to specific artwork IDs
-        if not artwork_ids:
-            print("Empty artwork_ids list provided")
-            return []
-        
-        # Create placeholders for the IN clause
-        placeholders = ','.join(['?' for _ in artwork_ids])
-        
-        query = f"""
-            SELECT
-                image_id,
-                distance
-            FROM vec_image_features
-            WHERE embedding MATCH ?
-            AND image_id IN ({placeholders})
-            ORDER BY distance
-            LIMIT ?
-        """
-        
-        # Parameters: [image_features] + artwork_ids + [top_k]
-        params = [image_features] + list(artwork_ids) + [top_k]
-        rows = conn.execute(query, params).fetchall()
-
-    # Convert the results to a list of dictionaries
-    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
-    
-    for row in rows:
-        similarity = 1.0 / (1.0 + row[1])
-        print(f"DEBUG: Image match - image_id={row[0]}, distance={row[1]}, similarity={similarity}")
-    
-    print(f"Found {len(similar_images)} similar images")
-    return similar_images
-def find_similar_artworks_by_text(text_features, conn, top_k=5):
-    """
-    Find the top-k most similar artworks based on text features.
-
-    Args:
-        text_features: Feature vector from the query text.
-        conn: Database connection.
-        top_k: Number of results to return (default: 5).
-
-    Returns:
-        List of dictionaries with image_id and distance (consistent with other similarity functions).
-    """
-    print("Finding similar artworks by text...")
-
-    # Query the vec_artworktext_features table for similarity matches
-    query = """
-        SELECT image_id, distance
-        FROM vec_artworktext_features
-        WHERE embedding MATCH ?
-        ORDER BY distance ASC
-        LIMIT ?
-    """
-
-    try:
-        # Execute the query with the serialized text features and top_k limit
-        rows = conn.execute(query, [serialize_f32(text_features), top_k]).fetchall()
-
-        # Convert the results to a list of dictionaries
-        similar_artworks = []
-        for row in rows:
-            distance = row[1]
-            similarity = 1.0 / (1.0 + distance)  # Calculate similarity for debug output
-            similar_artworks.append({
-                "image_id": row[0],
-                "distance": distance  # Return distance like other functions
-            })
-            print(f"DEBUG: Artwork match - image_id={row[0]}, distance={distance}, similarity={similarity}")
-
-        print(f"Found {len(similar_artworks)} similar artworks")
-        return similar_artworks
-
-    except Exception as e:
-        print(f"Error in text similarity search: {e}")
-        return []
-        
-def find_most_similar_texts(text_features, conn, top_k=3, search_in="description"):
+def find_most_similar_texts(text_features, conn, top_k=3, search_in="description", entry_ids=None):
     """
     Find the top-k most similar texts by cosine similarity.
     Args:
@@ -486,40 +380,55 @@ def find_most_similar_texts(text_features, conn, top_k=3, search_in="description
         conn: database connection
         top_k: number of results to return
         search_in: "description", "value", or "both"
+        entry_ids: optional list of entry IDs to filter results to only a specific subset of entries
     Returns:
         pandas.DataFrame with entry_id and distance columns
     """
     print("Finding similar texts...")
 
+
     queries = []
     params = []
 
+    def add_artwork_id_filter(query, ids):
+        if ids:
+            placeholders = ','.join(['?' for _ in ids])
+            query += f" AND id IN ({placeholders})"
+        return query
+
     if search_in == "description":
-        queries.append("""
+        q = """
             SELECT id AS entry_id, distance
             FROM vec_description_features
             WHERE embedding MATCH ?
-        """)
-        params.append([text_features])
+        """
+        q = add_artwork_id_filter(q, entry_ids)
+        queries.append(q)
+        params.append([text_features] + (list(entry_ids) if entry_ids else []))
     elif search_in == "value":
-        queries.append("""
+        q = """
             SELECT id AS entry_id, distance
             FROM vec_value_features
             WHERE embedding MATCH ?
-        """)
-        params.append([text_features])
+        """
+        q = add_artwork_id_filter(q, entry_ids)
+        queries.append(q)
+        params.append([text_features] + (list(entry_ids) if entry_ids else []))
     elif search_in == "both":
-        queries.append("""
+        q1 = """
             SELECT id AS entry_id, distance
             FROM vec_description_features
             WHERE embedding MATCH ?
-        """)
-        queries.append("""
+        """
+        q1 = add_artwork_id_filter(q1, entry_ids)
+        q2 = """
             SELECT id AS entry_id, distance
             FROM vec_value_features
             WHERE embedding MATCH ?
-        """)
-        params = [[text_features], [text_features]]
+        """
+        q2 = add_artwork_id_filter(q2, entry_ids)
+        queries.extend([q1, q2])
+        params = [[text_features] + (list(entry_ids) if entry_ids else []), [text_features] + (list(entry_ids) if entry_ids else [])]
     else:
         raise ValueError("search_in must be 'description', 'value', or 'both'")
 
@@ -540,11 +449,128 @@ def find_most_similar_texts(text_features, conn, top_k=3, search_in="description
         for _, row in df.iterrows():
             similarity = 1.0 / (1.0 + row['distance'])
             print(f"DEBUG: Text match - entry_id={row['entry_id']}, distance={row['distance']}, similarity={similarity}")
-    
     print(f"Found {len(df)} similar texts")
-
     return df
 
+
+def find_most_similar_images(image_features, conn, top_k=3, artwork_ids=None):
+    """
+    Find the top-k most similar images by cosine similarity.
+    
+    Args:
+        image_features: Feature vector from the query image
+        conn: Database connection
+        top_k: Number of results to return
+        artwork_ids: Optional list of artwork IDs to limit search to (for frontend map filtering)
+        
+    Returns:
+        List of dicts with image_id and distance
+    """
+    print("Finding similar images...", end=' ')
+
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
+    if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
+        placeholders = ','.join(['?' for _ in artwork_ids])
+        query = f"""
+            SELECT
+                image_id,
+                distance
+            FROM vec_image_features
+            WHERE embedding MATCH ?
+            AND image_id IN ({placeholders})
+            ORDER BY distance
+            LIMIT ?
+        """
+        params = [image_features] + list(artwork_ids) + [top_k]
+        rows = conn.execute(query, params).fetchall()
+    else:
+        query = """
+            SELECT
+                image_id,
+                distance
+            FROM vec_image_features
+            WHERE embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+        """
+        rows = conn.execute(query, [image_features, top_k]).fetchall()
+
+    # Convert the results to a list of dictionaries
+    similar_images = [{"image_id": row[0], "distance": row[1]} for row in rows]
+    
+    for row in rows:
+        similarity = 1.0 / (1.0 + row[1])
+        print(f"DEBUG: Image match - image_id={row[0]}, distance={row[1]}, similarity={similarity}")
+    
+    print(f"Found {len(similar_images)} similar images")
+    return similar_images
+
+def find_similar_artworks_by_text(text_features, conn, top_k=5, artwork_ids=None):
+    """
+    Find the top-k most similar artworks based on text features.
+
+    Args:
+        text_features: Feature vector from the query text.
+        conn: Database connection.
+        top_k: Number of results to return (default: 5).
+        artwork_ids: Optional list of artwork IDs to limit search to (for frontend map filtering).
+
+    Returns:
+        List of dictionaries with image_id and distance (consistent with other similarity functions).
+    """
+    print("Finding similar artworks using text...")
+    
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
+    if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
+        placeholders = ','.join(['?' for _ in artwork_ids])
+        query = f"""
+            SELECT image_id, distance
+            FROM vec_artworktext_features
+            WHERE embedding MATCH ?
+            AND image_id IN ({placeholders})
+            ORDER BY distance ASC
+            LIMIT ?
+        """
+        params = [serialize_f32(text_features)] + list(artwork_ids) + [top_k]
+    else:
+        query = """
+            SELECT image_id, distance
+            FROM vec_artworktext_features
+            WHERE embedding MATCH ?
+            ORDER BY distance ASC
+            LIMIT ?
+        """
+        params = [serialize_f32(text_features), top_k]
+
+    try:
+        rows = conn.execute(query, params).fetchall()
+
+        # Convert the results to a list of dictionaries
+        similar_artworks = []
+        for row in rows:
+            distance = row[1]
+            similarity = 1.0 / (1.0 + distance)  # Calculate similarity for debug output
+            similar_artworks.append({
+                "image_id": row[0],
+                "distance": distance  # Return distance like other functions
+            })
+            print(f"DEBUG: Artwork match - image_id={row[0]}, distance={distance}, similarity={similarity}")
+
+        print(f"Found {len(similar_artworks)} similar artworks")
+        return similar_artworks
+
+    except Exception as e:
+        print(f"Error in text similarity search: {e}")
+        return []
+        
 def find_most_similar_clip(clip_features, conn, top_k=3, artwork_ids=None):
     """
     Find the top-k most similar artworks using CLIP embeddings (multimodal).
@@ -568,8 +594,12 @@ def find_most_similar_clip(clip_features, conn, top_k=3, artwork_ids=None):
     """
     params = [clip_features]
     
-    # Add artwork ID filtering if provided
+    if artwork_ids is not None and len(artwork_ids) == 0:
+        print(" artwork_ids list provided, but it is empty. Returning empty result.")
+        return []
+        
     if artwork_ids:
+        print(f"Filtering to only {len(artwork_ids)} artwork IDs")
         placeholders = ','.join('?' * len(artwork_ids))
         query += f" AND image_id IN ({placeholders})"
         params.extend(artwork_ids)
@@ -1033,16 +1063,7 @@ def match_input_text_to_keywords(original_words, candidate_keywords, all_matches
                         original_phrase = ' '.join(original_words[start_idx:end_idx + 1])  # Restore original words
                         matched_keyword = {
                             "id": details["entry_id"],
-                            "value": original_phrase,  # Use original words
-                            "database_value": details["value"],
-                            "type": details["type"],
-                            "isArtist": bool(details.get("isArtist", 0)),
-                            "artist_aliases": details.get("artist_aliases", []),
-                            "description": details.get("short_description"),
-                            "full_description": details.get("descriptions"),
-                            "relatedKeywordIds": details.get("relatedKeywordIds", []),
-                            "relatedKeywordStrings": details.get("relatedKeywordStrings", "").split(", ") if details.get("relatedKeywordStrings") else [],
-                            "images": details.get("images", [])
+                            "value": original_phrase  # Use original words
                         }
                         seen_indices.update(range(start_idx, end_idx + 1))
                         i = end_idx + 1  # Skip past the full phrase
@@ -1052,8 +1073,6 @@ def match_input_text_to_keywords(original_words, candidate_keywords, all_matches
         if matched_keyword:
             final_results.append(matched_keyword)
         else:
-            if i not in seen_indices:
-                final_results.append({"value": original_words[i]})
             i += 1
 
     return final_results
