@@ -51,13 +51,13 @@
                     <button id="downloadFinalJson" class="btn btn-success" style="display: none; font-size: 1.1em; padding: 10px 20px;">
                         <i class="fas fa-download"></i> Download Final JSON
                     </button>
-                    <a href="/staging_review/final_sql_review" class="btn btn-warning" style="font-size: 1.1em; padding: 10px 20px; text-decoration: none;">
+                    <button class="btn btn-warning" disabled style="font-size: 1.1em; padding: 10px 20px; text-decoration: none; opacity: 0.6; cursor: not-allowed;" title="Disabled — only an admin can commit these changes">
                         <i class="fas fa-database"></i> Commit to Database
-                    </a>
+                    </button>
                     <div id="finalJsonStatus" style="margin-left: 10px; font-weight: bold;"></div>
                 </div>
                 <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                    Use "Commit to Database" to process individual artist files and commit them directly to the database.
+                    This feature has been disabled - only an admin can commit these changes to the database.
                 </div>
             </div>
         </div>
@@ -513,7 +513,7 @@ function createArtistForm(artist, idx) {
             <h4>Artist Info</h4>
             <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
             <div style="margin-bottom:8px;">
-                <button type="button" onclick="deleteArtistFile()" class="btn btn-danger" style="font-size: 0.9em; padding: 6px 12px;">
+                <button disabled type="button" onclick="deleteArtistFile()" class="btn btn-danger" style="font-size: 0.9em; padding: 6px 12px;">
                     <i class="fas fa-trash"></i> Delete Artist File
                 </button>
                 <span style="margin-left: 8px; font-size: 0.9em; color: #666;">Permanently remove this artist file from staging</span>
