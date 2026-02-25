@@ -14,10 +14,15 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         --extra-index-url https://download.pytorch.org/whl/cpu \
         -r requirements.txt
 
+# Force clean reinstall of sqlite-vec to avoid cached bad binaries
+RUN pip uninstall -y sqlite-vec && \
+    pip install --no-cache-dir --force-reinstall sqlite-vec==0.1.6
+
 # Copy application files
 COPY app/bootstrap.sh .
 COPY app/gunicorn_config.py .
 COPY app/helperfunctions.py .
+COPY app/voronoi_helper_functions.py .
 COPY app/index.py .
 COPY app/templates/ templates/
 COPY app/static/ static/

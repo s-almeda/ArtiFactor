@@ -104,6 +104,9 @@ app.register_blueprint(data_cleaner_bp)
 from templates.database_requests import database_requests_bp
 app.register_blueprint(database_requests_bp)
 
+from templates.comics_browser_api import comics_browser_api_bp
+app.register_blueprint(comics_browser_api_bp)
+
 
 
 @app.route("/")

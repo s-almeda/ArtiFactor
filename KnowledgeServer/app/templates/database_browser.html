@@ -5,26 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Browser</title>
     <link rel="stylesheet" href="../static/css/admin_styles.css">
+    <style>
+        /* ── Database-switcher tabs ── */
+        .db-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .db-tab {
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 2px solid #ccc;
+            background: #fff;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all .15s;
+            color: #555;
+        }
+        .db-tab.active {
+            border-color: #2c3e50;
+            background: #2c3e50;
+            color: #fff;
+        }
+        .db-tab.comics.active {
+            border-color: #8e44ad;
+            background: #8e44ad;
+        }
+
+        /* ── Comics breadcrumb bar ── */
+        #comics-breadcrumb {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        #comics-breadcrumb.visible { display: flex; }
+        .crumb-btn {
+            background: none;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            padding: 2px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #333;
+        }
+        .crumb-btn:hover { background: #f0f0f0; }
+        .crumb-sep { color: #aaa; }
+
+        /* ── Cover thumbnail in book_entries table ── */
+        .cover-thumb {
+            width: 48px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 3px;
+            cursor: pointer;
+            display: block;
+        }
+
+        /* ── Page grid inside book detail modal ── */
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .page-cell {
+            text-align: center;
+            cursor: pointer;
+        }
+        .page-cell img {
+            width: 100%;
+            border-radius: 3px;
+            border: 2px solid transparent;
+            transition: border-color .15s;
+        }
+        .page-cell img:hover { border-color: #8e44ad; }
+        .page-cell span {
+            display: block;
+            font-size: 10px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        /* ── Drill-down link style ── */
+        a.drill { color: #8e44ad; text-decoration: underline; cursor: pointer; }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="header-top">
-                <h1>🗄️ Database Browser</h1>
+                <h1 id="page-title">🗄️ Database Browser</h1>
                 <div class="pagination-top" id="pagination-top">
                     <button class="page-btn" id="prev-btn-top" onclick="changePage(-1)">← Previous</button>
                     <span class="page-info" id="page-info-top">Page 1</span>
                     <button class="page-btn" id="next-btn-top" onclick="changePage(1)">Next →</button>
-                    <button class="page-btn" id="last-btn-top" onclick="goToLastPage()">Last &raquo;</button>
+                    <button class="page-btn" id="last-btn-top" onclick="goToLastPage()">Last »</button>
                 </div>
             </div>
+
+            <!-- Database selector -->
+            <div class="db-tabs">
+                <button class="db-tab active"   id="db-tab-art"    onclick="switchDb('art')">🎨 Art / Knowledgebase</button>
+                <button class="db-tab comics"   id="db-tab-comics" onclick="switchDb('comics')">📚 Comics</button>
+            </div>
+
+            <!-- Comics breadcrumb (hidden when browsing art DB) -->
+            <div id="comics-breadcrumb">
+                <button class="crumb-btn" onclick="comicsDrillTo('text_entries')">All Series</button>
+                <span class="crumb-sep" id="crumb-sep-1" style="display:none">›</span>
+                <button class="crumb-btn" id="crumb-series-btn" style="display:none" onclick="comicsDrillTo('book_entries')"></button>
+                <span class="crumb-sep" id="crumb-sep-2" style="display:none">›</span>
+                <button class="crumb-btn" id="crumb-book-btn"   style="display:none" onclick="comicsDrillTo('image_entries')"></button>
+            </div>
+
             <div class="controls">
-                <div class="table-selector">
-                    <button class="table-btn" onclick="switchTable('text_entries')">Text Entries</button>
-                    <button class="table-btn active" onclick="switchTable('image_entries')">Image Entries</button>
+                <!-- Art DB table switcher -->
+                <div class="table-selector" id="art-table-selector">
+                    <button class="table-btn" onclick="artSwitchTable('text_entries')">Text Entries</button>
+                    <button class="table-btn active" onclick="artSwitchTable('image_entries')">Image Entries</button>
                 </div>
+                <!-- Comics DB table switcher -->
+                <div class="table-selector" id="comics-table-selector" style="display:none">
+                    <button class="table-btn active" id="ctab-text"  onclick="comicsSwitchTable('text_entries')">Series / Creators</button>
+                    <button class="table-btn"        id="ctab-book"  onclick="comicsSwitchTable('book_entries')">Books / Issues</button>
+                    <button class="table-btn"        id="ctab-image" onclick="comicsSwitchTable('image_entries')">Pages</button>
+                </div>
+
                 <div class="stats" id="stats">Loading...</div>
-                <input id="search-bar" type="text" placeholder="Search..." style="margin-left:16px;padding:4px 10px;border-radius:4px;border:1px solid #ccc;width:200px;" oninput="onSearchInput()">
+                <input id="search-bar" type="text" placeholder="Search..."
+                    style="margin-left:16px;padding:4px 10px;border-radius:4px;border:1px solid #ccc;width:200px;"
+                    oninput="onSearchInput()">
                 <label for="page-size" style="font-size:14px;margin-left:10px;">Show per page:</label>
                 <select id="page-size" style="margin-left:4px;padding:4px 8px;border-radius:4px;" onchange="onPageSizeChange()">
                     <option value="25">25</option>
@@ -40,516 +155,746 @@
                     <option value="1000">1000</option>
                     <option value="all">All</option>
                 </select>
-                <button class="page-btn" id="download-json-btn" onclick="downloadCurrentTableAsJSON()">Download as JSON</button>
+                <button class="page-btn" onclick="downloadCurrentTableAsJSON()">Download as JSON</button>
             </div>
         </div>
-        
+
         <div class="table-container">
-            <div id="table-content">
-                <div class="loading">Loading data...</div>
-            </div>
+            <div id="table-content"><div class="loading">Loading data...</div></div>
         </div>
     </div>
 
-    <!-- Modal for detailed view -->
+    <!-- Detail modal -->
     <div id="detailModal" class="modal" onclick="closeModalOnBackdrop(event)">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modal-title">Details</h2>
                 <span class="close" onclick="closeModal()">&times;</span>
             </div>
-            <div class="modal-body" id="modal-body">
-                <!-- Details will be inserted here -->
-            </div>
+            <div class="modal-body" id="modal-body"></div>
         </div>
     </div>
 
-    <script>
-        let currentTable = 'image_entries';
-        let currentPage = 1;
-        let totalPages = 1;
-        let pageSize = 25;
-        let totalRows = 0;
-        let currentData = null;
-        let sortColumn = null;
-        let sortDirection = 'asc';
-        let searchQuery = '';
-        let filteredRows = null;
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+let activeDb       = 'art';   // 'art' | 'comics'
+let currentTable   = 'image_entries';
+let currentPage    = 1;
+let totalPages     = 1;
+let pageSize       = 25;
+let totalRows      = 0;
+let currentData    = null;
+let sortColumn     = null;
+let sortDirection  = 'asc';
+let searchQuery    = '';
+let filteredRows   = null;
 
-        // Load data on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
+// Comics drill-down context
+let comicsFilter   = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
+
+// ============================================================
+//  DB SWITCHING
+// ============================================================
+function switchDb(db) {
+    activeDb = db;
+    currentPage   = 1;
+    sortColumn    = null;
+    sortDirection = 'asc';
+    searchQuery   = '';
+    document.getElementById('search-bar').value = '';
+
+    // Update tab styles
+    document.getElementById('db-tab-art').classList.toggle('active', db === 'art');
+    document.getElementById('db-tab-comics').classList.toggle('active', db === 'comics');
+
+    // Show/hide control panels
+    document.getElementById('art-table-selector').style.display    = db === 'art'    ? '' : 'none';
+    document.getElementById('comics-table-selector').style.display = db === 'comics' ? '' : 'none';
+    document.getElementById('comics-breadcrumb').classList.toggle('visible', db === 'comics');
+    document.getElementById('page-title').textContent =
+        db === 'art' ? '🎨 Art / Knowledgebase Browser' : '📚 Comics Browser';
+
+    if (db === 'art') {
+        currentTable = 'image_entries';
+        // Reset active art table button
+        document.querySelectorAll('#art-table-selector .table-btn').forEach((b,i) => b.classList.toggle('active', i===1));
+    } else {
+        // Reset comics filter & go to series list
+        comicsFilter = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
+        currentTable = 'text_entries';
+        updateComicsBreadcrumb();
+        document.querySelectorAll('#comics-table-selector .table-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('ctab-text').classList.add('active');
+    }
+    loadData();
+}
+
+// ============================================================
+//  ART DB – table switching (unchanged behaviour)
+// ============================================================
+function artSwitchTable(tableName) {
+    document.querySelectorAll('#art-table-selector .table-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    currentTable  = tableName;
+    currentPage   = 1;
+    sortColumn    = null;
+    sortDirection = 'asc';
+    loadData();
+}
+
+// ============================================================
+//  COMICS DB – table switching & drill-down
+// ============================================================
+function comicsSwitchTable(tableName) {
+    // Reset filter context when manually switching tabs
+    comicsFilter = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
+    currentTable = tableName;
+    currentPage  = 1;
+    sortColumn   = null;
+    updateComicsTabHighlight(tableName);
+    updateComicsBreadcrumb();
+    loadData();
+}
+
+function updateComicsTabHighlight(tableName) {
+    document.getElementById('ctab-text').classList.toggle('active',  tableName === 'text_entries');
+    document.getElementById('ctab-book').classList.toggle('active',  tableName === 'book_entries');
+    document.getElementById('ctab-image').classList.toggle('active', tableName === 'image_entries');
+}
+
+/**
+ * Drill into books for a series, or pages for a book.
+ * Called from table row clicks (series → books) and book rows (books → pages).
+ */
+function comicsDrillIntoSeries(seriesId, seriesLabel) {
+    comicsFilter.series_id   = seriesId;
+    comicsFilter.seriesLabel = seriesLabel;
+    comicsFilter.book_id     = null;
+    comicsFilter.bookLabel   = null;
+    currentTable = 'book_entries';
+    currentPage  = 1;
+    sortColumn   = null;
+    updateComicsTabHighlight('book_entries');
+    updateComicsBreadcrumb();
+    loadData();
+}
+
+function comicsDrillIntoBook(bookId, bookLabel) {
+    comicsFilter.book_id   = bookId;
+    comicsFilter.bookLabel = bookLabel;
+    currentTable = 'image_entries';
+    currentPage  = 1;
+    sortColumn   = null;
+    updateComicsTabHighlight('image_entries');
+    updateComicsBreadcrumb();
+    loadData();
+}
+
+/** Breadcrumb navigation — called by crumb buttons */
+function comicsDrillTo(tableName) {
+    if (tableName === 'text_entries') {
+        comicsFilter = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
+    } else if (tableName === 'book_entries') {
+        comicsFilter.book_id   = null;
+        comicsFilter.bookLabel = null;
+    }
+    currentTable = tableName;
+    currentPage  = 1;
+    sortColumn   = null;
+    updateComicsTabHighlight(tableName);
+    updateComicsBreadcrumb();
+    loadData();
+}
+
+function updateComicsBreadcrumb() {
+    const sep1    = document.getElementById('crumb-sep-1');
+    const serBtn  = document.getElementById('crumb-series-btn');
+    const sep2    = document.getElementById('crumb-sep-2');
+    const bookBtn = document.getElementById('crumb-book-btn');
+
+    if (comicsFilter.series_id) {
+        sep1.style.display  = '';
+        serBtn.style.display = '';
+        serBtn.textContent  = comicsFilter.seriesLabel || comicsFilter.series_id;
+    } else {
+        sep1.style.display  = 'none';
+        serBtn.style.display = 'none';
+    }
+
+    if (comicsFilter.book_id) {
+        sep2.style.display  = '';
+        bookBtn.style.display = '';
+        bookBtn.textContent = comicsFilter.bookLabel || comicsFilter.book_id;
+    } else {
+        sep2.style.display  = 'none';
+        bookBtn.style.display = 'none';
+    }
+}
+
+// ============================================================
+//  PAGINATION / PAGE SIZE
+// ============================================================
+function changePage(direction) {
+    const newPage = currentPage + direction;
+    if (newPage >= 1 && newPage <= totalPages) { currentPage = newPage; loadData(); }
+}
+function goToLastPage() { currentPage = totalPages; loadData(); }
+function onPageSizeChange() {
+    pageSize = document.getElementById('page-size').value;
+    currentPage = 1;
+    loadData();
+}
+function onSearchInput() {
+    searchQuery = document.getElementById('search-bar').value.trim().toLowerCase();
+    displayData(currentData);
+}
+
+// ============================================================
+//  CORE DATA LOAD
+// ============================================================
+function loadData() {
+    document.getElementById('table-content').innerHTML = '<div class="loading">Loading data...</div>';
+
+    let ps = (pageSize === 'all') ? 1_000_000 : parseInt(pageSize, 10) || 25;
+    let url;
+
+    if (activeDb === 'art') {
+        url = `/api/browse_database?table=${currentTable}&page=${currentPage}&page_size=${ps}`;
+    } else {
+        url = `/api/comics/browse?table=${currentTable}&page=${currentPage}&page_size=${ps}`;
+        if (comicsFilter.series_id) url += `&series_id=${encodeURIComponent(comicsFilter.series_id)}`;
+        if (comicsFilter.book_id)   url += `&book_id=${encodeURIComponent(comicsFilter.book_id)}`;
+    }
+
+    if (sortColumn) url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                currentData = data;
+                displayData(data);
+                updatePagination(data);
+                updateStats(data);
+            } else {
+                document.getElementById('table-content').innerHTML =
+                    `<div class="error">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(err => {
+            document.getElementById('table-content').innerHTML =
+                `<div class="error">Failed to load data: ${err}</div>`;
         });
+}
 
-        function switchTable(tableName) {
-            // Update active button
-            document.querySelectorAll('.table-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Reset to first page and clear sorting
-            currentTable = tableName;
-            currentPage = 1;
-            sortColumn = null;
-            sortDirection = 'asc';
-            loadData();
-        }
+// ============================================================
+//  DISPLAY
+// ============================================================
+function displayData(data) {
+    const el = document.getElementById('table-content');
+    if (!data?.rows?.length) { el.innerHTML = '<div class="empty">No data found</div>'; filteredRows = []; return; }
 
-        function changePage(direction) {
-            const newPage = currentPage + direction;
-            if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                loadData();
-            }
-        }
+    filteredRows = searchQuery
+        ? data.rows.filter(row => Object.values(row).some(v => {
+            if (v == null) return false;
+            return (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase().includes(searchQuery);
+          }))
+        : data.rows;
 
-        function goToLastPage() {
-            currentPage = totalPages;
-            loadData();
-        }
+    if (!filteredRows.length) { el.innerHTML = '<div class="empty">No data found</div>'; return; }
 
-        function loadData() {
-            const tableContent = document.getElementById('table-content');
-            tableContent.innerHTML = '<div class="loading">Loading data...</div>';
-            let url = `/api/browse_database?table=${currentTable}&page=${currentPage}`;
-            let ps = pageSize;
-            if (typeof ps === 'string' && ps === 'all') {
-                ps = 1000000;
-            }
-            url += `&page_size=${ps}`;
-            if (sortColumn) {
-                url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
-            }
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        currentData = data;
-                        displayData(data);
-                        updatePagination(data);
-                        updateStats(data);
-                    } else {
-                        tableContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
-                    }
-                })
-                .catch(error => {
-                    tableContent.innerHTML = `<div class="error">Failed to load data: ${error}</div>`;
-                });
-        }
+    // Route to the right renderer
+    if (activeDb === 'art') {
+        el.innerHTML = currentTable === 'text_entries' ? renderArtTextTable() : renderArtImageTable();
+    } else {
+        if (currentTable === 'text_entries')  el.innerHTML = renderComicsTextTable();
+        else if (currentTable === 'book_entries') el.innerHTML = renderComicsBookTable();
+        else el.innerHTML = renderComicsImageTable();
+    }
+}
 
-        function onPageSizeChange() {
-            const select = document.getElementById('page-size');
-            pageSize = select.value;
-            currentPage = 1;
-            loadData();
-        }
+// ── helpers ─────────────────────────────────────────────────
+function th(label, col) {
+    const cls = sortColumn === col ? `sorted-${sortDirection}` : '';
+    return `<th onclick="sortBy('${col}')" class="${cls}">${label}</th>`;
+}
+function sortBy(col) {
+    sortDirection = (sortColumn === col && sortDirection === 'asc') ? 'desc' : 'asc';
+    sortColumn = col;
+    loadData();
+}
+function fmtArray(jsonStr, max=3) {
+    if (!jsonStr) return '-';
+    try {
+        const a = JSON.parse(jsonStr);
+        if (!Array.isArray(a) || !a.length) return '-';
+        const preview = a.slice(0, max).join(', ');
+        return a.length > max ? `${preview} <em>+${a.length-max}</em>` : preview;
+    } catch { return jsonStr.substring(0, 60); }
+}
+function thumbUrl(imageUrlsJson) {
+    if (!imageUrlsJson) return null;
+    try {
+        const u = JSON.parse(imageUrlsJson);
+        return u.thumb || u.small || u.medium || u.normalized || Object.values(u)[0];
+    } catch { return null; }
+}
+function bestUrl(imageUrlsJson) {
+    if (!imageUrlsJson) return null;
+    try {
+        const u = JSON.parse(imageUrlsJson);
+        return u.larger || u.large || u.full || u.medium || u.normalized || Object.values(u)[0];
+    } catch { return null; }
+}
 
-        function onSearchInput() {
-            const input = document.getElementById('search-bar');
-            searchQuery = input.value.trim().toLowerCase();
-            displayData(currentData);
-        }
+// ── ART renderers (unchanged logic, just factored out) ───────
+function renderArtImageTable() {
+    let h = `<table><thead><tr>
+        <th>Image</th>
+        ${th('ID','image_id')} ${th('Title','value')}
+        <th>Artists</th><th>Related Keywords</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        const img = thumbUrl(row.image_urls);
+        h += `<tr onclick="showDetailsByRow(${i})">
+            <td onclick="event.stopPropagation()">
+                ${img ? `<img src="${img}" class="image-thumbnail" alt="${row.value}" onclick="showDetailsByRow(${i})">` : '-'}
+            </td>
+            <td><code>${row.image_id}</code></td>
+            <td class="truncate">${row.value}</td>
+            <td>${fmtArray(row.artist_names)}</td>
+            <td>${fmtArray(row.relatedKeywordStrings)}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
 
-        function sortBy(column) {
-            if (sortColumn === column) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortColumn = column;
-                sortDirection = 'asc';
-            }
-            loadData();
-        }
+function renderArtTextTable() {
+    let h = `<table><thead><tr>
+        ${th('ID','entry_id')} ${th('Title','value')} ${th('Type','type')}
+        <th>Images</th><th>Related Keywords</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        h += `<tr onclick="showDetailsByRow(${i})">
+            <td><code>${row.entry_id}</code></td>
+            <td class="truncate">${row.value}</td>
+            <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
+            <td>${fmtImagesColumn(row.images)}</td>
+            <td>${fmtArray(row.relatedKeywordStrings)}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
 
-        function displayData(data) {
-            const tableContent = document.getElementById('table-content');
-            if (!data || !data.rows || data.rows.length === 0) {
-                tableContent.innerHTML = '<div class="empty">No data found</div>';
-                filteredRows = [];
-                return;
-            }
-            // Filter rows if search is active
-            filteredRows = data.rows;
-            if (searchQuery) {
-                filteredRows = data.rows.filter(row => {
-                    return Object.values(row).some(val => {
-                        if (val == null) return false;
-                        let str = '';
-                        if (typeof val === 'string') {
-                            str = val;
-                        } else if (typeof val === 'object') {
-                            str = JSON.stringify(val);
-                        } else {
-                            str = String(val);
-                        }
-                        return str.toLowerCase().includes(searchQuery);
-                    });
-                });
-            }
-            if (filteredRows.length === 0) {
-                tableContent.innerHTML = '<div class="empty">No data found</div>';
-                return;
-            }
-            let html = '<table><thead><tr>';
-            if (currentTable === 'text_entries') {
-                html += `
-                    <th onclick="sortBy('entry_id')" class="${sortColumn === 'entry_id' ? 'sorted-' + sortDirection : ''}">ID</th>
-                    <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
-                    <th onclick="sortBy('type')" class="${sortColumn === 'type' ? 'sorted-' + sortDirection : ''}">Type</th>
-                    <th>Images</th>
-                    <th>Related Keywords</th>
-                `;
-            } else {
-                html += `
-                    <th>Image</th>
-                    <th onclick="sortBy('image_id')" class="${sortColumn === 'image_id' ? 'sorted-' + sortDirection : ''}">ID</th>
-                    <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
-                    <th>Artists</th>
-                    <th>Related Keywords</th>
-                `;
-            }
-            html += '</tr></thead><tbody>';
-            filteredRows.forEach((row, index) => {
-                html += `<tr onclick="showDetailsByRow(${index})">`;
-                if (currentTable === 'text_entries') {
-                    html += `
-                        <td><code>${row.entry_id}</code></td>
-                        <td class="truncate">
-                            ${row.value}
-                        </td>
-                        <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
-                        <td>${formatJsonField(row.images, 'array', true)}</td>
-                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
-                    `;
-                } else {
-                    const imageUrl = getImageUrl(row.image_urls);
-                    html += `
-                        <td onclick="event.stopPropagation()">
-                            ${imageUrl ? `<img src="${imageUrl}" class="image-thumbnail" alt="${row.value}" onclick="showDetailsByRow(${index})">` : '-'}
-                        </td>
-                        <td><code>${row.image_id}</code></td>
-                        <td class="truncate">${row.value}</td>
-                        <td>${formatJsonField(row.artist_names, 'array')}</td>
-                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
-                    `;
-                }
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            tableContent.innerHTML = html;
-        }
+function fmtImagesColumn(jsonStr) {
+    if (!jsonStr) return '-';
+    try {
+        const a = JSON.parse(jsonStr);
+        if (!Array.isArray(a) || !a.length) return '-';
+        const links = a.slice(0,3).map(id =>
+            `<a href="#" onclick="event.stopPropagation();showArtImageById('${id}');return false;"
+               style="color:#3498db;text-decoration:underline">${id}</a>`).join(', ');
+        return links + (a.length > 3 ? ` <em>+${a.length-3}</em>` : '');
+    } catch { return jsonStr.substring(0, 60); }
+}
 
-        function formatJsonField(field, type, isImagesColumn = false) {
-            if (!field || field === '') return '-';
-            
-            try {
-                const parsed = JSON.parse(field);
-                
-                if (type === 'array' && Array.isArray(parsed)) {
-                    if (parsed.length === 0) return '<span class="json-field">[]</span>';
-                    
-                    // Special handling for images column in text_entries
-                    if (isImagesColumn) {
-                        const links = parsed.slice(0, 3).map(id => 
-                            `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
-                        ).join(', ');
-                        const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                        return `<span class="json-field">${links}${more}</span>`;
-                    }   
-                    
-                    const preview = parsed.slice(0, 3).join(', ');
-                    const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<span class="json-field">${preview}${more}</span>`;
-                } else if (type === 'object' && typeof parsed === 'object') {
-                    const keys = Object.keys(parsed);
-                    return `<span class="json-field">{${keys.length} fields}</span>`;
-                }
-                
-                return `<span class="json-field">${field}</span>`;
-            } catch (e) {
-                return `<span class="json-field">${field.substring(0, 50)}...</span>`;
-            }
-        }
+// ── COMICS renderers ─────────────────────────────────────────
 
-        function getImageUrl(imageUrlsJson) {
-            if (!imageUrlsJson) return null;
-            
-            try {
-                const urls = JSON.parse(imageUrlsJson);
-                // Try to get a small or medium sized image
-                return urls.small || urls.medium || urls.square || urls.normalized || Object.values(urls)[0];
-            } catch (e) {
-                return null;
-            }
-        }
+function renderComicsTextTable() {
+    let h = `<table><thead><tr>
+        ${th('ID','entry_id')} ${th('Title','value')} ${th('Type','type')}
+        <th>Related</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        const isDrillable = row.type === 'series';
+        h += `<tr onclick="${isDrillable
+            ? `comicsDrillIntoSeries('${row.entry_id}', \`${row.value.replace(/`/g,"'")}\`)`
+            : `showComicsDetailsByRow(${i})`
+        }" style="cursor:pointer">
+            <td><code>${row.entry_id}</code></td>
+            <td class="truncate">${row.value}${isDrillable ? ' <span style="color:#8e44ad;font-size:11px">▸ browse</span>' : ''}</td>
+            <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
+            <td>${fmtArray(row.relatedKeywordStrings)}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
 
-        function updatePagination(data) {
-            totalRows = data.total_rows;
-            let ps = pageSize;
-            if (typeof ps === 'string' && ps === 'all') {
-                ps = totalRows;
-            } else {
-                ps = parseInt(ps, 10) || 25;
-            }
-            totalPages = Math.ceil(totalRows / ps);
-            const prevBtnTop = document.getElementById('prev-btn-top');
-            const nextBtnTop = document.getElementById('next-btn-top');
-            const pageInfoTop = document.getElementById('page-info-top');
-            prevBtnTop.disabled = currentPage === 1;
-            nextBtnTop.disabled = currentPage === totalPages;
-            const startRow = (currentPage - 1) * ps + 1;
-            const endRow = Math.min(currentPage * ps, totalRows);
-            pageInfoTop.textContent = `Page ${currentPage} of ${totalPages} (${startRow}-${endRow} of ${totalRows})`;
-        }
+function renderComicsBookTable() {
+    let h = `<table><thead><tr>
+        <th>Cover</th>
+        ${th('Book ID','book_id')} ${th('Title','value')}
+        ${th('Issue #','issue_number')} ${th('Date','cover_date')} ${th('Pages','page_count')}
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        // We'll lazy-load cover via cover_image_id — store it as data attr
+        const coverId = row.cover_image_id || '';
+        h += `<tr onclick="comicsDrillIntoBook('${row.book_id}', \`${row.value.replace(/`/g,"'")}\`)"
+                  style="cursor:pointer">
+            <td onclick="event.stopPropagation()">
+                <img class="cover-thumb" data-cover-id="${coverId}"
+                     src="" alt="cover"
+                     onerror="this.style.display='none'"
+                     onclick="showComicsDetailsByRow(${i})">
+            </td>
+            <td><code>${row.book_id}</code></td>
+            <td class="truncate">${row.value} <span style="color:#8e44ad;font-size:11px">▸ pages</span></td>
+            <td>${row.issue_number ?? '-'}</td>
+            <td>${row.cover_date ?? '-'}</td>
+            <td>${row.page_count ?? '-'}</td>
+        </tr>`;
+    });
+    const table = h + '</tbody></table>';
+    // Resolve cover thumbnails asynchronously after render
+    setTimeout(resolveComicsCovers, 0);
+    return table;
+}
 
-        function updateStats(data) {
-            const stats = document.getElementById('stats');
-            const tableName = currentTable === 'text_entries' ? 'Text Entries' : 'Image Entries';
-            stats.textContent = `${tableName}: ${data.total_rows.toLocaleString()} total records`;
-        }
+function renderComicsImageTable() {
+    let h = `<table><thead><tr>
+        <th>Image</th>
+        ${th('ID','image_id')} ${th('Page','page_number')} ${th('Title','value')}
+        <th>Related</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        const img = thumbUrl(row.image_urls);
+        h += `<tr onclick="showComicsDetailsByRow(${i})">
+            <td onclick="event.stopPropagation()">
+                ${img ? `<img src="${img}" class="image-thumbnail" alt="p${row.page_number}" onclick="showComicsDetailsByRow(${i})">` : '-'}
+            </td>
+            <td><code>${row.image_id}</code></td>
+            <td>${row.page_number ?? '-'}</td>
+            <td class="truncate">${row.value}</td>
+            <td>${fmtArray(row.relatedKeywordStrings)}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
 
-        // Modal functions
-        function showDetailsByRow(filteredIndex) {
-            if (!filteredRows || filteredIndex < 0 || filteredIndex >= filteredRows.length) return;
-            const row = filteredRows[filteredIndex];
-            const modal = document.getElementById('detailModal');
-            const modalTitle = document.getElementById('modal-title');
-            const modalBody = document.getElementById('modal-body');
-            // Set title
-            modalTitle.textContent = row.value || 'Details';
-            // Build details HTML
-            let detailsHtml = '';
-            if (currentTable === 'text_entries') {
-                detailsHtml = buildTextEntryDetails(row);
-            } else {
-                detailsHtml = buildImageEntryDetails(row);
-            }
-            modalBody.innerHTML = detailsHtml;
-            modal.style.display = 'block';
-        }
+/**
+ * After the book table renders, fetch cover URLs for any .cover-thumb elements
+ * that have a data-cover-id attribute.
+ */
+function resolveComicsCovers() {
+    document.querySelectorAll('img.cover-thumb[data-cover-id]').forEach(img => {
+        const coverId = img.getAttribute('data-cover-id');
+        if (!coverId) { img.style.display = 'none'; return; }
+        fetch('/api/comics/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entryId: coverId, type: 'image' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { img.style.display = 'none'; return; }
+            const url = thumbUrl(data.image_urls);
+            if (url) { img.src = url; } else { img.style.display = 'none'; }
+        })
+        .catch(() => img.style.display = 'none');
+    });
+}
 
-        function showDetailsByKeywordId(textId) {
-            fetch('/lookup_entry', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    entryId: textId,
-                    type: 'text'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.error) {
-                    const modal = document.getElementById('detailModal');
-                    const modalTitle = document.getElementById('modal-title');
-                    const modalBody = document.getElementById('modal-body');
-                    
-                    modalTitle.textContent = data.value || 'Text Entry Details';
-                    modalBody.innerHTML = buildTextEntryDetails(data);
-                    modal.style.display = 'block';
-                } else {
-                    alert('Text entry not found: ' + data.error);
-                }
-            })
-            .catch(error => {
-                alert('Error loading text entry: ' + error);
-            });
-        }
+// ============================================================
+//  PAGINATION / STATS
+// ============================================================
+function updatePagination(data) {
+    totalRows = data.total_rows;
+    let ps = (pageSize === 'all') ? totalRows : (parseInt(pageSize, 10) || 25);
+    totalPages = Math.ceil(totalRows / ps) || 1;
 
-        function showImageById(imageId) {
-            fetch('/lookup_entry', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    entryId: imageId,
-                    type: 'image'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.error) {
-                    const modal = document.getElementById('detailModal');
-                    const modalTitle = document.getElementById('modal-title');
-                    const modalBody = document.getElementById('modal-body');
-                    
-                    modalTitle.textContent = data.value || 'Image Details';
-                    modalBody.innerHTML = buildImageEntryDetails(data);
-                    modal.style.display = 'block';
-                } else {
-                    alert('Image not found: ' + data.error);
-                }
-            })
-            .catch(error => {
-                alert('Error loading image: ' + error);
-            });
-        }
+    document.getElementById('prev-btn-top').disabled = currentPage === 1;
+    document.getElementById('next-btn-top').disabled = currentPage === totalPages;
 
-        function buildTextEntryDetails(row) {
-            let html = '';
-            
-            html += `<div class="detail-row"><div class="detail-label">Entry ID:</div><div class="detail-value"><code>${row.entry_id}</code></div></div>`;
-            html += `<div class="detail-row"><div class="detail-label">Title/Value:</div><div class="detail-value">${row.value}</div></div>`;
-            
-            if (row.isArtist) {
-                html += `<div class="detail-row"><div class="detail-label">Is Artist:</div><div class="detail-value"><span class="artist-badge">Yes</span></div></div>`;
-            }
-            
-            if (row.type) {
-                html += `<div class="detail-row"><div class="detail-label">Type:</div><div class="detail-value"><span class="type-badge">${row.type}</span></div></div>`;
-            }
-            
-            // JSON fields
-            html += formatDetailJson('Images', row.images, true);
-            html += formatDetailJson('Artist Aliases', row.artist_aliases);
-            html += formatDetailJson('Descriptions', row.descriptions);
-            html += formatDetailJson('Related Keyword IDs', row.relatedKeywordIds, false, true);
-            html += formatDetailJson('Related Keywords', row.relatedKeywordStrings);
-            
-            return html;
-        }
+    const start = (currentPage - 1) * ps + 1;
+    const end   = Math.min(currentPage * ps, totalRows);
+    document.getElementById('page-info-top').textContent =
+        `Page ${currentPage} of ${totalPages} (${start}–${end} of ${totalRows})`;
+}
+function updateStats(data) {
+    const labels = {
+        image_entries: 'Image Entries',
+        text_entries:  activeDb === 'comics' ? 'Series / Creators' : 'Text Entries',
+        book_entries:  'Books / Issues',
+    };
+    document.getElementById('stats').textContent =
+        `${labels[currentTable] || currentTable}: ${data.total_rows.toLocaleString()} records`;
+}
 
-        function buildImageEntryDetails(row) {
-            let html = '';
-            
-            // Try to get the best quality image
-            let bestImageUrl = null;
-            try {
-                const urls = JSON.parse(row.image_urls);
-                bestImageUrl = urls.larger || urls.large || urls.medium || urls.normalized || Object.values(urls)[0];
-            } catch (e) {}
-            
-            if (bestImageUrl) {
-                html += `<div class="detail-row"><div class="detail-label">Image:</div><div class="detail-value"><img src="${bestImageUrl}" class="detail-image" alt="${row.value}"></div></div>`;
-            }
-            
-            html += `<div class="detail-row"><div class="detail-label">Image ID:</div><div class="detail-value"><code>${row.image_id}</code></div></div>`;
-            html += `<div class="detail-row"><div class="detail-label">Title/Value:</div><div class="detail-value">${row.value}</div></div>`;
-            
-            if (row.filename) {
-                html += `<div class="detail-row"><div class="detail-label">Filename:</div><div class="detail-value">${row.filename}</div></div>`;
-            }
-            
-            if (row.rights) {
-                html += `<div class="detail-row"><div class="detail-label">Rights:</div><div class="detail-value">${row.rights}</div></div>`;
-            }
-            
-            // JSON fields
-            html += formatDetailJson('Artists', row.artist_names);
-            html += formatDetailJson('Image URLs', row.image_urls);
-            html += formatDetailJson('Descriptions', row.descriptions);
-            html += formatDetailJson('Related Keyword IDs', row.relatedKeywordIds, false, true);
-            html += formatDetailJson('Related Keywords', row.relatedKeywordStrings);
-            
-            return html;
-        }
+// ============================================================
+//  MODALS
+// ============================================================
+function showDetailsByRow(i) {
+    if (!filteredRows?.[i]) return;
+    const row = filteredRows[i];
+    document.getElementById('modal-title').textContent = row.value || 'Details';
+    document.getElementById('modal-body').innerHTML =
+        currentTable === 'text_entries' ? buildArtTextDetails(row) : buildArtImageDetails(row);
+    document.getElementById('detailModal').style.display = 'block';
+}
 
-        function formatDetailJson(label, jsonString, isImagesColumn = false, isRelatedKeywordIds = false) {
-            if (!jsonString || jsonString === '') {
-                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">-</div></div>`;
-            }
-            
-            try {
-                const parsed = JSON.parse(jsonString);
+function showComicsDetailsByRow(i) {
+    if (!filteredRows?.[i]) return;
+    const row = filteredRows[i];
+    document.getElementById('modal-title').textContent = row.value || 'Details';
+    let html = '';
+    if (currentTable === 'book_entries')  html = buildComicsBookDetails(row);
+    else if (currentTable === 'image_entries') html = buildComicsImageDetails(row);
+    else html = buildComicsTextDetails(row);
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('detailModal').style.display = 'block';
+}
 
-                if (isImagesColumn) {
-                    const links = parsed.map(id => 
-                        `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
-                    ).join(', ');
-                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
-                }
-                if (isRelatedKeywordIds) {
-                    const links = parsed.map(id => 
-                        `<a href="#" onclick="event.stopPropagation(); showDetailsByKeywordId('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
-                    ).join(', ');
-                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
-                }
+function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+function closeModalOnBackdrop(e) { if (e.target === e.currentTarget) closeModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-                const formatted = JSON.stringify(parsed, null, 2);
-                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value json">${formatted}</div></div>`;
-            } catch (e) {
-                return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${jsonString}</div></div>`;
-            }
-        }
+// ── detail row builder ──────────────────────────────────────
+function dr(label, value) {
+    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${value ?? '-'}</div></div>`;
+}
+function drJson(label, jsonStr) {
+    if (!jsonStr) return dr(label, '-');
+    try {
+        return dr(label, `<pre class="json">${JSON.stringify(JSON.parse(jsonStr), null, 2)}</pre>`);
+    } catch { return dr(label, jsonStr); }
+}
 
-        function closeModal() {
-            document.getElementById('detailModal').style.display = 'none';
-        }
+// ── Art modals (same as before) ──────────────────────────────
+function buildArtImageDetails(row) {
+    let h = '';
+    const img = bestUrl(row.image_urls);
+    if (img) h += dr('Image', `<img src="${img}" class="detail-image" alt="${row.value}">`);
+    h += dr('Image ID', `<code>${row.image_id}</code>`);
+    h += dr('Title', row.value);
+    if (row.filename) h += dr('Filename', row.filename);
+    if (row.rights)   h += dr('Rights', row.rights);
+    h += drJson('Artists', row.artist_names);
+    h += drJson('Image URLs', row.image_urls);
+    h += drJson('Descriptions', row.descriptions);
+    h += buildRelatedKeywordIdsHtml(row.relatedKeywordIds, 'art');
+    h += drJson('Related Keywords', row.relatedKeywordStrings);
+    return h;
+}
+function buildArtTextDetails(row) {
+    let h = '';
+    h += dr('Entry ID', `<code>${row.entry_id}</code>`);
+    h += dr('Title', row.value);
+    if (row.isArtist) h += dr('Is Artist', '<span class="artist-badge">Yes</span>');
+    if (row.type)     h += dr('Type', `<span class="type-badge">${row.type}</span>`);
+    h += buildImagesListHtml(row.images, 'art');
+    h += drJson('Aliases', row.artist_aliases);
+    h += drJson('Descriptions', row.descriptions);
+    h += buildRelatedKeywordIdsHtml(row.relatedKeywordIds, 'art');
+    h += drJson('Related Keywords', row.relatedKeywordStrings);
+    return h;
+}
 
-        function closeModalOnBackdrop(event) {
-            if (event.target === event.currentTarget) {
-                closeModal();
-            }
-        }
+// ── Comics modals ────────────────────────────────────────────
+function buildComicsBookDetails(row) {
+    let h = '';
+    h += dr('Book ID', `<code>${row.book_id}</code>`);
+    h += dr('Title', row.value);
+    h += dr('Series ID', row.series_id
+        ? `<a class="drill" onclick="comicsDrillIntoSeries('${row.series_id}','${row.series_id}');closeModal()">${row.series_id}</a>`
+        : '-');
+    h += dr('Issue #', row.issue_number);
+    h += dr('Cover Date', row.cover_date);
+    h += dr('Page Count', row.page_count);
+    h += drJson('Descriptions', row.descriptions);
+    h += buildRelatedKeywordIdsHtml(row.relatedKeywordIds, 'comics');
+    h += drJson('Related Keywords', row.relatedKeywordStrings);
+    // Page grid
+    h += `<div class="detail-row"><div class="detail-label">Pages:</div>
+          <div class="detail-value"><div id="modal-page-grid" class="page-grid">
+            <em style="color:#aaa">Loading pages…</em>
+          </div></div></div>`;
+    // Load pages async
+    setTimeout(() => loadModalPageGrid(row.book_id), 0);
+    return h;
+}
 
-        // Close modal on Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
+function loadModalPageGrid(bookId) {
+    fetch(`/api/comics/book_pages/${encodeURIComponent(bookId)}`)
+        .then(r => r.json())
+        .then(data => {
+            const grid = document.getElementById('modal-page-grid');
+            if (!grid) return;
+            if (!data.success || !data.pages.length) { grid.innerHTML = '<em>No pages found</em>'; return; }
+            grid.innerHTML = data.pages.map(p => {
+                const img = thumbUrl(p.image_urls) || '';
+                return `<div class="page-cell" onclick="showComicsImageInModal('${p.image_id}')">
+                    ${img ? `<img src="${img}" alt="p${p.page_number}" loading="lazy">` : ''}
+                    <span>p${p.page_number}</span>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => {
+            const grid = document.getElementById('modal-page-grid');
+            if (grid) grid.innerHTML = '<em style="color:red">Failed to load pages</em>';
         });
+}
 
-        function downloadCurrentTableAsJSON() {
-            // Get user-selected download size
-            const sizeSelect = document.getElementById('download-size');
-            let selectedSize = sizeSelect ? sizeSelect.value : "100";
-            let pageSize;
-            if (selectedSize === "all") {
-                pageSize = 1000000;
-            } else {
-                pageSize = parseInt(selectedSize, 10) || 100;
-            }
+function showComicsImageInModal(imageId) {
+    fetch('/api/comics/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: imageId, type: 'image' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert('Not found: ' + data.error); return; }
+        document.getElementById('modal-title').textContent = data.value || 'Page';
+        document.getElementById('modal-body').innerHTML = buildComicsImageDetails(data);
+    });
+}
 
-            let url = `/api/browse_database?table=${currentTable}&page=1&page_size=${pageSize}`;
-            if (sortColumn) {
-                url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+function buildComicsImageDetails(row) {
+    let h = '';
+    const img = bestUrl(row.image_urls);
+    if (img) h += dr('Image', `<img src="${img}" class="detail-image" alt="${row.value}">`);
+    h += dr('Image ID', `<code>${row.image_id}</code>`);
+    h += dr('Title', row.value);
+    h += dr('Page #', row.page_number);
+    h += dr('Book', row.book_id
+        ? `<a class="drill" onclick="comicsDrillIntoBook('${row.book_id}','${row.book_id}');closeModal()">${row.book_id}</a>`
+        : '-');
+    if (row.filename) h += dr('Filename', row.filename);
+    if (row.rights)   h += dr('Rights', row.rights);
+    h += drJson('Artists', row.artist_names);
+    h += drJson('Image URLs', row.image_urls);
+    h += drJson('Descriptions', row.descriptions);
+    h += buildRelatedKeywordIdsHtml(row.relatedKeywordIds, 'comics');
+    h += drJson('Related Keywords', row.relatedKeywordStrings);
+    return h;
+}
+
+function buildComicsTextDetails(row) {
+    let h = '';
+    h += dr('Entry ID', `<code>${row.entry_id}</code>`);
+    h += dr('Title', row.value);
+    if (row.type)  h += dr('Type', `<span class="type-badge">${row.type}</span>`);
+    h += buildImagesListHtml(row.images, 'comics');
+    h += drJson('Descriptions', row.descriptions);
+    h += buildRelatedKeywordIdsHtml(row.relatedKeywordIds, 'comics');
+    h += drJson('Related Keywords', row.relatedKeywordStrings);
+    return h;
+}
+
+// ── shared sub-builders ───────────────────────────────────────
+function buildImagesListHtml(jsonStr, db) {
+    if (!jsonStr) return dr('Images', '-');
+    try {
+        const a = JSON.parse(jsonStr);
+        if (!a.length) return dr('Images', '-');
+        const links = a.map(id => {
+            const fn = db === 'comics' ? `showComicsImageInModal('${id}')` : `showArtImageById('${id}')`;
+            return `<a href="#" onclick="event.preventDefault();${fn}" style="color:#3498db;text-decoration:underline">${id}</a>`;
+        }).join(', ');
+        return dr('Images', links);
+    } catch { return dr('Images', jsonStr); }
+}
+
+function buildRelatedKeywordIdsHtml(jsonStr, db) {
+    if (!jsonStr) return dr('Related Keyword IDs', '-');
+    try {
+        const a = JSON.parse(jsonStr);
+        if (!a.length) return dr('Related Keyword IDs', '-');
+        const links = a.map(id => {
+            const fn = db === 'comics'
+                ? `showComicsEntryById('${id}')`
+                : `showDetailsByKeywordId('${id}')`;
+            return `<a href="#" onclick="event.preventDefault();${fn}" style="color:#3498db;text-decoration:underline">${id}</a>`;
+        }).join(', ');
+        return dr('Related Keyword IDs', links);
+    } catch { return dr('Related Keyword IDs', jsonStr); }
+}
+
+// ── lookup helpers ────────────────────────────────────────────
+function showComicsEntryById(entryId) {
+    // Determine type from ID prefix
+    let type = 'text';
+    if (entryId.match(/^cbp_\d+_p\d+/)) type = 'image';
+    else if (entryId.match(/^cbp_\d+$/))  type = 'book';
+
+    fetch('/api/comics/lookup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId, type })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert('Not found: ' + data.error); return; }
+        document.getElementById('modal-title').textContent = data.value || entryId;
+        if (type === 'image')      document.getElementById('modal-body').innerHTML = buildComicsImageDetails(data);
+        else if (type === 'book')  document.getElementById('modal-body').innerHTML = buildComicsBookDetails(data);
+        else                       document.getElementById('modal-body').innerHTML = buildComicsTextDetails(data);
+    });
+}
+
+function showArtImageById(imageId) {
+    fetch('/lookup_entry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: imageId, type: 'image' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert('Not found: ' + data.error); return; }
+        document.getElementById('modal-title').textContent = data.value || 'Image';
+        document.getElementById('modal-body').innerHTML = buildArtImageDetails(data);
+    });
+}
+
+function showDetailsByKeywordId(textId) {
+    fetch('/lookup_entry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: textId, type: 'text' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) { alert('Not found: ' + data.error); return; }
+        document.getElementById('modal-title').textContent = data.value || 'Text Entry';
+        document.getElementById('modal-body').innerHTML = buildArtTextDetails(data);
+    });
+}
+
+// ============================================================
+//  JSON DOWNLOAD
+// ============================================================
+function downloadCurrentTableAsJSON() {
+    const sizeVal = document.getElementById('download-size').value;
+    const ps = sizeVal === 'all' ? 1_000_000 : (parseInt(sizeVal, 10) || 100);
+
+    let url = activeDb === 'art'
+        ? `/api/browse_database?table=${currentTable}&page=1&page_size=${ps}`
+        : `/api/comics/browse?table=${currentTable}&page=1&page_size=${ps}`;
+    if (sortColumn) url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        if (!data.success) { alert('Download failed: ' + (data.error || 'Unknown')); return; }
+        const rows = data.rows.map(row => {
+            const out = { ...row };
+            for (const k in out) {
+                if (typeof out[k] === 'string' &&
+                    ((out[k].startsWith('[') && out[k].endsWith(']')) ||
+                     (out[k].startsWith('{') && out[k].endsWith('}')))) {
+                    try { out[k] = JSON.parse(out[k]); } catch {}
+                }
             }
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.rows) {
-                        // Parse JSON-stringified fields so the output is valid JSON
-                        const rows = data.rows.map(row => {
-                            const parsedRow = { ...row };
-                            // Try to parse any field that looks like a JSON array/object string
-                            for (const key in parsedRow) {
-                                if (
-                                    typeof parsedRow[key] === "string" &&
-                                    (
-                                        (parsedRow[key].startsWith("[") && parsedRow[key].endsWith("]")) ||
-                                        (parsedRow[key].startsWith("{") && parsedRow[key].endsWith("}"))
-                                    )
-                                ) {
-                                    try {
-                                        parsedRow[key] = JSON.parse(parsedRow[key]);
-                                    } catch (e) {
-                                        // leave as string if parsing fails
-                                    }
-                                }
-                            }
-                            return parsedRow;
-                        });
-                        const jsonStr = JSON.stringify(rows, null, 2);
-                        const blob = new Blob([jsonStr], { type: "application/json" });
-                        const link = document.createElement("a");
-                        link.href = URL.createObjectURL(blob);
-                        link.download = `${currentTable}.json`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    } else {
-                        alert("Failed to download data: " + (data.error || "Unknown error"));
-                    }
-                })
-                .catch(error => {
-                    alert("Failed to download data: " + error);
-                });
-        }
-    </script>
+            return out;
+        });
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${activeDb}_${currentTable}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }).catch(e => alert('Download failed: ' + e));
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
