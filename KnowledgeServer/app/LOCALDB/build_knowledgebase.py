@@ -10,7 +10,8 @@ import sqlean as sqlite3
 import sqlite_vec
 import json
 
-
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Grab API token for artsy. replace with new token in ~/.zshrc when this one expires (next exp date is 5/23)
 xapp_token = os.getenv("XAPP_TOKEN")
@@ -21,7 +22,7 @@ if not xapp_token:
 
 def initialize_knowledgebase():
     print("Step: Initializing KnowledgeBase Database...")
-    db_path = "LOCALDB/knowledgebase.db"
+    db_path = os.path.join(SCRIPT_DIR, "knowledgebase.db")
 
     if os.path.exists(db_path):
         if input(f"'{db_path}' exists. Enter 'd' to delete or Enter to skip: ").strip().lower() == 'd':
@@ -99,7 +100,7 @@ def get_images(url="https://api.artsy.net/api/artworks", max_depth=0):
         depth_counter = 0
     
 
-    db_path = "LOCALDB/knowledgebase.db"
+    db_path = os.path.join(SCRIPT_DIR, "knowledgebase.db")
 
     if not os.path.exists(db_path):
         print(f"Error: '{db_path}' does not exist. Please initialize the KnowledgeBase Database first.")
@@ -206,7 +207,7 @@ def put_artwork_in_images_db(conn, artwork_data):
         if image_urls:
             for version in ["small", "square", "medium", "normalized", "medium_rectangle", "large"]:
                 if version in image_urls:
-                    local_path = f"LOCALDB/images/{image_id}_{version}.jpg"
+                    local_path = os.path.join(SCRIPT_DIR, "images", f"{image_id}_{version}.jpg")
                     if os.path.exists(local_path):
                         print(f"<< Image file for this artwork already exists as {image_id}_{version}.jpg >> ")
                         filename = f"{image_id}_{version}.jpg"
@@ -216,7 +217,7 @@ def put_artwork_in_images_db(conn, artwork_data):
                     try:
                         response = requests.get(image_urls[version], stream=True, timeout=10)
                         if response.status_code == 200:
-                            os.makedirs("LOCALDB/images", exist_ok=True)
+                            os.makedirs(os.path.join(SCRIPT_DIR, "images"), exist_ok=True)
                             with open(local_path, "wb") as f:
                                 for chunk in response.iter_content(1024):
                                     f.write(chunk)
@@ -486,8 +487,8 @@ def check_if_valid_image_url(url):
 
 def populate_textdb_with_genes():
     print("Step: Populating Text Database with Genes CSV...")
-    db_path = "LOCALDB/knowledgebase.db"
-    csv_path = "genes_cleaned.csv"
+    db_path = os.path.join(SCRIPT_DIR, "knowledgebase.db")
+    csv_path = os.path.join(SCRIPT_DIR, "genes_cleaned.csv")
 
     if not os.path.exists(db_path):
         print(f"Error: '{db_path}' does not exist. Please initialize the Text Database first.")

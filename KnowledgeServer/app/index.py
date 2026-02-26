@@ -115,6 +115,10 @@ app.register_blueprint(data_cleaner_bp)
 from templates.database_requests import database_requests_bp
 app.register_blueprint(database_requests_bp)
 
+
+from templates.comics_browser_api import comics_browser_api_bp
+app.register_blueprint(comics_browser_api_bp)
+
 from templates.map_api_v3 import map_api_v3_bp
 app.register_blueprint(map_api_v3_bp)
 

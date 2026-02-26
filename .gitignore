@@ -12,10 +12,12 @@ log*
 /KnowledgeServer/app/__pycache__/*
 /KnowledgeServer/app/LOCALDB/images/*
 KnowledgeServer/app/LOCALDB/images/*
+KnowledgeServer/app/LOCALDB/comic_images/*
 # LOCALDB/*
 # LOCALDB
 
 *.db
+KnowledgeServer/app/LOCALDB/*.db
 */images/*
 
 node_modules
