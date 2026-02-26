@@ -11,6 +11,7 @@ app/update_embeddings.py
 .git/
 .gitignore
 *.md
+*.db
 docker_build.sh
 docker_run.sh
 
@@ -29,3 +30,29 @@ __pycache__/
 .venv/
 env/
 pip-cache/
+
+# Exclude Node.js modules and lock files
+node_modules/
+package-lock.json
+
+# Exclude build artifacts
+dist/
+build/
+
+# Exclude additional cache directories
+.cache/
+
+# Exclude hidden files
+.DS_Store
+Thumbs.db
+
+# Exclude temporary and backup files
+*.tmp
+*.bak
+
+# Exclude additional Python virtual environments
+.env/
+
+# Exclude frontend build tool configurations
+vite.config.*
+webpack.config.*

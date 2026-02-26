@@ -64,7 +64,7 @@
 
     <div id="artist-list" class="artist-list" style="display: none;"></div>
     <!-- Floating Save Changes Button -->
-    <button id="floatingSaveBtn" class="btn btn-primary" style="display:none;position:fixed;top:50%;right:32px;z-index:1000;font-size:1.1em;padding:14px 28px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:#007bff;color:#fff;transition:background 0.2s, transform 0.1s;">💾 Save Changes</button>
+    <button disabled id="floatingSaveBtn" aria-disabled="true" tabindex="-1" class="btn btn-primary" style="display:none;position:fixed;top:50%;right:32px;z-index:1000;font-size:1.1em;padding:14px 28px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);background:#007bff;color:#fff;transition:background 0.2s, transform 0.1s;opacity:0.6;cursor:not-allowed;pointer-events:none;" title="Disabled — only an admin can save">💾 Save Changes</button>
     <div id="artistModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -513,7 +513,7 @@ function createArtistForm(artist, idx) {
             <h4>Artist Info</h4>
             <label>Slug: <input type="text" name="slug" value="${artist.slug || ''}" style="width:80%"></label><br>
             <div style="margin-bottom:8px;">
-                <button disabled type="button" onclick="deleteArtistFile()" class="btn btn-danger" style="font-size: 0.9em; padding: 6px 12px;">
+                <button type="button" class="btn btn-danger" disabled style="font-size:0.9em; padding:6px 12px; opacity:0.6; cursor:not-allowed;" title="Disabled — only admins can delete">
                     <i class="fas fa-trash"></i> Delete Artist File
                 </button>
                 <span style="margin-left: 8px; font-size: 0.9em; color: #666;">Permanently remove this artist file from staging</span>
@@ -598,7 +598,7 @@ function createArtistForm(artist, idx) {
     
     <div class="artist-actions" style="margin-top: 20px; padding: 15px; border-top: 2px solid #ddd; background: #f8f9fa;">
         <div style="display: flex; gap: 10px; align-items: center;">
-            <button type="button" class="btn btn-primary" onclick="saveArtistChanges(event, ${idx})" style="font-size: 1.1em; padding: 10px 20px;">
+            <button type="button" class="btn btn-primary" disabled style="font-size: 1.1em; padding: 10px 20px; opacity: 0.6; cursor: not-allowed;" title="Disabled — only an admin can save">
                 <i class="fas fa-save"></i> Save Changes
             </button>
             <button type="button" class="btn btn-danger" onclick="deleteArtistFile(event, ${idx})" style="font-size: 1.1em; padding: 10px 20px;">

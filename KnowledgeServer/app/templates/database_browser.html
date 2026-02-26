@@ -196,6 +196,7 @@
                     <th onclick="sortBy('entry_id')" class="${sortColumn === 'entry_id' ? 'sorted-' + sortDirection : ''}">ID</th>
                     <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
                     <th onclick="sortBy('type')" class="${sortColumn === 'type' ? 'sorted-' + sortDirection : ''}">Type</th>
+                    <th>Description</th>
                     <th>Images</th>
                     <th>Related Keywords</th>
                 `;
@@ -204,22 +205,29 @@
                     <th>Image</th>
                     <th onclick="sortBy('image_id')" class="${sortColumn === 'image_id' ? 'sorted-' + sortDirection : ''}">ID</th>
                     <th onclick="sortBy('value')" class="${sortColumn === 'value' ? 'sorted-' + sortDirection : ''}">Title/Value</th>
+                    <th>Description</th>
                     <th>Artists</th>
                     <th>Related Keywords</th>
                 `;
             }
             html += '</tr></thead><tbody>';
+            
             filteredRows.forEach((row, index) => {
+                const description = getFirstDescription(row.descriptions);
+                
                 html += `<tr onclick="showDetailsByRow(${index})">`;
                 if (currentTable === 'text_entries') {
                     html += `
                         <td><code>${row.entry_id}</code></td>
-                        <td class="truncate">
-                            ${row.value}
-                        </td>
+                        <td class="truncate">${row.value}</td>
                         <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
-                        <td>${formatJsonField(row.images, 'array', true)}</td>
-                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
+                        <td class="truncate" style="max-width: 200px;">
+                            ${description ? 
+                                `<span title="Source: ${description.source}">${description.text.substring(0, 100)}${description.text.length > 100 ? '...' : ''}</span>` 
+                                : '-'}
+                        </td>
+                        <td>${formatJsonField(row.images, 'array', true, 'images')}</td>
+                        <td>${formatJsonField(row.relatedKeywordStrings, 'array', false, 'relatedKeywordStrings')}</td>
                     `;
                 } else {
                     const imageUrl = getImageUrl(row.image_urls);
@@ -229,8 +237,13 @@
                         </td>
                         <td><code>${row.image_id}</code></td>
                         <td class="truncate">${row.value}</td>
-                        <td>${formatJsonField(row.artist_names, 'array')}</td>
-                        <td>${formatJsonField(row.relatedKeywordStrings, 'array')}</td>
+                        <td class="truncate" style="max-width: 200px;">
+                            ${description ? 
+                                `<span title="Source: ${description.source}">${description.text.substring(0, 100)}${description.text.length > 100 ? '...' : ''}</span>` 
+                                : '-'}
+                        </td>
+                        <td>${formatJsonField(row.artist_names, 'array', false, 'artist_names')}</td>
+                        <td>${formatJsonField(row.relatedKeywordStrings, 'array', false, 'relatedKeywordStrings')}</td>
                     `;
                 }
                 html += '</tr>';
@@ -239,7 +252,7 @@
             tableContent.innerHTML = html;
         }
 
-        function formatJsonField(field, type, isImagesColumn = false) {
+        function formatJsonField(field, type, isImagesColumn = false, fieldName = '') {
             if (!field || field === '') return '-';
             
             try {
@@ -255,11 +268,19 @@
                         ).join(', ');
                         const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
                         return `<span class="json-field">${links}${more}</span>`;
-                    }   
+                    }
                     
-                    const preview = parsed.slice(0, 3).join(', ');
-                    const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
-                    return `<span class="json-field">${preview}${more}</span>`;
+                    // Don't truncate related keyword strings, but do truncate related keyword IDs
+                    if (fieldName === 'relatedKeywordStrings') {
+                        // Show all related keyword strings without truncation
+                        const preview = parsed.join(', ');
+                        return `<span class="json-field">${preview}</span>`;
+                    } else {
+                        // Default behavior - truncate other arrays including relatedKeywordIds
+                        const preview = parsed.slice(0, 3).join(', ');
+                        const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                        return `<span class="json-field">${preview}${more}</span>`;
+                    }
                 } else if (type === 'object' && typeof parsed === 'object') {
                     const keys = Object.keys(parsed);
                     return `<span class="json-field">{${keys.length} fields}</span>`;
@@ -306,6 +327,27 @@
             const stats = document.getElementById('stats');
             const tableName = currentTable === 'text_entries' ? 'Text Entries' : 'Image Entries';
             stats.textContent = `${tableName}: ${data.total_rows.toLocaleString()} total records`;
+        }
+
+        // Add a helper function to extract first available description
+        function getFirstDescription(descriptionsJson) {
+            if (!descriptionsJson || descriptionsJson === '') return null;
+            
+            try {
+                const descriptions = JSON.parse(descriptionsJson);
+                // Get the first non-empty description from any source
+                for (const source in descriptions) {
+                    if (descriptions[source] && descriptions[source].description) {
+                        return {
+                            text: descriptions[source].description,
+                            source: source
+                        };
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing descriptions:', e);
+            }
+            return null;
         }
 
         // Modal functions
@@ -454,20 +496,63 @@
             
             try {
                 const parsed = JSON.parse(jsonString);
+                
+                // Special handling for descriptions
+                if (label === 'Descriptions' && typeof parsed === 'object') {
+                    let descHtml = '<div class="detail-row"><div class="detail-label">Descriptions:</div><div class="detail-value">';
+                    for (const source in parsed) {
+                        const sourceData = parsed[source];
+                        descHtml += `<div style="margin-bottom: 10px;">`;
+                        descHtml += `<strong>${source}:</strong><br>`;
+                        
+                        if (sourceData.description) {
+                            descHtml += `<div style="margin-left: 20px; margin-bottom: 5px;">${sourceData.description}</div>`;
+                        }
+                        
+                        // Show other metadata
+                        for (const key in sourceData) {
+                            if (key !== 'description') {
+                                descHtml += `<div style="margin-left: 20px; font-size: 0.9em; color: #666;">`;
+                                descHtml += `<strong>${key}:</strong> ${sourceData[key]}`;
+                                descHtml += `</div>`;
+                            }
+                        }
+                        descHtml += `</div>`;
+                    }
+                    descHtml += '</div></div>';
+                    return descHtml;
+                }
 
                 if (isImagesColumn) {
                     const links = parsed.map(id => 
                         `<a href="#" onclick="event.stopPropagation(); showImageById('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
                     ).join(', ');
-                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
                     return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
                 }
                 if (isRelatedKeywordIds) {
                     const links = parsed.map(id => 
                         `<a href="#" onclick="event.stopPropagation(); showDetailsByKeywordId('${id}'); return false;" style="color: #3498db; text-decoration: underline;">${id}</a>`
                     ).join(', ');
-                    //const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
                     return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${links}</div></div>`;
+                }
+
+                if (Array.isArray(parsed)) {
+                    if (parsed.length === 0) return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">[]</div></div>`;
+                    
+                    // Don't truncate Related Keywords (strings), but do truncate Related Keyword IDs
+                    if (label === 'Related Keywords') {
+                        // Show all related keyword strings without truncation
+                        const allKeywords = parsed.join(', ');
+                        return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${allKeywords}</div></div>`;
+                    } else {
+                        // Default behavior - truncate other arrays including Related Keyword IDs
+                        const preview = parsed.slice(0, 3).join(', ');
+                        const more = parsed.length > 3 ? ` ... +${parsed.length - 3}` : '';
+                        return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">${preview}${more}</div></div>`;
+                    }
+                } else if (typeof parsed === 'object') {
+                    const keys = Object.keys(parsed);
+                    return `<div class="detail-row"><div class="detail-label">${label}:</div><div class="detail-value">{${keys.length} fields}</div></div>`;
                 }
 
                 const formatted = JSON.stringify(parsed, null, 2);

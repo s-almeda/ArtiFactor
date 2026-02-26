@@ -17,14 +17,30 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Copy application files
 COPY app/bootstrap.sh .
 COPY app/gunicorn_config.py .
-COPY app/helperfunctions.py .
+COPY app/helper_functions helper_functions/
 COPY app/index.py .
 COPY app/templates/ templates/
 COPY app/static/ static/
 COPY app/config.py .
 
+# ADD THESE LINES FOR JOBS SYSTEM:
+COPY app/jobs/__init__.py jobs/
+COPY app/jobs/map_job_processor.py jobs/
+COPY app/jobs/schema.sql jobs/
+COPY app/jobs/worker.py jobs/
+
 # Ensure bootstrap.sh is executable
 RUN chmod +x bootstrap.sh
+
+# CREATE GENERATED MAPS CACHE DIRECTORY, and a finished cached version of the full map (albeit one i don't love)
+RUN mkdir -p /generated_maps
+RUN mkdir -p /generated_maps/v9_demo_maps/
+COPY app/generated_maps/map_v3_8198064e0648.json generated_maps/ 
+COPY app/generated_maps/good_map_data.json generated_maps/  
+COPY app/generated_maps/v9_demo_maps/ generated_maps/v9_demo_maps/
+COPY app/generated_maps/artwork_ids.json generated_maps/ 
+# Uncomment the above statements to copy a version of the full map over. 
+# also sending our canonical map 
 
 # Expose port 8080 for Flask
 EXPOSE 8080

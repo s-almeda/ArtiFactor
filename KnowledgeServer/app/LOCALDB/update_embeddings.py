@@ -46,14 +46,16 @@ def update_embeddings(remake_clip=False):
     operation_description = []
     if remake_clip:
         operation_description.append("remaking CLIP from scratch")
+        operation_description.append("remaking artwork text features from scratch")
     else:
         operation_description.append("updating CLIP")
-    
+        operation_description.append("updating artwork text features")
+
     operation_description.append("updating ResNet50 and MiniLM")
-    
+
     confirmation_msg = f"Will be {', '.join(operation_description)}. Continue? (y/n): "
     user_input = input(confirmation_msg).strip().lower()
-    
+
     if user_input not in ['y', 'yes']:
         print("Operation cancelled.")
         return
@@ -411,8 +413,120 @@ def update_embeddings(remake_clip=False):
             continue
 
 
-    
-    
+    # --- ARTWORK TEXT FEATURES (NEW) ---
+    if remake_clip:
+        logging.info("Remaking ALL artwork text features from scratch...")
+    else:
+        logging.info("Updating artwork text features...")
+
+    # Create virtual table if it doesn't exist
+    cursor.execute('''
+    CREATE VIRTUAL TABLE IF NOT EXISTS vec_artworktext_features USING vec0(
+        image_id TEXT PRIMARY KEY,
+        embedding float[384])
+    ''')
+
+    # Track updated artwork text entries
+    updated_artworktext_entries = []
+
+    # Process each image entry (same candidates as CLIP)
+    cursor.execute('''
+        SELECT i.image_id, i.value, i.filename, i.artist_names, i.descriptions, i.relatedKeywordStrings
+        FROM image_entries i
+    ''')
+    artworktext_candidates = cursor.fetchall()
+    if remake_clip:
+        logging.info(f"Found {len(artworktext_candidates)} artworks to REMAKE text features for (will process ALL).")
+    else:
+        logging.info(f"Found {len(artworktext_candidates)} artworks to process for text features (will skip existing).")
+
+    for image_id, title, filename, artist_names_json, descriptions_json, keywords_json in artworktext_candidates:
+        # Check if already processed
+        cursor.execute('SELECT 1 FROM vec_artworktext_features WHERE image_id = ?', (image_id,))
+        existing_record = cursor.fetchone()
+
+        if existing_record and not remake_clip:
+            logging.info(f"Skipping image_id {image_id} (artwork text features already exist).")
+            continue
+        elif existing_record and remake_clip:
+            # Delete existing entry if remaking
+            cursor.execute('DELETE FROM vec_artworktext_features WHERE image_id = ?', (image_id,))
+            logging.info(f"Deleted existing artwork text features for image_id {image_id} (remaking).")
+
+        try:
+            # Build text representation (SAME as CLIP but without image processing)
+            text_parts = []
+
+            # Add title
+            if title:
+                text_parts.append(title)
+
+            # Add artist names
+            if artist_names_json:
+                try:
+                    artist_names = json.loads(artist_names_json)
+                    if artist_names:
+                        text_parts.append(f"by {', '.join(artist_names[:3])}")
+                except json.JSONDecodeError:
+                    pass
+
+            # Add artwork descriptions (values only, no keys)
+            if descriptions_json:
+                try:
+                    desc = json.loads(descriptions_json)
+                    for source, content in desc.items():
+                        if isinstance(content, dict):
+                            for key, value in content.items():
+                                if isinstance(value, str) and value.strip():
+                                    # Only add the value, not the key
+                                    text_parts.append(value)
+                        elif isinstance(content, str) and content.strip():
+                            text_parts.append(content)
+                except json.JSONDecodeError:
+                    pass
+
+            # Add keywords
+            if keywords_json:
+                try:
+                    keywords = json.loads(keywords_json)
+                    if keywords:
+                        text_parts.extend(keywords)  # Add all keywords individually
+                except json.JSONDecodeError:
+                    pass
+
+            # Combine text (no length limit for MiniLM since it's more flexible)
+            combined_text = ', '.join(text_parts)  # Use comma separation for better readability
+
+            if not combined_text.strip():
+                # Skip if no meaningful text content
+                logging.warning(f"Skipping image_id {image_id} due to empty text content.")
+                continue
+
+            # Process with MiniLM (reuse the text_model from earlier)
+            text_features = text_model.encode(combined_text)
+
+            # Insert into database
+            cursor.execute('''
+                INSERT INTO vec_artworktext_features (image_id, embedding)
+                VALUES (?, ?)
+            ''', (image_id, text_features.tobytes()))
+
+            updated_artworktext_entries.append(title or image_id)
+            logging.info(f"✅ Inserted artwork text features for {image_id}: {title}")
+
+            # Commit every 250 entries to save progress
+            if len(updated_artworktext_entries) % 250 == 0:
+                conn.commit()
+                logging.info(f"💾 Committed progress: {len(updated_artworktext_entries)} artwork text entries processed.")
+
+        except Exception as e:
+            logging.error(f"Error processing artwork text features for {image_id}: {e}")
+            continue
+
+    # Commit artwork text changes
+    conn.commit()
+    logging.info(f"💾 Committed progress: {len(updated_artworktext_entries)} artwork text entries processed.")
+
     # Commit and close
     conn.commit()
     logging.info("Committed changes to the database.")
@@ -436,6 +550,12 @@ def update_embeddings(remake_clip=False):
         logging.info(f"Updated {len(updated_clip_entries)} CLIP entries.")
     else:
         logging.info("No new CLIP entries.")
+    
+    # And log the artwork text updates:
+    if updated_artworktext_entries:
+        logging.info(f"Updated {len(updated_artworktext_entries)} artwork text entries.")
+    else:
+        logging.info("No new artwork text entries.")
     
 
 if __name__ == "__main__":
