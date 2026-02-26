@@ -5,6 +5,7 @@ import time
 import requests
 import sqlean as sqlite3
 from bs4 import BeautifulSoup
+from PIL import Image
 
 BASE_URL = "https://comicbookplus.com"
 IMAGE_HOST = "https://box01.comicbookplus.com"
@@ -13,6 +14,7 @@ HEADERS = {
 }
 DB_PATH = "comics.db"
 IMAGES_DIR = "comic_images"
+THUMBS_DIR = os.path.join(IMAGES_DIR, "thumbs")
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +33,7 @@ def initialize_comics_db():
             return
 
     os.makedirs(IMAGES_DIR, exist_ok=True)
+    os.makedirs(THUMBS_DIR, exist_ok=True)
 
     with sqlite3.connect(DB_PATH) as conn:
 
@@ -550,6 +553,8 @@ def _scrape_and_store_page(conn, book_id, dlid, image_hash, page_num, page_count
     # Download image
     filename = f"{image_id}.jpg"
     local_path = os.path.join(IMAGES_DIR, filename)
+    thumb_filename = f"{image_id}_thumb.jpg"
+    thumb_local_path = os.path.join(THUMBS_DIR, thumb_filename)
 
     if not os.path.exists(local_path):
         print(f"    << Downloading page {page_num}/{page_count}: {full_url} >>")
@@ -569,10 +574,15 @@ def _scrape_and_store_page(conn, book_id, dlid, image_hash, page_num, page_count
     else:
         print(f"    ☑️  Image already on disk: {filename}")
 
+    # Ensure local thumbnail exists (generated from downloaded page image)
+    _ensure_thumbnail(local_path, thumb_local_path)
+
     # Build image_entry
     image_urls = {
         "full": full_url,
-        "thumb": thumb_url
+        "full_local": f"/api/comics/image/{filename}",
+        "thumb": f"/api/comics/image/thumbs/{thumb_filename}",
+        "thumb_remote": thumb_url
     }
 
     provenance = (
@@ -619,6 +629,24 @@ def _scrape_and_store_page(conn, book_id, dlid, image_hash, page_num, page_count
     conn.commit()
 
     return image_id
+
+
+def _ensure_thumbnail(source_path, thumb_path, max_size=(220, 220)):
+    """Create/refresh a local thumbnail from the page image."""
+    if not os.path.exists(source_path):
+        return
+
+    if os.path.exists(thumb_path):
+        return
+
+    try:
+        os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+        with Image.open(source_path) as image:
+            image = image.convert("RGB")
+            image.thumbnail(max_size)
+            image.save(thumb_path, format="JPEG", quality=82, optimize=True)
+    except Exception as e:
+        print(f"    ⚠️  Failed to generate thumbnail for {source_path}: {e}")
 
 
 # ---------------------------------------------------------------------------

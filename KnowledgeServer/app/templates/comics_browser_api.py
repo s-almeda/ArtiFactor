@@ -8,7 +8,7 @@ Register in index.py:
     app.register_blueprint(comics_browser_api_bp)
 """
 
-from flask import Blueprint, jsonify, request, g, current_app
+from flask import Blueprint, jsonify, request, g, current_app, send_from_directory, abort
 import sqlite_vec
 import sqlean as sqlite3
 import os
@@ -19,6 +19,7 @@ from config import BASE_DIR
 # Path to the comics database — adjust if yours lives elsewhere
 # ---------------------------------------------------------------------------
 COMICS_DB_PATH = os.path.join(BASE_DIR, "LOCALDB", "comics.db")
+COMICS_IMAGES_DIR = os.path.join(BASE_DIR, "LOCALDB", "comic_images")
 
 comics_browser_api_bp = Blueprint("comics_browser_api", __name__)
 
@@ -230,3 +231,28 @@ def api_comics_book_pages(book_id):
     except Exception as e:
         current_app.logger.exception("Error in api_comics_book_pages")
         return jsonify({"success": False, "error": str(e)})
+
+
+# ---------------------------------------------------------------------------
+# /api/comics/image/<path:filename>  — serve local comics images/thumbnails
+# ---------------------------------------------------------------------------
+
+@comics_browser_api_bp.route("/api/comics/image/<path:filename>")
+def api_comics_image_file(filename):
+    """Serve local files from LOCALDB/comic_images (including thumbs/*)."""
+    try:
+        safe_base = os.path.abspath(COMICS_IMAGES_DIR)
+        target = os.path.abspath(os.path.join(safe_base, filename))
+        if not target.startswith(safe_base + os.sep):
+            abort(400)
+
+        if not os.path.exists(target):
+            abort(404)
+
+        rel_dir = os.path.dirname(filename)
+        rel_file = os.path.basename(filename)
+        directory = os.path.join(COMICS_IMAGES_DIR, rel_dir) if rel_dir else COMICS_IMAGES_DIR
+        return send_from_directory(directory, rel_file)
+    except Exception:
+        current_app.logger.exception("Error serving comics image file")
+        abort(404)

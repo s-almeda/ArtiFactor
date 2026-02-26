@@ -17,18 +17,12 @@ FULL_IMAGE_PATH="gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG"
 # Detect if running on Google Cloud VM using the metadata service
 if curl -fsSL -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/ >/dev/null; then
     echo "✅ Running on Google Cloud VM..."
-    # Server filesystem contract:
-    # - Canonical host data path: /home/admin/LOCALDB
-    # - Container path: /app/LOCALDB
-    # Avoid relying on ~/$HOME because deploy/run user may vary (root/admin/loaner1-main).
-    # Prefer the existing admin LOCALDB mount path if present
-    if [ -d "/home/admin/LOCALDB" ]; then
-        LOCALDB_PATH="/home/admin/LOCALDB"
-    elif [ -d "$HOME/LOCALDB" ]; then
-        LOCALDB_PATH="$HOME/LOCALDB"
-    else
-        LOCALDB_PATH="$HOME/LOCALDB"
-        mkdir -p "$LOCALDB_PATH"
+    # Canonical server dataset path
+    LOCALDB_PATH="/home/admin/LOCALDB"
+
+    if [ ! -d "$LOCALDB_PATH" ]; then
+        echo "❌ ERROR: Expected server LOCALDB path is missing: $LOCALDB_PATH"
+        exit 1
     fi
 else
     echo "Running on local machine..."
