@@ -16,7 +16,7 @@ def validate_admin_password():
         
         # Get the expected password from environment variable
         expected_password = os.environ.get('STAGING_ADMIN_PASSWORD', 'default_admin_pass')
-        
+        # print(expected_password + " =?" + password)  # for debugging
         if password == expected_password:
             return jsonify({'success': True})
         else:
@@ -194,8 +194,6 @@ def check_malformed_json():
     try:
         print("=== DEBUG: Starting comprehensive malformed JSON check ===")
         from index import get_db
-        import ast
-        
         db = get_db()
         
         malformed_entries = []
@@ -406,8 +404,8 @@ def check_artists_without_images():
         cursor = db.execute("""
             SELECT entry_id, value, images, artist_aliases 
             FROM text_entries 
-            WHERE isArtist = 1 
-            AND (images IS NULL OR images = '' OR images = '[]')
+
+            WHERE (images IS NULL OR images = '' OR images = '[]')
         """)
         
         for row in cursor.fetchall():
@@ -977,7 +975,7 @@ def fix_related_keywords():
 
 @data_cleaner_bp.route('/search_all_related_artworks', methods=['POST'])
 def search_all_related_artworks():
-    """Search for artworks related to all artists without images by checking relatedKeywordIds"""
+    """Search for artworks related to all TEXT ENTRIES without images by checking relatedKeywordIds"""
     try:
         print("=== DEBUG: Starting bulk related artworks search ===")
         from index import get_db
@@ -987,8 +985,7 @@ def search_all_related_artworks():
         artists_cursor = db.execute("""
             SELECT entry_id, value, images, artist_aliases 
             FROM text_entries 
-            WHERE isArtist = 1 
-            AND (images IS NULL OR images = '' OR images = '[]')
+            WHERE (images IS NULL OR images = '' OR images = '[]')
         """)
         
         artists_with_matches = []
@@ -1007,7 +1004,7 @@ def search_all_related_artworks():
                 except json.JSONDecodeError:
                     aliases = []
             
-            # Search for images that have this artist's entry_id in their relatedKeywordIds
+            # Search for images that have this text entry's entry_id in their relatedKeywordIds
             related_images = []
             cursor = db.execute("""
                 SELECT image_id, value, artist_names, relatedKeywordIds 
@@ -1066,7 +1063,7 @@ def search_all_related_artworks():
 
 @data_cleaner_bp.route('/execute_artist_updates', methods=['POST'])
 def execute_artist_updates():
-    """Execute updates: add image IDs to artists and remove artists with no matches"""
+    """Execute updates: add image IDs to artists and optionally remove artists with no matches"""
     try:
         print("=== DEBUG: Starting execute artist updates ===")
         from index import get_db
@@ -1075,7 +1072,8 @@ def execute_artist_updates():
         data = request.json
         artists_with_matches = data.get('artists_with_matches', [])
         artists_without_matches = data.get('artists_without_matches', [])
-        
+        remove_entries_without_images = data.get('remove_entries_without_images', False)  # Default: False
+
         updated_artists = 0
         removed_artists = 0
         
@@ -1110,16 +1108,17 @@ def execute_artist_updates():
                     updated_artists += 1
                     print(f"DEBUG: Updated artist {artist_entry_id} with {len(new_image_ids)} new images")
         
-        # Remove artists without matches
-        for artist in artists_without_matches:
-            artist_entry_id = artist['entry_id']
-            cursor = db.execute(
-                "DELETE FROM text_entries WHERE entry_id = ? AND isArtist = 1",
-                (artist_entry_id,)
-            )
-            if cursor.rowcount > 0:
-                removed_artists += 1
-                print(f"DEBUG: Removed artist {artist_entry_id}")
+        # Remove artists without matches, only if option is True
+        if remove_entries_without_images:
+            for artist in artists_without_matches:
+                artist_entry_id = artist['entry_id']
+                cursor = db.execute(
+                    "DELETE FROM text_entries WHERE entry_id = ? AND isArtist = 1",
+                    (artist_entry_id,)
+                )
+                if cursor.rowcount > 0:
+                    removed_artists += 1
+                    print(f"DEBUG: Removed artist {artist_entry_id}")
         
         # Commit all changes
         db.commit()
@@ -1128,7 +1127,8 @@ def execute_artist_updates():
             'success': True,
             'updated_artists': updated_artists,
             'removed_artists': removed_artists,
-            'message': f'Successfully updated {updated_artists} artists with new images and removed {removed_artists} artists without any artwork'
+            'message': f'Successfully updated {updated_artists} artists with new images'
+                       + (f' and removed {removed_artists} artists without any artwork' if remove_entries_without_images else '')
         })
         
     except Exception as e:
@@ -2545,6 +2545,61 @@ def reset_duplicate_images():
         
     except Exception as e:
         print(f"ERROR in reset_duplicate_images: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@data_cleaner_bp.route('/check_text_entries_without_images', methods=['POST'])
+def check_text_entries_without_images():
+    """Check for text entries (isArtist=0) that have no images"""
+    try:
+        print("=== DEBUG: Starting text entries without images check ===")
+        from index import get_db
+        db = get_db()
+
+        # Find text entries with no images or empty images
+        text_entries_without_images = []
+        cursor = db.execute("""
+            SELECT entry_id, value, images, relatedKeywordIds 
+            FROM text_entries 
+            WHERE isArtist = 0 
+            AND (images IS NULL OR images = '' OR images = '[]')
+        """)
+
+        for row in cursor.fetchall():
+            entry_id = row['entry_id']
+            value = row['value']
+            images = row['images']
+            related_keywords = row['relatedKeywordIds']
+
+            print(f"DEBUG: Found text entry without images: {entry_id} - {value}")
+
+            # Parse related keywords if available
+            keywords = []
+            if related_keywords:
+                try:
+                    keywords = json.loads(related_keywords)
+                except json.JSONDecodeError:
+                    keywords = []
+
+            text_entries_without_images.append({
+                'entry_id': entry_id,
+                'value': value,
+                'images': images,
+                'related_keywords': keywords
+            })
+
+        print(f"DEBUG: Found {len(text_entries_without_images)} text entries without images")
+
+        return jsonify({
+            'success': True,
+            'text_entries_without_images': text_entries_without_images,
+            'total_text_entries_without_images': len(text_entries_without_images)
+        })
+
+    except Exception as e:
+        print(f"ERROR in check_text_entries_without_images: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

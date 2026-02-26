@@ -8,7 +8,7 @@ endpoints for turning subsets of the art history dataset --> maps, with zones (c
 from flask import Blueprint, jsonify, request, g, render_template
 import json
 import os
-import helperfunctions as hf
+from helper_functions import helperfunctions as hf
 from index import get_db
 # from config import IMAGES_PATH
 from PIL import Image
@@ -104,7 +104,7 @@ def test():
         'message': 'Map API is working!'
     })
 
-@map_api_bp.route('/map-check')
+@map_api_bp.route('/map-check-v0')
 def check_page():
     """Serve the API check page."""
     return render_template('map_api_check.html')
