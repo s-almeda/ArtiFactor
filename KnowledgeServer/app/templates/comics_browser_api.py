@@ -12,6 +12,10 @@ from flask import Blueprint, jsonify, request, g, current_app, send_from_directo
 import sqlite_vec
 import sqlean as sqlite3
 import os
+import numpy as np
+from PIL import Image
+
+from helper_functions import helperfunctions as hf
 
 from config import BASE_DIR
 
@@ -33,11 +37,162 @@ def get_comics_db():
     if "comics_db" not in g:
         g.comics_db = sqlite3.connect(COMICS_DB_PATH)
         g.comics_db.row_factory = sqlite3.Row
-        # TODO: Uncomment when vector tables are added
-        # g.comics_db.enable_load_extension(True)
-        # sqlite_vec.load(g.comics_db)
-        # g.comics_db.enable_load_extension(False)
+        g.comics_db.enable_load_extension(True)
+        sqlite_vec.load(g.comics_db)
+        g.comics_db.enable_load_extension(False)
     return g.comics_db
+
+
+@comics_browser_api_bp.teardown_app_request
+def close_comics_db(_exception=None):
+    db = g.pop("comics_db", None)
+    if db is not None:
+        db.close()
+
+
+def _normalize_id_list(value):
+    if value is None:
+        return None
+    if isinstance(value, list):
+        normalized = [str(v).strip() for v in value if str(v).strip()]
+        return normalized
+    if isinstance(value, str):
+        normalized = [v.strip() for v in value.split(",") if v.strip()]
+        return normalized
+    return None
+
+
+def _normalize_similarity_rows(raw_rows, id_key):
+    if raw_rows is None:
+        return []
+
+    if hasattr(raw_rows, "to_dict"):
+        records = raw_rows.to_dict(orient="records")
+    elif isinstance(raw_rows, list):
+        records = raw_rows
+    else:
+        records = []
+
+    normalized = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        result_id = record.get(id_key)
+        if not result_id:
+            continue
+        distance = record.get("distance", 0.0)
+        try:
+            distance = float(distance)
+        except Exception:
+            distance = 0.0
+        normalized.append({id_key: result_id, "distance": distance})
+
+    return normalized
+
+
+def _fetch_rows_by_ids(db, table, id_col, ordered_ids):
+    if not ordered_ids:
+        return {}
+
+    placeholders = ",".join(["?" for _ in ordered_ids])
+    query = f"SELECT * FROM {table} WHERE {id_col} IN ({placeholders})"
+    rows = db.execute(query, ordered_ids).fetchall()
+    return {row[id_col]: dict(row) for row in rows}
+
+
+def _json_or_error():
+    body = request.get_json(silent=True)
+    if body is None:
+        return None, (jsonify({"success": False, "error": "Request body must be valid JSON"}), 400)
+    return body, None
+
+
+def _get_text_embedding_for_entry(db, entry_id, search_in):
+    vectors = []
+
+    if search_in in ("description", "both"):
+        row = db.execute(
+            "SELECT embedding FROM vec_description_features WHERE id = ?",
+            (entry_id,)
+        ).fetchone()
+        if row and row["embedding"]:
+            vectors.append(np.frombuffer(row["embedding"], dtype=np.float32))
+
+    if search_in in ("value", "both"):
+        row = db.execute(
+            "SELECT embedding FROM vec_value_features WHERE id = ?",
+            (entry_id,)
+        ).fetchone()
+        if row and row["embedding"]:
+            vectors.append(np.frombuffer(row["embedding"], dtype=np.float32))
+
+    if vectors:
+        if len(vectors) == 1:
+            return vectors[0]
+        return np.mean(np.vstack(vectors), axis=0).astype(np.float32)
+
+    fallback_row = db.execute(
+        "SELECT type, value, artist_aliases, descriptions FROM text_entries WHERE entry_id = ?",
+        (entry_id,)
+    ).fetchone()
+    if not fallback_row:
+        return None
+
+    synthetic_text = ", ".join([
+        fallback_row["type"] or "",
+        fallback_row["value"] or "",
+        fallback_row["artist_aliases"] or "",
+        fallback_row["descriptions"] or ""
+    ]).strip(", ")
+
+    if not synthetic_text:
+        return None
+
+    return hf.extract_text_features(synthetic_text)
+
+
+def _get_image_embedding_for_entry(db, image_id):
+    row = db.execute(
+        "SELECT embedding FROM vec_image_features WHERE image_id = ?",
+        (image_id,)
+    ).fetchone()
+    if row and row["embedding"]:
+        return np.frombuffer(row["embedding"], dtype=np.float32)
+
+    file_row = db.execute(
+        "SELECT filename FROM image_entries WHERE image_id = ?",
+        (image_id,)
+    ).fetchone()
+    if not file_row:
+        return None, f"No image entry found for image_id '{image_id}'", 404
+
+    filename = file_row["filename"]
+    if not filename:
+        return None, f"No filename available for image_id '{image_id}'", 400
+
+    image_path = os.path.join(COMICS_IMAGES_DIR, filename)
+    if not os.path.exists(image_path):
+        return None, f"Image file not found: {filename}", 404
+
+    with Image.open(image_path).convert("RGB") as image:
+        return hf.extract_img_features(image), None, None
+
+
+def _ensure_self_match(db, normalized_rows, table, id_col, query_id):
+    if not query_id:
+        return normalized_rows
+
+    if any(row[id_col] == query_id for row in normalized_rows):
+        return normalized_rows
+
+    exists = db.execute(
+        f"SELECT 1 FROM {table} WHERE {id_col} = ? LIMIT 1",
+        (query_id,)
+    ).fetchone()
+    if exists:
+        normalized_rows.insert(0, {id_col: query_id, "distance": 0.0})
+
+    return normalized_rows
 
 
 # Column whitelists — prevents SQL injection via sort_by param
@@ -256,3 +411,195 @@ def api_comics_image_file(filename):
     except Exception:
         current_app.logger.exception("Error serving comics image file")
         abort(404)
+
+
+# ---------------------------------------------------------------------------
+# /api/comics/similar/text  — semantic text similarity in comics.db
+# ---------------------------------------------------------------------------
+
+@comics_browser_api_bp.route("/api/comics/similar/text", methods=["POST"])
+def api_comics_similar_text():
+    """
+    Body JSON supports either raw query text or entry lookup:
+        {
+            "query_text": "batman detective",
+            "entry_id": "cbp_series_3503",
+            "top_k": 10,
+            "search_in": "both",
+            "entry_ids": ["cbp_series_3503", "cbp_creator_123"]
+        }
+    """
+    try:
+        body, error = _json_or_error()
+        if error:
+            return error
+
+        query_text = str(body.get("query_text", "") or "").strip()
+        entry_id = str(body.get("entry_id", "") or "").strip()
+        search_in = str(body.get("search_in", "both") or "both").strip().lower()
+        top_k_raw = body.get("top_k", 10)
+        entry_ids = _normalize_id_list(body.get("entry_ids"))
+
+        if search_in not in {"description", "value", "both"}:
+            return jsonify({"success": False, "error": "search_in must be one of: description, value, both"}), 400
+
+        try:
+            top_k = max(1, int(top_k_raw))
+        except Exception:
+            return jsonify({"success": False, "error": "top_k must be an integer"}), 400
+
+        if not query_text and not entry_id:
+            return jsonify({"success": False, "error": "Provide either query_text or entry_id"}), 400
+
+        db = get_comics_db()
+
+        if query_text:
+            query_vector = hf.extract_text_features(query_text)
+            query_type = "query_text"
+        else:
+            query_vector = _get_text_embedding_for_entry(db, entry_id, search_in)
+            query_type = "entry_id"
+            if query_vector is None:
+                return jsonify({"success": False, "error": f"Unable to generate embedding for entry_id '{entry_id}'"}), 404
+
+        serialized_query = hf.serialize_f32(query_vector)
+        raw_rows = hf.find_most_similar_texts(
+            serialized_query,
+            db,
+            top_k=top_k,
+            search_in=search_in,
+            entry_ids=entry_ids,
+        )
+
+        normalized = _normalize_similarity_rows(raw_rows, "entry_id")
+        normalized = _ensure_self_match(db, normalized, "text_entries", "entry_id", entry_id)
+        normalized = normalized[:top_k]
+
+        ordered_ids = [row["entry_id"] for row in normalized]
+        rows_map = _fetch_rows_by_ids(db, "text_entries", "entry_id", ordered_ids)
+
+        rows = []
+        for row in normalized:
+            full_row = rows_map.get(row["entry_id"])
+            if not full_row:
+                continue
+            full_row["distance"] = row["distance"]
+            rows.append(full_row)
+
+        return jsonify({
+            "success": True,
+            "query_type": query_type,
+            "search_in": search_in,
+            "top_k": top_k,
+            "count": len(rows),
+            "rows": rows,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error in api_comics_similar_text")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# /api/comics/similar/image  — visual similarity in comics.db
+# ---------------------------------------------------------------------------
+
+@comics_browser_api_bp.route("/api/comics/similar/image", methods=["POST"])
+def api_comics_similar_image():
+    """
+    Body JSON supports either image lookup by id or query image input:
+        {
+            "image_id": "cbp_77488_p001",
+            "top_k": 10,
+            "artwork_ids": ["cbp_77488_p001", "cbp_77488_p002"]
+        }
+
+        {
+            "image": "https://..." | "data:image/...;base64,...",
+            "top_k": 10
+        }
+    """
+    try:
+        body, error = _json_or_error()
+        if error:
+            return error
+
+        image_id = str(body.get("image_id", "") or "").strip()
+        image_input = body.get("image")
+        image_url = body.get("image_url")
+        image_b64 = body.get("image_b64")
+        top_k_raw = body.get("top_k", 10)
+        artwork_ids = _normalize_id_list(body.get("artwork_ids"))
+        if artwork_ids is None:
+            artwork_ids = _normalize_id_list(body.get("image_ids"))
+
+        try:
+            top_k = max(1, int(top_k_raw))
+        except Exception:
+            return jsonify({"success": False, "error": "top_k must be an integer"}), 400
+
+        db = get_comics_db()
+        query_type = None
+
+        if image_id:
+            image_vector_result = _get_image_embedding_for_entry(db, image_id)
+            if isinstance(image_vector_result, tuple) and len(image_vector_result) == 3:
+                query_vector, error_message, status_code = image_vector_result
+                if error_message:
+                    return jsonify({"success": False, "error": error_message}), status_code
+            else:
+                query_vector = image_vector_result
+            query_type = "image_id"
+        else:
+            if image_input:
+                if hf.check_image_url(image_input):
+                    image_obj = hf.url_to_image(image_input)
+                else:
+                    image_obj = hf.base64_to_image(image_input)
+            elif image_url:
+                image_obj = hf.url_to_image(image_url)
+            elif image_b64:
+                image_obj = hf.base64_to_image(image_b64)
+            else:
+                return jsonify({"success": False, "error": "Provide image_id or image/image_url/image_b64"}), 400
+
+            if image_obj is None:
+                return jsonify({"success": False, "error": "Unable to parse image input"}), 400
+
+            query_vector = hf.extract_img_features(image_obj)
+            query_type = "raw_image"
+
+        serialized_query = hf.serialize_f32(query_vector)
+        raw_rows = hf.find_most_similar_images(
+            serialized_query,
+            db,
+            top_k=top_k,
+            artwork_ids=artwork_ids,
+        )
+
+        normalized = _normalize_similarity_rows(raw_rows, "image_id")
+        normalized = _ensure_self_match(db, normalized, "image_entries", "image_id", image_id)
+        normalized = normalized[:top_k]
+
+        ordered_ids = [row["image_id"] for row in normalized]
+        rows_map = _fetch_rows_by_ids(db, "image_entries", "image_id", ordered_ids)
+
+        rows = []
+        for row in normalized:
+            full_row = rows_map.get(row["image_id"])
+            if not full_row:
+                continue
+            full_row["distance"] = row["distance"]
+            rows.append(full_row)
+
+        return jsonify({
+            "success": True,
+            "query_type": query_type,
+            "top_k": top_k,
+            "count": len(rows),
+            "rows": rows,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error in api_comics_similar_image")
+        return jsonify({"success": False, "error": str(e)}), 500

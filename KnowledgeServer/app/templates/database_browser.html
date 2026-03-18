@@ -32,6 +32,28 @@
             border-color: #8e44ad;
             background: #8e44ad;
         }
+        .db-tab.poetry.active {
+            border-color: #27ae60;
+            background: #27ae60;
+        }
+
+        /* ── Poetry breadcrumb bar ── */
+        #poetry-breadcrumb {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        #poetry-breadcrumb.visible { display: flex; }
+
+        /* ── Poetry line display ── */
+        .poetry-line-text {
+            font-style: italic;
+            color: #2c3e50;
+        }
 
         /* ── Comics breadcrumb bar ── */
         #comics-breadcrumb {
@@ -112,6 +134,14 @@
             <div class="db-tabs">
                 <button class="db-tab active"   id="db-tab-art"    onclick="switchDb('art')">🎨 Art / Knowledgebase</button>
                 <button class="db-tab comics"   id="db-tab-comics" onclick="switchDb('comics')">📚 Comics</button>
+                <button class="db-tab poetry"  id="db-tab-poetry" onclick="switchDb('poetry')">📜 Poetry</button>
+            </div>
+
+            <!-- Poetry breadcrumb -->
+            <div id="poetry-breadcrumb">
+                <button class="crumb-btn" onclick="poetryDrillTo('text_entries')">All Authors / Subjects</button>
+                <span class="crumb-sep" id="pcrumb-sep-1" style="display:none">›</span>
+                <button class="crumb-btn" id="pcrumb-book-btn" style="display:none" onclick="poetryDrillTo('line_entries')"></button>
             </div>
 
             <!-- Comics breadcrumb (hidden when browsing art DB) -->
@@ -128,6 +158,12 @@
                 <div class="table-selector" id="art-table-selector">
                     <button class="table-btn" onclick="artSwitchTable('text_entries')">Text Entries</button>
                     <button class="table-btn active" onclick="artSwitchTable('image_entries')">Image Entries</button>
+                </div>
+                <!-- Poetry DB table switcher -->
+                <div class="table-selector" id="poetry-table-selector" style="display:none">
+                    <button class="table-btn active" id="ptab-text" onclick="poetrySwitchTable('text_entries')">Authors / Subjects</button>
+                    <button class="table-btn"        id="ptab-book" onclick="poetrySwitchTable('book_entries')">Books</button>
+                    <button class="table-btn"        id="ptab-line" onclick="poetrySwitchTable('line_entries')">Lines</button>
                 </div>
                 <!-- Comics DB table switcher -->
                 <div class="table-selector" id="comics-table-selector" style="display:none">
@@ -193,6 +229,8 @@ let filteredRows   = null;
 
 // Comics drill-down context
 let comicsFilter   = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
+// Poetry drill-down context
+let poetryFilter   = { book_id: null, bookLabel: null };
 
 // ============================================================
 //  DB SWITCHING
@@ -206,27 +244,36 @@ function switchDb(db) {
     document.getElementById('search-bar').value = '';
 
     // Update tab styles
-    document.getElementById('db-tab-art').classList.toggle('active', db === 'art');
+    document.getElementById('db-tab-art').classList.toggle('active',    db === 'art');
     document.getElementById('db-tab-comics').classList.toggle('active', db === 'comics');
+    document.getElementById('db-tab-poetry').classList.toggle('active', db === 'poetry');
 
     // Show/hide control panels
     document.getElementById('art-table-selector').style.display    = db === 'art'    ? '' : 'none';
     document.getElementById('comics-table-selector').style.display = db === 'comics' ? '' : 'none';
+    document.getElementById('poetry-table-selector').style.display = db === 'poetry' ? '' : 'none';
     document.getElementById('comics-breadcrumb').classList.toggle('visible', db === 'comics');
+    document.getElementById('poetry-breadcrumb').classList.toggle('visible', db === 'poetry');
     document.getElementById('page-title').textContent =
-        db === 'art' ? '🎨 Art / Knowledgebase Browser' : '📚 Comics Browser';
+        db === 'art' ? '🎨 Art / Knowledgebase Browser' :
+        db === 'comics' ? '📚 Comics Browser' : '📜 Poetry Browser';
 
     if (db === 'art') {
         currentTable = 'image_entries';
-        // Reset active art table button
         document.querySelectorAll('#art-table-selector .table-btn').forEach((b,i) => b.classList.toggle('active', i===1));
-    } else {
+    } else if (db === 'comics') {
         // Reset comics filter & go to series list
         comicsFilter = { series_id: null, seriesLabel: null, book_id: null, bookLabel: null };
         currentTable = 'text_entries';
         updateComicsBreadcrumb();
         document.querySelectorAll('#comics-table-selector .table-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('ctab-text').classList.add('active');
+    } else {
+        // Reset poetry filter & go to authors/subjects
+        poetryFilter = { book_id: null, bookLabel: null };
+        currentTable = 'text_entries';
+        updatePoetryBreadcrumb();
+        updatePoetryTabHighlight('text_entries');
     }
     loadData();
 }
@@ -362,10 +409,13 @@ function loadData() {
 
     if (activeDb === 'art') {
         url = `/api/browse_database?table=${currentTable}&page=${currentPage}&page_size=${ps}`;
-    } else {
+    } else if (activeDb === 'comics') {
         url = `/api/comics/browse?table=${currentTable}&page=${currentPage}&page_size=${ps}`;
         if (comicsFilter.series_id) url += `&series_id=${encodeURIComponent(comicsFilter.series_id)}`;
         if (comicsFilter.book_id)   url += `&book_id=${encodeURIComponent(comicsFilter.book_id)}`;
+    } else {
+        url = `/api/poetry/browse?table=${currentTable}&page=${currentPage}&page_size=${ps}`;
+        if (poetryFilter.book_id) url += `&book_id=${encodeURIComponent(poetryFilter.book_id)}`;
     }
 
     if (sortColumn) url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
@@ -408,10 +458,14 @@ function displayData(data) {
     // Route to the right renderer
     if (activeDb === 'art') {
         el.innerHTML = currentTable === 'text_entries' ? renderArtTextTable() : renderArtImageTable();
-    } else {
-        if (currentTable === 'text_entries')  el.innerHTML = renderComicsTextTable();
+    } else if (activeDb === 'comics') {
+        if (currentTable === 'text_entries')      el.innerHTML = renderComicsTextTable();
         else if (currentTable === 'book_entries') el.innerHTML = renderComicsBookTable();
-        else el.innerHTML = renderComicsImageTable();
+        else                                      el.innerHTML = renderComicsImageTable();
+    } else {
+        if (currentTable === 'text_entries')      el.innerHTML = renderPoetryTextTable();
+        else if (currentTable === 'book_entries') el.innerHTML = renderPoetryBookTable();
+        else                                      el.innerHTML = renderPoetryLineTable();
     }
 }
 
@@ -597,6 +651,205 @@ function resolveComicsCovers() {
 }
 
 // ============================================================
+//  POETRY DB – table switching & drill-down
+// ============================================================
+function poetrySwitchTable(tableName) {
+    poetryFilter = { book_id: null, bookLabel: null };
+    currentTable = tableName;
+    currentPage  = 1;
+    sortColumn   = null;
+    updatePoetryTabHighlight(tableName);
+    updatePoetryBreadcrumb();
+    loadData();
+}
+
+function updatePoetryTabHighlight(tableName) {
+    document.getElementById('ptab-text').classList.toggle('active', tableName === 'text_entries');
+    document.getElementById('ptab-book').classList.toggle('active', tableName === 'book_entries');
+    document.getElementById('ptab-line').classList.toggle('active', tableName === 'line_entries');
+}
+
+function poetryDrillIntoBook(bookId, bookLabel) {
+    poetryFilter.book_id   = bookId;
+    poetryFilter.bookLabel = bookLabel;
+    currentTable = 'line_entries';
+    currentPage  = 1;
+    sortColumn   = null;
+    updatePoetryTabHighlight('line_entries');
+    updatePoetryBreadcrumb();
+    loadData();
+}
+
+function poetryDrillTo(tableName) {
+    if (tableName === 'text_entries') {
+        poetryFilter = { book_id: null, bookLabel: null };
+    }
+    // 'line_entries' keeps the current book filter
+    currentTable = tableName;
+    currentPage  = 1;
+    sortColumn   = null;
+    updatePoetryTabHighlight(tableName);
+    updatePoetryBreadcrumb();
+    loadData();
+}
+
+function updatePoetryBreadcrumb() {
+    const sep     = document.getElementById('pcrumb-sep-1');
+    const bookBtn = document.getElementById('pcrumb-book-btn');
+    if (poetryFilter.book_id) {
+        sep.style.display     = '';
+        bookBtn.style.display = '';
+        bookBtn.textContent   = poetryFilter.bookLabel || poetryFilter.book_id;
+    } else {
+        sep.style.display     = 'none';
+        bookBtn.style.display = 'none';
+    }
+}
+
+// ── POETRY renderers ─────────────────────────────────────────
+
+function renderPoetryTextTable() {
+    let h = `<table><thead><tr>
+        ${th('ID','entry_id')} ${th('Name','value')} ${th('Type','type')}
+        <th>Related</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        h += `<tr onclick="showPoetryDetailsByRow(${i})" style="cursor:pointer">
+            <td><code>${row.entry_id}</code></td>
+            <td class="truncate">${row.value}</td>
+            <td>${row.type ? `<span class="type-badge">${row.type}</span>` : '-'}</td>
+            <td>${fmtArray(row.relatedKeywordStrings)}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
+
+function renderPoetryBookTable() {
+    let h = `<table><thead><tr>
+        ${th('Book ID','book_id')} ${th('Title','value')} <th>Author</th>
+        ${th('Lines','line_count')} <th>Gutenberg</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        const authorLabel = (() => {
+            try {
+                const kws = JSON.parse(row.relatedKeywordStrings || '[]');
+                return kws[0] || '-';
+            } catch { return '-'; }
+        })();
+        h += `<tr onclick="poetryDrillIntoBook('${row.book_id}', \`${row.value.replace(/`/g,"'")}\`)"
+                  style="cursor:pointer">
+            <td><code>${row.book_id}</code></td>
+            <td class="truncate">${row.value} <span style="color:#27ae60;font-size:11px">▸ lines</span></td>
+            <td class="truncate">${authorLabel}</td>
+            <td>${row.line_count ?? '-'}</td>
+            <td>${row.gid
+                ? `<a href="https://www.gutenberg.org/ebooks/${row.gid}" target="_blank"
+                      onclick="event.stopPropagation()" style="color:#27ae60">#${row.gid}</a>`
+                : '-'}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
+
+function renderPoetryLineTable() {
+    let h = `<table><thead><tr>
+        ${th('Line #','line_number')} <th>Line</th> <th>Book</th>
+    </tr></thead><tbody>`;
+    filteredRows.forEach((row, i) => {
+        h += `<tr onclick="showPoetryDetailsByRow(${i})" style="cursor:pointer">
+            <td style="color:#aaa;font-size:12px">${row.line_number ?? '-'}</td>
+            <td class="poetry-line-text">${row.value ? escHtml(row.value) : '-'}</td>
+            <td style="font-size:12px;color:#888">${row.book_id ?? '-'}</td>
+        </tr>`;
+    });
+    return h + '</tbody></table>';
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── POETRY modals ────────────────────────────────────────────
+
+function showPoetryDetailsByRow(i) {
+    if (!filteredRows?.[i]) return;
+    const row = filteredRows[i];
+    document.getElementById('modal-title').textContent = row.value || 'Details';
+    let html = '';
+    if (currentTable === 'book_entries')      html = buildPoetryBookDetails(row);
+    else if (currentTable === 'line_entries') html = buildPoetryLineDetails(row);
+    else                                      html = buildPoetryTextDetails(row);
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('detailModal').style.display = 'block';
+}
+
+function buildPoetryLineDetails(row) {
+    let h = '';
+    h += dr('Line', `<span class="poetry-line-text" style="font-size:16px">${escHtml(row.value || '')}</span>`);
+    h += dr('Line #', row.line_number);
+    h += dr('Book', row.book_id
+        ? `<a class="drill" onclick="poetryDrillIntoBook('${row.book_id}','${row.book_id}');closeModal()">${row.book_id}</a>`
+        : '-');
+    h += drJson('Descriptions', row.descriptions);
+    h += drJson('Related', row.relatedKeywordStrings);
+    return h;
+}
+
+function buildPoetryBookDetails(row) {
+    const authorLabel = (() => {
+        try { return JSON.parse(row.relatedKeywordStrings || '[]')[0] || '-'; } catch { return '-'; }
+    })();
+    let h = '';
+    h += dr('Book ID', `<code>${row.book_id}</code>`);
+    h += dr('Title', row.value);
+    h += dr('Author', authorLabel);
+    h += dr('Line Count', row.line_count);
+    h += dr('Gutenberg', row.gid
+        ? `<a href="https://www.gutenberg.org/ebooks/${row.gid}" target="_blank" style="color:#27ae60">#${row.gid}</a>`
+        : '-');
+    h += drJson('Descriptions', row.descriptions);
+    h += drJson('Related', row.relatedKeywordStrings);
+    // Inline line list
+    h += `<div class="detail-row"><div class="detail-label">Lines (first 50):</div>
+          <div class="detail-value"><div id="modal-poetry-lines"
+               style="max-height:300px;overflow-y:auto;font-style:italic;line-height:1.8;font-size:13px">
+            <em style="color:#aaa">Loading…</em>
+          </div></div></div>`;
+    setTimeout(() => loadModalPoetryLines(row.book_id), 0);
+    return h;
+}
+
+function loadModalPoetryLines(bookId) {
+    fetch(`/api/poetry/book_lines/${encodeURIComponent(bookId)}?page_size=50`)
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('modal-poetry-lines');
+            if (!el) return;
+            if (!data.success || !data.lines.length) { el.innerHTML = '<em>No lines found</em>'; return; }
+            el.innerHTML = data.lines.map(l =>
+                `<div style="padding:2px 0;border-bottom:1px solid #f0f0f0">
+                    <span style="color:#aaa;font-size:11px;margin-right:8px">${l.line_number}.</span>${escHtml(l.value || '')}
+                </div>`
+            ).join('');
+        })
+        .catch(() => {
+            const el = document.getElementById('modal-poetry-lines');
+            if (el) el.innerHTML = '<em style="color:red">Failed to load lines</em>';
+        });
+}
+
+function buildPoetryTextDetails(row) {
+    let h = '';
+    h += dr('Entry ID', `<code>${row.entry_id}</code>`);
+    h += dr('Name', row.value);
+    if (row.type) h += dr('Type', `<span class="type-badge">${row.type}</span>`);
+    h += drJson('Aliases', row.artist_aliases);
+    h += drJson('Descriptions', row.descriptions);
+    h += drJson('Related', row.relatedKeywordStrings);
+    return h;
+}
+
+// ============================================================
 //  PAGINATION / STATS
 // ============================================================
 function updatePagination(data) {
@@ -613,11 +866,16 @@ function updatePagination(data) {
         `Page ${currentPage} of ${totalPages} (${start}–${end} of ${totalRows})`;
 }
 function updateStats(data) {
-    const labels = {
-        image_entries: 'Image Entries',
-        text_entries:  activeDb === 'comics' ? 'Series / Creators' : 'Text Entries',
-        book_entries:  'Books / Issues',
-    };
+    let labels;
+    if (activeDb === 'poetry') {
+        labels = { text_entries: 'Authors / Subjects', book_entries: 'Books', line_entries: 'Lines' };
+    } else {
+        labels = {
+            image_entries: 'Image Entries',
+            text_entries:  activeDb === 'comics' ? 'Series / Creators' : 'Text Entries',
+            book_entries:  'Books / Issues',
+        };
+    }
     document.getElementById('stats').textContent =
         `${labels[currentTable] || currentTable}: ${data.total_rows.toLocaleString()} records`;
 }
@@ -867,7 +1125,9 @@ function downloadCurrentTableAsJSON() {
 
     let url = activeDb === 'art'
         ? `/api/browse_database?table=${currentTable}&page=1&page_size=${ps}`
-        : `/api/comics/browse?table=${currentTable}&page=1&page_size=${ps}`;
+        : activeDb === 'comics'
+        ? `/api/comics/browse?table=${currentTable}&page=1&page_size=${ps}`
+        : `/api/poetry/browse?table=${currentTable}&page=1&page_size=${ps}`;
     if (sortColumn) url += `&sort_by=${sortColumn}&sort_dir=${sortDirection}`;
 
     fetch(url).then(r => r.json()).then(data => {
