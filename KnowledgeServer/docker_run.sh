@@ -64,8 +64,8 @@ fi
 
 # Stop and remove any existing container
 echo "Stopping and removing existing container (if any)..."
-docker stop $IMAGE_NAME 2>/dev/null
-docker rm $IMAGE_NAME 2>/dev/null
+docker stop $IMAGE_NAME 2>/dev/null || true
+docker rm $IMAGE_NAME 2>/dev/null || true
 
 # Run the container with appropriate volume mounts 
 echo "Running Docker container..."
