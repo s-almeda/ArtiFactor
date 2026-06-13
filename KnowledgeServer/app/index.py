@@ -119,6 +119,9 @@ app.register_blueprint(database_requests_bp)
 from templates.comics_browser_api import comics_browser_api_bp
 app.register_blueprint(comics_browser_api_bp)
 
+from templates.poetry_api import poetry_api_bp
+app.register_blueprint(poetry_api_bp)
+
 from templates.map_api_v3 import map_api_v3_bp
 app.register_blueprint(map_api_v3_bp)
 
@@ -889,6 +892,44 @@ def get_text_features():
 
 
 
+
+
+@app.route('/get_clip_features', methods=['POST'])
+def get_clip_features():
+    """
+    Extract CLIP multimodal features from an image + text pair.
+
+    Expected request JSON:
+    {
+        "image": "url or base64 string",
+        "text":  "descriptive text"
+    }
+
+    Returns JSON with 1024D concatenated CLIP embedding (512D image + 512D text, both normalized).
+    {
+        "features": [0.123, ...]
+    }
+    """
+    if 'image' not in request.json or 'text' not in request.json:
+        return jsonify({"error": "Both 'image' and 'text' fields are required"}), 400
+
+    image_data = request.json['image']
+    text = request.json['text']
+
+    if helpers.check_image_url(image_data):
+        img = helpers.url_to_image(image_data)
+    else:
+        img = helpers.base64_to_image(image_data)
+
+    if img is None:
+        return jsonify({"error": "Failed to load image"}), 400
+
+    try:
+        features = helpers.extract_clip_multimodal_features(img, text)
+        return jsonify({"features": features.tolist()})
+    except Exception as e:
+        print(f"Error extracting CLIP features: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # function for getting the matched enty matched_entry = next((entry for entry in dataset if entry["filename"] == row.filename), None)

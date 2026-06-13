@@ -22,19 +22,27 @@ const flask_server = "https://data.snailbunny.site";
 // ---- get replicate access for image to text --- ///
 import Replicate from "replicate";
 dotenv.config();
-if (!process.env.REPLICATE_API_TOKEN) { //this will fail if you don't have my replicate api key in your .env file! (like, saved to your terminal)
+const replicateToken = process.env.REPLICATE_API_TOKEN;
+if (!replicateToken) { //this will fail if you don't have my replicate api key in your .env file! (like, saved to your terminal)
   console.error("REPLICATE_API_TOKEN is not set in the environment");
 }
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
+const replicate = replicateToken
+  ? new Replicate({ auth: replicateToken })
+  : null;
 
 // ------------------------------------------------ //
 
 const app = express();
 const port = 3000;
 
-app.use(cors());
+const corsOptions = {
+  origin: ["https://arti-factor.vercel.app", "http://localhost:5173"],
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json({ limit: '50mb' })); // Increase the JSON payload limit 
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Increase the URL-encoded payload limit 
 
@@ -346,8 +354,13 @@ app.post("/api/get-similar-images", async (req, res) => {
 // -------- End of flask ML/Data server API calls ---------- //
 
 app.post("/api/generate-text", async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   const { imageUrl = "https://uploads3.wikiart.org/images/pierre-tal-coat/en-grimpant-1962.jpg" } = req.body;
   console.log("received a generate-text request:", req.body);
+
+  if (!replicate) {
+    return res.status(503).json({ error: "Text generation is unavailable: REPLICATE_API_TOKEN is not configured on the server" });
+  }
 
   const input = {
     mode: "fast",
@@ -361,7 +374,8 @@ app.post("/api/generate-text", async (req, res) => {
       { input }
     );
     console.log("Output from replicate API:", output);
-    const truncatedOutput = output.split(',').slice(0, 5).join(', ');
+    const normalizedOutput = Array.isArray(output) ? output.join(", ") : String(output ?? "");
+    const truncatedOutput = normalizedOutput.split(',').slice(0, 5).join(', ');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ text: truncatedOutput });
     logToFile(`IMAGE for text generation: ${imageUrl} | Successful generated text: ${truncatedOutput}`);

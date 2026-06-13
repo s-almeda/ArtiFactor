@@ -45,6 +45,42 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     copy_to_remote_localdb ./app/LOCALDB/update_embeddings.py
 fi
 
+# Prompt user about update_comics_embeddings.py changes
+echo "Have you made changes to LOCALDB/update_comics_embeddings.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying update_comics_embeddings.py to remote instance..."
+    copy_to_remote_localdb ./app/LOCALDB/update_comics_embeddings.py
+fi
+
+# Prompt user about update_comics_ocr.py changes
+echo "Have you made changes to LOCALDB/update_comics_ocr.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying update_comics_ocr.py to remote instance..."
+    copy_to_remote_localdb ./app/LOCALDB/update_comics_ocr.py
+fi
+
+# Prompt user about build_poetrybase.py changes
+echo "Have you made changes to LOCALDB/build_poetrybase.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying build_poetrybase.py to remote instance..."
+    copy_to_remote_localdb ./app/LOCALDB/build_poetrybase.py
+fi
+
+# Prompt user about update_poetry_embeddings.py changes
+echo "Have you made changes to LOCALDB/update_poetry_embeddings.py?"
+read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying update_poetry_embeddings.py to remote instance..."
+    copy_to_remote_localdb ./app/LOCALDB/update_poetry_embeddings.py
+fi
+
 # Prompt user about artist_names.txt changes
 echo "Have you made changes to LOCALDB/artist_names.txt?"
 read -p "If yes, press 'y' to copy it to the remote instance: " -n 1 -r
