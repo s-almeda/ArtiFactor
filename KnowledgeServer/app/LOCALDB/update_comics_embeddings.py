@@ -401,14 +401,14 @@ def update_comics_embeddings(remake_clip=False):
     ''')
 
     cursor.execute('''
-        SELECT image_id, value, filename, artist_names, descriptions, relatedKeywordStrings
+        SELECT image_id, value, filename, artist_names, descriptions, relatedKeywordStrings, ocr_text
         FROM image_entries
     ''')
     artworktext_candidates = cursor.fetchall()
 
     updated_artworktext_entries = []
 
-    for image_id, title, filename, artist_names_json, descriptions_json, keywords_json in artworktext_candidates:
+    for image_id, title, filename, artist_names_json, descriptions_json, keywords_json, ocr_text in artworktext_candidates:
         cursor.execute('SELECT 1 FROM vec_artworktext_features WHERE image_id = ?', (image_id,))
         existing = cursor.fetchone()
 
@@ -454,7 +454,11 @@ def update_comics_embeddings(remake_clip=False):
                 except json.JSONDecodeError:
                     pass
 
-            combined_text = ', '.join(text_parts)
+            # OCR text from the page image — most content-rich signal for text search
+            if ocr_text and ocr_text.strip():
+                text_parts.append(ocr_text.strip())
+
+            combined_text = ' | '.join(text_parts)
             if not combined_text.strip():
                 logging.warning(f"Skipping {image_id}: empty text content.")
                 continue

@@ -610,10 +610,14 @@ function renderComicsImageTable() {
     let h = `<table><thead><tr>
         <th>Image</th>
         ${th('ID','image_id')} ${th('Page','page_number')} ${th('Title','value')}
+        <th>OCR Text</th>
         <th>Related</th>
     </tr></thead><tbody>`;
     filteredRows.forEach((row, i) => {
         const img = thumbUrl(row.image_urls);
+        const ocrPreview = row.ocr_text
+            ? `<span style="font-size:11px;color:#555;font-style:italic">${escHtml(row.ocr_text.substring(0, 80))}${row.ocr_text.length > 80 ? '…' : ''}</span>`
+            : '<span style="color:#ccc;font-size:11px">—</span>';
         h += `<tr onclick="showComicsDetailsByRow(${i})">
             <td onclick="event.stopPropagation()">
                 ${img ? `<img src="${img}" class="image-thumbnail" alt="p${row.page_number}" onclick="showComicsDetailsByRow(${i})">` : '-'}
@@ -621,6 +625,7 @@ function renderComicsImageTable() {
             <td><code>${row.image_id}</code></td>
             <td>${row.page_number ?? '-'}</td>
             <td class="truncate">${row.value}</td>
+            <td style="max-width:220px">${ocrPreview}</td>
             <td>${fmtArray(row.relatedKeywordStrings)}</td>
         </tr>`;
     });
@@ -1020,6 +1025,8 @@ function buildComicsImageDetails(row) {
         : '-');
     if (row.filename) h += dr('Filename', row.filename);
     if (row.rights)   h += dr('Rights', row.rights);
+    if (row.ocr_text) h += dr('OCR Text', `<span style="font-style:italic;line-height:1.6">${escHtml(row.ocr_text)}</span>`);
+    else              h += dr('OCR Text', '<span style="color:#aaa">None</span>');
     h += drJson('Artists', row.artist_names);
     h += drJson('Image URLs', row.image_urls);
     h += drJson('Descriptions', row.descriptions);

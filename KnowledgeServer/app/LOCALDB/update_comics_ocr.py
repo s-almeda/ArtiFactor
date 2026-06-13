@@ -4,20 +4,20 @@ update_comics_ocr.py
 Runs OCR on downloaded comic page images and stores the extracted text
 in the `ocr_text` column of image_entries in comics.db.
 
-Uses PaddleOCR — robust against stylized/hand-lettered comic fonts,
-speech bubbles, and sound effects.
-
 After running this, re-run update_comics_embeddings.py --clip remake
 to rebuild vec_artworktext_features using the real OCR text.
 
 Usage:
-    python3 update_comics_ocr.py                    # all unprocessed images
-    python3 update_comics_ocr.py --remake           # redo all (overwrite existing)
-    python3 update_comics_ocr.py --limit 10         # only process first N (for testing)
-    python3 update_comics_ocr.py --conf 0.6         # higher confidence threshold
+    python3 update_comics_ocr.py                         # easyocr (default), all unprocessed
+    python3 update_comics_ocr.py --method tesseract      # use tesseract instead
+    python3 update_comics_ocr.py --remake                # redo all (overwrite existing)
+    python3 update_comics_ocr.py --limit 10              # only process first N (for testing)
+    python3 update_comics_ocr.py -y --log ~/ocr_run.log  # headless/overnight run
 
 Install:
-    pip install paddlepaddle paddleocr
+    EasyOCR:   pip install easyocr
+    Tesseract: brew install tesseract && pip install pytesseract   (mac)
+               sudo apt-get install tesseract-ocr && pip install pytesseract  (linux)
 
 Note: activate the project venv first with `venv_pls`
 """
@@ -28,11 +28,12 @@ import time
 import logging
 import argparse
 import sqlean as sqlite3
+from PIL import Image
 
 
 DB_PATH = "comics.db"
 IMAGES_DIR = "comic_images"
-CONFIDENCE_THRESHOLD = 0.5
+CONFIDENCE_THRESHOLD = 0.4
 
 
 # ---------------------------------------------------------------------------
@@ -52,44 +53,96 @@ def add_ocr_text_column(conn):
 
 
 # ---------------------------------------------------------------------------
-# OCR
+# OCR backends
 # ---------------------------------------------------------------------------
 
-def load_paddle_ocr():
+def load_easyocr():
+    try:
+        import easyocr
+    except ImportError:
+        print("EasyOCR not installed. Run: pip install easyocr")
+        sys.exit(1)
+    logging.info("Loading EasyOCR model (first run may download ~500MB)...")
+    t0 = time.time()
+    reader = easyocr.Reader(['en'], verbose=False)
+    logging.info(f"EasyOCR loaded in {time.time()-t0:.1f}s")
+    return reader
+
+
+def ocr_easyocr(reader, image_path, threshold):
+    results = reader.readtext(image_path)
+    kept = [text for (_, text, conf) in results if conf >= threshold]
+    return " ".join(kept)
+
+
+def load_tesseract():
+    try:
+        import pytesseract
+        pytesseract.get_tesseract_version()
+    except ImportError:
+        print("pytesseract not installed. Run: pip install pytesseract")
+        sys.exit(1)
+    except Exception:
+        print("Tesseract binary not found. Run: sudo apt-get install tesseract-ocr")
+        sys.exit(1)
+    logging.info("Tesseract ready.")
+    return None  # no stateful object needed
+
+
+def ocr_tesseract(_, image_path, threshold):
+    import pytesseract
+    img = Image.open(image_path).convert("RGB")
+    data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    kept = []
+    for i, word in enumerate(data["text"]):
+        word = word.strip()
+        if not word:
+            continue
+        conf = data["conf"][i]
+        conf_norm = conf / 100.0 if conf >= 0 else 0.0
+        if conf_norm >= threshold:
+            kept.append(word)
+    return " ".join(kept)
+
+
+def load_paddleocr():
     try:
         from paddleocr import PaddleOCR
     except ImportError:
-        print("PaddleOCR not installed. Run: pip install paddlepaddle paddleocr")
+        print("PaddleOCR not installed. Run: pip install 'paddlepaddle==2.6.2' 'paddleocr==2.7.3' 'numpy<2.0'")
         sys.exit(1)
-
-    logging.info("Loading PaddleOCR model (first run will download model weights ~400MB)...")
+    logging.info("Loading PaddleOCR model...")
     t0 = time.time()
-    # use_textline_orientation handles rotated text (common in comics); lang='en'
-    ocr = PaddleOCR(use_textline_orientation=True, lang='en')
+    ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
     logging.info(f"PaddleOCR loaded in {time.time()-t0:.1f}s")
     return ocr
 
 
-def ocr_image(ocr, image_path, threshold):
-    results = ocr.predict(image_path)
-    kept = []
-    for res in results:
-        texts = res.get("rec_texts", [])
-        scores = res.get("rec_scores", [])
-        for text, conf in zip(texts, scores):
-            if conf >= threshold and text.strip():
-                kept.append(text.strip())
+def ocr_paddleocr(ocr, image_path, threshold):
+    result = ocr.ocr(image_path, cls=True)
+    if not result or not result[0]:
+        return ""
+    kept = [text for (_, (text, conf)) in result[0] if conf >= threshold]
     return " ".join(kept)
+
+
+METHODS = {
+    "paddleocr": (load_paddleocr, ocr_paddleocr),
+    "easyocr":   (load_easyocr,   ocr_easyocr),
+    "tesseract": (load_tesseract, ocr_tesseract),
+}
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
-def update_comics_ocr(remake=False, limit=None, conf=CONFIDENCE_THRESHOLD, yes=False, log_file=None):
+def update_comics_ocr(method="paddleocr", remake=False, limit=None,
+                      conf=CONFIDENCE_THRESHOLD, yes=False, log_file=None, batch=None):
     log_handlers = [logging.StreamHandler(sys.stdout)]
     if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True) if os.path.dirname(log_file) else None
+        if os.path.dirname(log_file):
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_handlers.append(logging.FileHandler(log_file))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
                         handlers=log_handlers)
@@ -101,12 +154,12 @@ def update_comics_ocr(remake=False, limit=None, conf=CONFIDENCE_THRESHOLD, yes=F
     remake_str = " (remaking all)" if remake else " (skipping already OCR'd)"
     limit_str = f", limit {limit}" if limit else ""
     if not yes:
-        confirm = input(f"Run PaddleOCR on comics.db{remake_str}{limit_str}. Continue? (y/n): ").strip().lower()
+        confirm = input(f"Run OCR [{method}] on comics.db{remake_str}{limit_str}. Continue? (y/n): ").strip().lower()
         if confirm not in ("y", "yes"):
             print("Cancelled.")
             return
     else:
-        logging.info(f"Run PaddleOCR on comics.db{remake_str}{limit_str}.")
+        logging.info(f"Run OCR [{method}] on comics.db{remake_str}{limit_str}.")
 
     conn = sqlite3.connect(DB_PATH)
     add_ocr_text_column(conn)
@@ -125,16 +178,18 @@ def update_comics_ocr(remake=False, limit=None, conf=CONFIDENCE_THRESHOLD, yes=F
     rows = cursor.fetchall()
     if limit:
         rows = rows[:limit]
+    if batch:
+        rows = rows[:batch]
 
     logging.info(f"Found {len(rows)} image entries to process.")
-
     if not rows:
         print("Nothing to process.")
         conn.close()
         return
 
     images_folder = os.path.join(os.getcwd(), IMAGES_DIR)
-    ocr = load_paddle_ocr()
+    loader, ocr_fn = METHODS[method]
+    engine = loader()
 
     updated = 0
     skipped = 0
@@ -153,7 +208,7 @@ def update_comics_ocr(remake=False, limit=None, conf=CONFIDENCE_THRESHOLD, yes=F
             continue
 
         try:
-            ocr_text = ocr_image(ocr, image_path, conf)
+            ocr_text = ocr_fn(engine, image_path, conf)
 
             cursor.execute(
                 "UPDATE image_entries SET ocr_text = ? WHERE image_id = ?",
@@ -177,12 +232,19 @@ def update_comics_ocr(remake=False, limit=None, conf=CONFIDENCE_THRESHOLD, yes=F
     conn.close()
 
     print(f"\nDone. Updated: {updated} | Skipped: {skipped} | Errors: {errors}")
+
+    if batch and updated > 0:
+        logging.info(f"Batch of {batch} complete. Re-launching to continue...")
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
     if updated > 0:
         print("Next: re-run update_comics_embeddings.py --clip remake to rebuild text embeddings.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="OCR comic page images and store text in comics.db")
+    parser.add_argument("--method", choices=list(METHODS.keys()), default="paddleocr",
+                        help="OCR engine to use (default: easyocr)")
     parser.add_argument("--remake", action="store_true",
                         help="Reprocess all images, overwriting existing OCR text")
     parser.add_argument("--limit", type=int, default=None,
@@ -192,8 +254,10 @@ if __name__ == "__main__":
     parser.add_argument("-y", "--yes", action="store_true",
                         help="Skip confirmation prompt (for server/overnight runs)")
     parser.add_argument("--log", type=str, default=None,
-                        help="Optional path to write log output (e.g. ocr_run.log)")
+                        help="Optional path to write log output (e.g. ~/ocr_run.log)")
+    parser.add_argument("--batch", type=int, default=None,
+                        help="Re-launch process every N images to avoid memory buildup (e.g. --batch 200)")
     args = parser.parse_args()
 
-    update_comics_ocr(remake=args.remake, limit=args.limit, conf=args.conf,
-                      yes=args.yes, log_file=args.log)
+    update_comics_ocr(method=args.method, remake=args.remake, limit=args.limit,
+                      conf=args.conf, yes=args.yes, log_file=args.log, batch=args.batch)

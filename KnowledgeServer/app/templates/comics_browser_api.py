@@ -287,7 +287,7 @@ def api_comics_browse():
             select_cols = (
                 "image_id, value, artist_names, image_urls, filename, "
                 "rights, descriptions, relatedKeywordIds, relatedKeywordStrings, "
-                "book_id, page_number"
+                "book_id, page_number, ocr_text"
             )
         elif table == "book_entries":
             select_cols = (
